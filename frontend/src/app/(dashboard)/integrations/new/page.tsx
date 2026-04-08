@@ -10,7 +10,8 @@ import {
 } from "@/lib/api";
 
 interface TypeField {
-  name: string;
+  key: string;
+  name?: string;
   label: string;
   type?: string;
   placeholder?: string;
@@ -19,7 +20,7 @@ interface TypeField {
 }
 
 interface IntegrationType {
-  id: string;
+  type: string;
   name: string;
   description: string;
   icon?: string;
@@ -105,7 +106,7 @@ export default function NewIntegrationPage() {
       if (!selectedType) return false;
       return selectedType.fields
         .filter((f) => f.required)
-        .every((f) => configValues[f.name]?.trim());
+        .every((f) => configValues[f.key]?.trim());
     }
     return false;
   }
@@ -122,7 +123,7 @@ export default function NewIntegrationPage() {
       const payload = {
         name,
         description,
-        type: selectedType.id,
+        type: selectedType.type,
         clientId: selectedClientId,
         config: configValues,
       };
@@ -200,10 +201,10 @@ export default function NewIntegrationPage() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {types.map((t) => {
-                const isSelected = selectedType?.id === t.id;
+                const isSelected = selectedType?.type === t.type;
                 return (
                   <div
-                    key={t.id}
+                    key={t.type}
                     onClick={() => setSelectedType(t)}
                     className={`bg-[#1a1527] rounded-xl p-4 border-2 cursor-pointer transition-all hover:bg-[#231d35] ${
                       isSelected
@@ -213,7 +214,7 @@ export default function NewIntegrationPage() {
                   >
                     <div className="flex items-start gap-3">
                       <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center text-purple-400 text-xs font-bold shrink-0">
-                        {t.icon || typeIcons[t.id] || t.id.slice(0, 2).toUpperCase()}
+                        {t.icon || typeIcons[t.type] || t.type.slice(0, 2).toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
@@ -331,15 +332,15 @@ export default function NewIntegrationPage() {
 
           <div className="space-y-4">
             {selectedType.fields.map((field) => (
-              <div key={field.name}>
+              <div key={field.key}>
                 <label className="block text-sm font-medium text-[#e2e0ea] mb-1.5">
                   {field.label}
                   {field.required && <span className="text-rose-400"> *</span>}
                 </label>
                 {field.options ? (
                   <select
-                    value={configValues[field.name] || ""}
-                    onChange={(e) => handleConfigChange(field.name, e.target.value)}
+                    value={configValues[field.key] || ""}
+                    onChange={(e) => handleConfigChange(field.key, e.target.value)}
                     className="w-full px-4 py-2.5 bg-[#0f0b1a] border border-white/[0.08] rounded-lg text-sm text-[#e2e0ea] focus:outline-none focus:border-purple-500/50"
                   >
                     <option value="">Selecione...</option>
@@ -350,8 +351,8 @@ export default function NewIntegrationPage() {
                 ) : (
                   <input
                     type={field.type === "password" ? "password" : "text"}
-                    value={configValues[field.name] || ""}
-                    onChange={(e) => handleConfigChange(field.name, e.target.value)}
+                    value={configValues[field.key] || ""}
+                    onChange={(e) => handleConfigChange(field.key, e.target.value)}
                     placeholder={field.placeholder || ""}
                     className="w-full px-4 py-2.5 bg-[#0f0b1a] border border-white/[0.08] rounded-lg text-sm text-[#e2e0ea] placeholder-[#9b95ad]/50 focus:outline-none focus:border-purple-500/50"
                   />
@@ -418,7 +419,7 @@ export default function NewIntegrationPage() {
                 <p className="text-xs text-[#9b95ad] mb-2">Configuracao</p>
                 <div className="space-y-1 text-sm">
                   {Object.entries(configValues).map(([key, val]) => {
-                    const field = selectedType.fields.find((f) => f.name === key);
+                    const field = selectedType.fields.find((f) => f.key === key);
                     const isSecret = field?.type === "password" || key.toLowerCase().includes("password") || key.toLowerCase().includes("secret");
                     return (
                       <div key={key} className="flex gap-2">
