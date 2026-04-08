@@ -252,33 +252,90 @@ export default function IntegrationsPage() {
                 </div>
               )}
 
-              {/* Expanded Config */}
+              {/* Expanded Details */}
               {isExpanded && (
                 <div className="px-4 pb-4 border-t border-white/[0.06]">
-                  <div className="pt-3 space-y-2">
+                  <div className="pt-4 space-y-4">
+                    {/* Info Grid */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <div className="bg-[#0f0b1a] rounded-lg p-3">
+                        <p className="text-[10px] text-[#9b95ad] uppercase tracking-wider">Tipo</p>
+                        <p className="text-sm font-semibold text-[#e2e0ea] mt-1">{integ.type}</p>
+                      </div>
+                      <div className="bg-[#0f0b1a] rounded-lg p-3">
+                        <p className="text-[10px] text-[#9b95ad] uppercase tracking-wider">Cliente</p>
+                        <p className="text-sm font-semibold text-[#e2e0ea] mt-1">{integ.client?.name || '—'}</p>
+                      </div>
+                      <div className="bg-[#0f0b1a] rounded-lg p-3">
+                        <p className="text-[10px] text-[#9b95ad] uppercase tracking-wider">Alertas</p>
+                        <p className="text-sm font-semibold text-[#e2e0ea] mt-1">{integ._count?.alerts ?? 0}</p>
+                      </div>
+                      <div className="bg-[#0f0b1a] rounded-lg p-3">
+                        <p className="text-[10px] text-[#9b95ad] uppercase tracking-wider">Atualizado</p>
+                        <p className="text-sm font-semibold text-[#e2e0ea] mt-1">{new Date(integ.updatedAt || Date.now()).toLocaleDateString('pt-BR')}</p>
+                      </div>
+                    </div>
+
+                    {/* Metrics */}
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="bg-[#0f0b1a] rounded-lg p-3 text-center">
+                        <p className={`text-2xl font-bold ${(integ.latency ?? 0) > 500 ? 'text-amber-400' : 'text-[#e2e0ea]'}`}>{integ.latency ?? 0}ms</p>
+                        <p className="text-[10px] text-[#9b95ad] mt-1">Latência</p>
+                        <p className="text-[10px] text-[#9b95ad]">{(integ.latency ?? 0) <= 200 ? '✅ Excelente' : (integ.latency ?? 0) <= 500 ? '⚡ Normal' : '⚠️ Elevada'}</p>
+                      </div>
+                      <div className="bg-[#0f0b1a] rounded-lg p-3 text-center">
+                        <p className={`text-2xl font-bold ${(integ.errorRate ?? 0) > 5 ? 'text-rose-400' : 'text-[#e2e0ea]'}`}>{integ.errorRate ?? 0}%</p>
+                        <p className="text-[10px] text-[#9b95ad] mt-1">Taxa de Erro</p>
+                        <p className="text-[10px] text-[#9b95ad]">{(integ.errorRate ?? 0) <= 1 ? '✅ Saudável' : (integ.errorRate ?? 0) <= 5 ? '⚡ Aceitável' : '🔴 Crítico'}</p>
+                      </div>
+                      <div className="bg-[#0f0b1a] rounded-lg p-3 text-center">
+                        <p className={`text-2xl font-bold ${(integ.uptime ?? 0) >= 95 ? 'text-emerald-400' : 'text-amber-400'}`}>{integ.uptime ?? 0}%</p>
+                        <p className="text-[10px] text-[#9b95ad] mt-1">Uptime</p>
+                        <p className="text-[10px] text-[#9b95ad]">{(integ.uptime ?? 0) >= 99 ? '✅ Excelente' : (integ.uptime ?? 0) >= 95 ? '⚡ Dentro do SLA' : '⚠️ Abaixo do SLA'}</p>
+                      </div>
+                    </div>
+
+                    {/* Description */}
                     {integ.description && (
-                      <p className="text-sm text-[#9b95ad]">{integ.description}</p>
-                    )}
-                    {integ.config && Object.keys(integ.config).length > 0 && (
-                      <div className="bg-[#0f0b1a] rounded-lg p-3 text-xs space-y-1">
-                        <p className="text-[#9b95ad] font-medium mb-2">Configuracao</p>
-                        {Object.entries(integ.config).map(([key, val]) => (
-                          <div key={key} className="flex gap-2">
-                            <span className="text-purple-400 shrink-0">{key}:</span>
-                            <span className="text-[#e2e0ea] break-all">
-                              {key.toLowerCase().includes("password") || key.toLowerCase().includes("secret")
-                                ? "***"
-                                : String(val)}
-                            </span>
-                          </div>
-                        ))}
+                      <div className="bg-[#0f0b1a] rounded-lg p-3">
+                        <p className="text-[10px] text-[#9b95ad] uppercase tracking-wider mb-1">Descrição</p>
+                        <p className="text-sm text-[#e2e0ea]">{integ.description}</p>
                       </div>
                     )}
-                    {integ.lastTestedAt && (
-                      <p className="text-xs text-[#9b95ad]">
-                        Ultimo teste: {new Date(integ.lastTestedAt).toLocaleString("pt-BR")}
-                      </p>
+
+                    {/* Config */}
+                    {integ.config && Object.keys(integ.config).length > 0 && (
+                      <div className="bg-[#0f0b1a] rounded-lg p-3">
+                        <p className="text-[10px] text-[#9b95ad] uppercase tracking-wider mb-2">Configuração de Conexão</p>
+                        <div className="space-y-1">
+                          {Object.entries(integ.config).map(([key, val]) => (
+                            <div key={key} className="flex gap-2 text-xs">
+                              <span className="text-purple-400 shrink-0">{key}:</span>
+                              <span className="text-[#e2e0ea] break-all">
+                                {key.toLowerCase().includes("password") || key.toLowerCase().includes("secret") ? "••••••••" : String(val)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     )}
+
+                    {/* No config message */}
+                    {(!integ.config || Object.keys(integ.config).length === 0) && (
+                      <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3">
+                        <p className="text-xs text-amber-400">⚠️ Esta integração não possui configuração de conexão. Foi criada como simulação.</p>
+                      </div>
+                    )}
+
+                    {/* Actions */}
+                    <div className="flex gap-3 pt-2">
+                      <a href={`/diagnostics?clientId=${integ.clientId}`} className="px-4 py-2 rounded-lg bg-purple-500/15 border border-purple-500/20 text-purple-400 text-xs font-medium hover:bg-purple-500/20 transition">
+                        🤖 Diagnosticar com IA
+                      </a>
+                      <a href={`/clients/${integ.clientId}`} className="px-4 py-2 rounded-lg bg-white/5 border border-white/[0.08] text-[#9b95ad] text-xs font-medium hover:text-white transition">
+                        👁️ Ver cliente
+                      </a>
+                    </div>
                   </div>
                 </div>
               )}
