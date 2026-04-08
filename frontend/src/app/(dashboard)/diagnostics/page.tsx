@@ -41,6 +41,7 @@ function DiagnosticsContent() {
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState("");
+  const [expandedEntry, setExpandedEntry] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -188,20 +189,36 @@ function DiagnosticsContent() {
         <div>
           <h2 className="text-lg font-semibold mb-4">Historico de Diagnosticos</h2>
           <div className="space-y-3">
-            {history.map((entry) => (
+            {history.map((entry) => {
+              const isExpanded = expandedEntry === entry.id;
+              return (
               <div
                 key={entry.id}
-                className="bg-[#1a1527] rounded-xl p-4 border border-white/[0.08]"
+                className="bg-[#1a1527] rounded-xl border border-white/[0.08] overflow-hidden"
               >
-                <p className="text-sm font-medium mb-2">{entry.query}</p>
-                <p className="text-sm text-[#9b95ad] whitespace-pre-wrap line-clamp-3">
-                  {entry.response}
-                </p>
-                <p className="text-xs text-[#9b95ad] mt-2">
-                  {new Date(entry.createdAt).toLocaleString("pt-BR")}
-                </p>
+                <button
+                  onClick={() => setExpandedEntry(isExpanded ? null : entry.id)}
+                  className="w-full p-4 text-left hover:bg-[#231d35] transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium text-[#e2e0ea]">{entry.query}</p>
+                    <span className="text-[#9b95ad] text-lg ml-3 flex-shrink-0">{isExpanded ? '−' : '+'}</span>
+                  </div>
+                  <div className="flex items-center gap-3 mt-2">
+                    <span className="text-xs text-[#9b95ad]">{new Date(entry.createdAt).toLocaleString("pt-BR")}</span>
+                    {!isExpanded && <span className="text-xs text-purple-400">Clique para ver detalhes</span>}
+                  </div>
+                </button>
+                {isExpanded && (
+                  <div className="px-4 pb-4 border-t border-white/[0.05]">
+                    <div className="mt-4 bg-[#0f0b1a] rounded-lg p-4">
+                      <p className="text-xs font-semibold text-purple-400 uppercase tracking-wider mb-3">Resultado do Diagnóstico</p>
+                      <div className="text-sm text-[#e2e0ea] whitespace-pre-wrap leading-relaxed">{entry.response}</div>
+                    </div>
+                  </div>
+                )}
               </div>
-            ))}
+            );})}
           </div>
         </div>
       )}
