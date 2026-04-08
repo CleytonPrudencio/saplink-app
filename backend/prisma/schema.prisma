@@ -1,0 +1,91 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Consultancy {
+  id        String   @id @default(uuid())
+  name      String
+  cnpj      String?  @unique
+  plan      String   @default("STARTER")
+  logoUrl   String?
+  createdAt DateTime @default(now())
+  users     User[]
+  clients   Client[]
+}
+
+model User {
+  id            String      @id @default(uuid())
+  email         String      @unique
+  password      String
+  name          String
+  role          String      @default("CONSULTANT_USER")
+  consultancyId String
+  consultancy   Consultancy @relation(fields: [consultancyId], references: [id])
+  createdAt     DateTime    @default(now())
+}
+
+model Client {
+  id            String        @id @default(uuid())
+  name          String
+  cnpj          String?
+  consultancyId String
+  consultancy   Consultancy   @relation(fields: [consultancyId], references: [id])
+  healthScore   Int           @default(0)
+  integrations  Integration[]
+  alerts        Alert[]
+  diagnostics   Diagnostic[]
+  createdAt     DateTime      @default(now())
+}
+
+model Integration {
+  id        String   @id @default(uuid())
+  name      String
+  type      String
+  status    String   @default("ACTIVE")
+  latency   Int      @default(0)
+  errorRate Float    @default(0)
+  uptime    Float    @default(100)
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id])
+  alerts    Alert[]
+  updatedAt DateTime @updatedAt
+}
+
+model Alert {
+  id            String       @id @default(uuid())
+  type          String
+  severity      String
+  message       String
+  resolved      Boolean      @default(false)
+  clientId      String
+  client        Client       @relation(fields: [clientId], references: [id])
+  integrationId String?
+  integration   Integration? @relation(fields: [integrationId], references: [id])
+  createdAt     DateTime     @default(now())
+  resolvedAt    DateTime?
+}
+
+model Diagnostic {
+  id        String   @id @default(uuid())
+  query     String
+  response  String
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model DeadCode {
+  id             String    @id @default(uuid())
+  objectName     String
+  objectType     String
+  lastUsed       DateTime?
+  usageCount     Int       @default(0)
+  recommendation String
+  clientId       String
+  createdAt      DateTime  @default(now())
+}
