@@ -180,18 +180,18 @@ export default function ClientDetailPage({
               <div className="grid grid-cols-3 gap-3 text-sm">
                 <div>
                   <p className="text-[#9b95ad]">Latência</p>
-                  <p className={`font-medium ${int.latency > 500 ? 'text-amber-400' : ''}`}>{int.latency ?? "-"} ms</p>
+                  <p className={`font-medium ${(int.latency ?? 0) > 500 ? 'text-amber-400' : ''}`}>{int.latency ?? "-"} ms</p>
                 </div>
                 <div>
                   <p className="text-[#9b95ad]">Taxa de Erro</p>
-                  <p className={`font-medium ${int.errorRate > 5 ? 'text-rose-400' : ''}`}>{int.errorRate ?? 0}%</p>
+                  <p className={`font-medium ${(int.errorRate ?? 0) > 5 ? 'text-rose-400' : ''}`}>{int.errorRate ?? 0}%</p>
                 </div>
                 <div>
                   <p className="text-[#9b95ad]">Uptime</p>
                   <div className="mt-1">
                     <div className="w-full bg-white/[0.08] rounded-full h-2">
                       <div
-                        className={`h-2 rounded-full transition-all ${int.uptime >= 95 ? 'bg-emerald-500' : int.uptime >= 85 ? 'bg-amber-500' : 'bg-rose-500'}`}
+                        className={`h-2 rounded-full transition-all ${(int.uptime ?? 0) >= 95 ? 'bg-emerald-500' : (int.uptime ?? 0) >= 85 ? 'bg-amber-500' : 'bg-rose-500'}`}
                         style={{ width: `${int.uptime ?? 0}%` }}
                       />
                     </div>
@@ -252,25 +252,25 @@ export default function ClientDetailPage({
                 const issues: { severity: string; color: string; icon: string; title: string; detail: string; action: string }[] = [];
 
                 // Taxa de erro
-                if (int.errorRate > 50) {
+                if (((int.errorRate ?? 0)) > 50) {
                   issues.push({ severity: 'CRÍTICO', color: 'rose', icon: '🔴', title: 'Taxa de erro crítica', detail: `${int.errorRate}% dos requests estão falhando. Isso indica um problema grave que precisa de atenção imediata.`, action: 'Diagnosticar com IA agora' });
-                } else if (int.errorRate > 20) {
+                } else if (((int.errorRate ?? 0)) > 20) {
                   issues.push({ severity: 'ALTO', color: 'orange', icon: '🟠', title: 'Taxa de erro elevada', detail: `${int.errorRate}% de erros. Pode indicar configuração incorreta de campos ou timeout em BAPIs.`, action: 'Verificar mapeamento de campos' });
-                } else if (int.errorRate > 5) {
+                } else if (((int.errorRate ?? 0)) > 5) {
                   issues.push({ severity: 'MÉDIO', color: 'amber', icon: '🟡', title: 'Taxa de erro acima do normal', detail: `${int.errorRate}% de erros. Recomendado investigar antes que escale.`, action: 'Monitorar nas próximas horas' });
                 }
 
                 // Latência
-                if (int.latency > 1000) {
+                if (((int.latency ?? 0)) > 1000) {
                   issues.push({ severity: 'ALTO', color: 'orange', icon: '🐌', title: 'Latência muito alta', detail: `${int.latency}ms de latência média. O normal é abaixo de 300ms. Pode haver gargalo na rede ou no servidor SAP.`, action: 'Verificar conexão RFC e rede' });
-                } else if (int.latency > 500) {
+                } else if (((int.latency ?? 0)) > 500) {
                   issues.push({ severity: 'MÉDIO', color: 'amber', icon: '⏱️', title: 'Latência elevada', detail: `${int.latency}ms. Acima do ideal (300ms). Pode impactar a performance de integrações síncronas.`, action: 'Otimizar queries ou aumentar timeout' });
                 }
 
                 // Uptime
-                if (int.uptime < 90) {
+                if (((int.uptime ?? 0)) < 90) {
                   issues.push({ severity: 'ALTO', color: 'orange', icon: '📉', title: 'Uptime abaixo do SLA', detail: `${int.uptime}% de disponibilidade. A meta mínima é 95%. Verifique estabilidade do servidor.`, action: 'Revisar infraestrutura' });
-                } else if (int.uptime < 95) {
+                } else if (((int.uptime ?? 0)) < 95) {
                   issues.push({ severity: 'MÉDIO', color: 'amber', icon: '📊', title: 'Uptime precisa melhorar', detail: `${int.uptime}% de disponibilidade. Está próximo do limite aceitável (95%).`, action: 'Acompanhar tendência' });
                 }
 

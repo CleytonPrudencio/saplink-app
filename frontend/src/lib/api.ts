@@ -104,6 +104,32 @@ export async function getPresets() {
   return data;
 }
 
+// Integrations (all)
+export async function getAllIntegrations() {
+  const { data } = await api.get('/integrations/all');
+  return data;
+}
+
+export async function getIntegrationTypes() {
+  const { data } = await api.get('/integrations/types');
+  return data;
+}
+
+export async function createIntegration(payload: Record<string, unknown>) {
+  const { data } = await api.post('/integrations', payload);
+  return data;
+}
+
+export async function testIntegration(id: string) {
+  const { data } = await api.post(`/integrations/${id}/test`);
+  return data;
+}
+
+export async function deleteIntegration(id: string) {
+  const { data } = await api.delete(`/integrations/${id}`);
+  return data;
+}
+
 // Dead Code
 export async function getDeadCode(clientId: string) {
   const { data } = await api.get(`/dead-code/client/${clientId}`);

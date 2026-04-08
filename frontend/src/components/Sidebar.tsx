@@ -18,6 +18,7 @@ interface SidebarProps {
 const menuItems = [
   { href: "/", label: "Dashboard", icon: "\uD83D\uDCCA" },
   { href: "/clients", label: "Clientes", icon: "\uD83D\uDC65" },
+  { href: "/integrations", label: "Integra\u00e7\u00f5es", icon: "\uD83D\uDD17" },
   { href: "/alerts", label: "Alertas", icon: "\uD83D\uDD14" },
   { href: "/diagnostics", label: "Diagnostico IA", icon: "\uD83E\uDD16" },
   { href: "/dead-code", label: "Dead Code", icon: "\uD83D\uDD0D" },
