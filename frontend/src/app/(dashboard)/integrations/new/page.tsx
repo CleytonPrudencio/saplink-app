@@ -115,7 +115,42 @@ export default function NewIntegrationPage() {
     setConfigValues((prev) => ({ ...prev, [fieldName]: value }));
   }
 
+  async function handleTest() {
+    if (!selectedType) return;
+    setTesting(true);
+    setTestResult(null);
+    setCreateError("");
+    try {
+      // Create temporarily to test, then we keep it
+      const payload = {
+        name,
+        description,
+        type: selectedType.type,
+        clientId: selectedClientId,
+        config: configValues,
+      };
+      const created = await createIntegration(payload);
+      const tempId = created.id || created.data?.id;
+      setCreatedId(tempId);
+
+      // Now test
+      const result = await testIntegration(tempId);
+      setTestResult(result);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Erro ao testar conexão";
+      setTestResult({ success: false, message, details: {} });
+    } finally {
+      setTesting(false);
+    }
+  }
+
   async function handleCreate() {
+    // Integration already created during test, just redirect
+    if (createdId) {
+      router.push("/integrations");
+      return;
+    }
+    // If user skips test
     if (!selectedType) return;
     setCreating(true);
     setCreateError("");
@@ -129,25 +164,11 @@ export default function NewIntegrationPage() {
       };
       const result = await createIntegration(payload);
       setCreatedId(result.id || result.data?.id);
+      router.push("/integrations");
     } catch {
-      setCreateError("Erro ao criar integracao. Tente novamente.");
+      setCreateError("Erro ao criar integração. Tente novamente.");
     } finally {
       setCreating(false);
-    }
-  }
-
-  async function handleTest() {
-    if (!createdId) return;
-    setTesting(true);
-    setTestResult(null);
-    try {
-      const result = await testIntegration(createdId);
-      setTestResult(result);
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Erro ao testar conexao";
-      setTestResult({ success: false, message, details: {} });
-    } finally {
-      setTesting(false);
     }
   }
 
@@ -433,120 +454,104 @@ export default function NewIntegrationPage() {
             )}
           </div>
 
-          {/* Create / Test */}
-          {!createdId ? (
+          {createError && <p className="text-rose-400 text-sm">{createError}</p>}
+
+          {/* Step 1: Test Connection */}
+          {!testResult && !testing && (
             <div className="space-y-3">
-              {createError && (
-                <p className="text-rose-400 text-sm">{createError}</p>
-              )}
-              <button
-                onClick={handleCreate}
-                disabled={creating}
-                className="w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-500 text-white text-sm font-medium rounded-lg hover:from-purple-500 hover:to-purple-400 transition-all cursor-pointer disabled:opacity-50"
-              >
-                {creating ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                    </svg>
-                    Criando...
-                  </span>
-                ) : (
-                  "Criar Integracao"
-                )}
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3 text-sm text-emerald-400">
-                Integracao criada com sucesso!
+              <div className="bg-cyan-500/10 border border-cyan-500/20 rounded-lg p-4">
+                <p className="text-sm text-cyan-400 font-medium mb-1">🔌 Testar antes de salvar</p>
+                <p className="text-xs text-[#9b95ad]">Vamos verificar se a conexão funciona antes de criar a integração.</p>
               </div>
-
-              {/* Test Button */}
-              {!testResult && (
-                <button
-                  onClick={handleTest}
-                  disabled={testing}
-                  className="w-full px-6 py-3 bg-gradient-to-r from-cyan-600 to-cyan-500 text-white text-sm font-medium rounded-lg hover:from-cyan-500 hover:to-cyan-400 transition-all cursor-pointer disabled:opacity-50"
-                >
-                  {testing ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                      </svg>
-                      Testando conexao...
-                    </span>
-                  ) : (
-                    "Testar Conexao"
-                  )}
-                </button>
-              )}
-
-              {/* Test Result */}
-              {testResult && (
-                <div
-                  className={`rounded-xl p-5 border ${
-                    testResult.success
-                      ? "bg-emerald-500/10 border-emerald-500/20"
-                      : "bg-rose-500/10 border-rose-500/20"
-                  }`}
-                >
-                  <div className="flex items-center gap-3 mb-2">
-                    {testResult.success ? (
-                      <>
-                        <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center">
-                          <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                        </div>
-                        <span className="text-emerald-400 font-medium">Conexao bem-sucedida</span>
-                      </>
-                    ) : (
-                      <>
-                        <div className="w-8 h-8 rounded-full bg-rose-500/20 flex items-center justify-center">
-                          <svg className="w-5 h-5 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </div>
-                        <span className="text-rose-400 font-medium">Falha na conexao</span>
-                      </>
-                    )}
-                  </div>
-                  <p className={`text-sm ${testResult.success ? "text-emerald-400/70" : "text-rose-400/70"}`}>
-                    {testResult.message}
-                  </p>
-                  {testResult.details && Object.keys(testResult.details).length > 0 && (
-                    <div className="mt-3 pt-3 border-t border-white/[0.06] space-y-1">
-                      {Object.entries(testResult.details).map(([k, v]) => (
-                        <div key={k} className="flex gap-2 text-xs">
-                          <span className="text-[#9b95ad]">{k}:</span>
-                          <span className="text-[#e2e0ea]">{String(v)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Go to Integrations */}
               <button
-                onClick={() => router.push("/integrations")}
-                className="w-full px-6 py-3 bg-white/[0.06] text-[#e2e0ea] text-sm font-medium rounded-lg hover:bg-white/[0.1] transition-colors cursor-pointer"
+                onClick={handleTest}
+                className="w-full px-6 py-3.5 bg-gradient-to-r from-cyan-600 to-cyan-500 text-white text-sm font-semibold rounded-lg hover:from-cyan-500 hover:to-cyan-400 transition-all cursor-pointer"
               >
-                Ir para Integracoes
+                Testar Conexão
               </button>
             </div>
           )}
 
-          {/* Back button (only before creation) */}
-          {!createdId && (
+          {/* Loading */}
+          {testing && (
+            <div className="bg-[#1a1527] rounded-xl p-8 border border-purple-500/20 text-center">
+              <div className="w-12 h-12 border-3 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+              <p className="text-sm text-purple-400 font-medium">Testando conexão...</p>
+              <p className="text-xs text-[#9b95ad] mt-1">Verificando configuração e conectividade</p>
+            </div>
+          )}
+
+          {/* Test Result */}
+          {testResult && (
+            <div className="space-y-4">
+              <div className={`rounded-xl p-5 border ${testResult.success ? "bg-emerald-500/10 border-emerald-500/20" : "bg-rose-500/10 border-rose-500/20"}`}>
+                <div className="flex items-center gap-3 mb-2">
+                  {testResult.success ? (
+                    <>
+                      <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                        <svg className="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                      </div>
+                      <div>
+                        <span className="text-emerald-400 font-semibold">Conexão bem-sucedida!</span>
+                        <p className="text-xs text-emerald-400/70">Tudo pronto para salvar a integração.</p>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-10 h-10 rounded-full bg-rose-500/20 flex items-center justify-center">
+                        <svg className="w-6 h-6 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                      </div>
+                      <div>
+                        <span className="text-rose-400 font-semibold">Falha na conexão</span>
+                        <p className="text-xs text-rose-400/70">Verifique as configurações e tente novamente.</p>
+                      </div>
+                    </>
+                  )}
+                </div>
+                <p className={`text-sm mt-3 ${testResult.success ? "text-emerald-400/80" : "text-rose-400/80"}`}>{testResult.message}</p>
+                {testResult.details && Object.keys(testResult.details).length > 0 && (
+                  <div className="mt-3 pt-3 border-t border-white/[0.06] space-y-1">
+                    {Object.entries(testResult.details).map(([k, v]) => (
+                      <div key={k} className="flex gap-2 text-xs">
+                        <span className="text-[#9b95ad]">{k}:</span>
+                        <span className="text-[#e2e0ea]">{String(v)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Actions after test */}
+              <div className="flex gap-3">
+                {testResult.success ? (
+                  <button onClick={() => router.push("/integrations")} className="flex-1 px-6 py-3.5 bg-gradient-to-r from-purple-600 to-purple-500 text-white text-sm font-semibold rounded-lg hover:from-purple-500 hover:to-purple-400 transition-all cursor-pointer">
+                    ✅ Salvar Integração
+                  </button>
+                ) : (
+                  <>
+                    <button onClick={() => { setTestResult(null); setStep(2); }} className="flex-1 px-6 py-3 bg-white/[0.06] text-[#e2e0ea] text-sm font-medium rounded-lg hover:bg-white/[0.1] transition-colors cursor-pointer">
+                      ← Corrigir Configuração
+                    </button>
+                    <button onClick={() => { setTestResult(null); setTesting(false); }} className="flex-1 px-6 py-3 bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-sm font-medium rounded-lg hover:bg-cyan-500/15 transition cursor-pointer">
+                      🔄 Testar Novamente
+                    </button>
+                  </>
+                )}
+              </div>
+
+              {/* Save anyway if test failed */}
+              {!testResult.success && (
+                <button onClick={() => router.push("/integrations")} className="w-full px-6 py-2.5 text-[#9b95ad] text-xs hover:text-white transition cursor-pointer">
+                  Salvar mesmo assim (a integração será criada com status de erro)
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Back button (only before test) */}
+          {!testResult && !testing && (
             <div className="flex justify-start">
-              <button
-                onClick={() => setStep(2)}
-                className="px-6 py-2.5 bg-white/[0.06] text-[#e2e0ea] text-sm font-medium rounded-lg hover:bg-white/[0.1] transition-colors cursor-pointer"
-              >
+              <button onClick={() => setStep(2)} className="px-6 py-2.5 bg-white/[0.06] text-[#e2e0ea] text-sm font-medium rounded-lg hover:bg-white/[0.1] transition-colors cursor-pointer">
                 Voltar
               </button>
             </div>
