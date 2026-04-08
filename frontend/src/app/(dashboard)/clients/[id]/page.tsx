@@ -129,8 +129,8 @@ export default function ClientDetailPage({
         <div>
           <h1 className="text-2xl font-bold">{client.name}</h1>
           <div className="flex gap-4 mt-1 text-sm text-[#9b95ad]">
-            <span>{client.integrationCount || 0} integracoes</span>
-            <span>{client.alertCount || 0} alertas</span>
+            <span>{client.integrationCount || integrations.length} integrações</span>
+            <span>{client.alertCount || alerts.length} alertas</span>
           </div>
         </div>
       </div>
@@ -155,10 +155,14 @@ export default function ClientDetailPage({
       {/* Integrations Tab */}
       {activeTab === "integrations" && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {integrations.map((int) => (
+          {integrations.map((int) => {
+            const isError = int.status?.toUpperCase() === 'ERROR';
+            const isOffline = int.status?.toUpperCase() === 'OFFLINE';
+            const hasProblem = isError || isOffline;
+            return (
             <div
               key={int.id}
-              className="bg-[#1a1527] rounded-xl p-5 border border-white/[0.08]"
+              className={`bg-[#1a1527] rounded-xl p-5 border transition-all ${hasProblem ? 'border-rose-500/30 shadow-[0_0_20px_rgba(244,63,94,0.1)]' : 'border-white/[0.08]'}`}
             >
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
@@ -167,29 +171,27 @@ export default function ClientDetailPage({
                   </span>
                   <h3 className="font-medium">{int.name}</h3>
                 </div>
-                <span
-                  className={`px-2.5 py-1 rounded-full text-xs font-semibold uppercase ${statusBadge(
-                    int.status
-                  )}`}
-                >
+                <span className={`px-2.5 py-1 rounded-full text-xs font-semibold uppercase ${statusBadge(int.status)}`}>
                   {int.status}
                 </span>
               </div>
+
+              {/* Métricas */}
               <div className="grid grid-cols-3 gap-3 text-sm">
                 <div>
-                  <p className="text-[#9b95ad]">Latencia</p>
-                  <p className="font-medium">{int.latency ?? "-"} ms</p>
+                  <p className="text-[#9b95ad]">Latência</p>
+                  <p className={`font-medium ${int.latency > 500 ? 'text-amber-400' : ''}`}>{int.latency ?? "-"} ms</p>
                 </div>
                 <div>
                   <p className="text-[#9b95ad]">Taxa de Erro</p>
-                  <p className="font-medium">{int.errorRate ?? 0}%</p>
+                  <p className={`font-medium ${int.errorRate > 5 ? 'text-rose-400' : ''}`}>{int.errorRate ?? 0}%</p>
                 </div>
                 <div>
                   <p className="text-[#9b95ad]">Uptime</p>
                   <div className="mt-1">
                     <div className="w-full bg-white/[0.08] rounded-full h-2">
                       <div
-                        className="bg-emerald-500 h-2 rounded-full transition-all"
+                        className={`h-2 rounded-full transition-all ${int.uptime >= 95 ? 'bg-emerald-500' : int.uptime >= 85 ? 'bg-amber-500' : 'bg-rose-500'}`}
                         style={{ width: `${int.uptime ?? 0}%` }}
                       />
                     </div>
@@ -197,10 +199,73 @@ export default function ClientDetailPage({
                   </div>
                 </div>
               </div>
+
+              {/* Ações de erro */}
+              {hasProblem && (
+                <div className="mt-4 pt-4 border-t border-rose-500/20">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-rose-400 text-sm">⚠️</span>
+                    <span className="text-sm font-semibold text-rose-400">
+                      {isError ? 'Integração com erro — ação necessária' : 'Integração offline'}
+                    </span>
+                  </div>
+
+                  <div className="space-y-2">
+                    {/* Passo 1: Ver alertas */}
+                    <button
+                      onClick={() => setActiveTab('alerts')}
+                      className="w-full flex items-center gap-3 p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/15 transition text-left cursor-pointer"
+                    >
+                      <span className="w-6 h-6 rounded-full bg-rose-500/20 text-rose-400 text-xs font-bold flex items-center justify-center flex-shrink-0">1</span>
+                      <div>
+                        <p className="text-sm font-medium text-rose-300">Ver alertas relacionados</p>
+                        <p className="text-xs text-[#9b95ad]">Confira os alertas gerados por esta integração</p>
+                      </div>
+                    </button>
+
+                    {/* Passo 2: Diagnosticar com IA */}
+                    <a
+                      href={`/diagnostics?clientId=${id}`}
+                      className="w-full flex items-center gap-3 p-3 rounded-lg bg-purple-500/10 border border-purple-500/20 hover:bg-purple-500/15 transition text-left block"
+                    >
+                      <span className="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 text-xs font-bold flex items-center justify-center flex-shrink-0">2</span>
+                      <div>
+                        <p className="text-sm font-medium text-purple-300">Diagnosticar com IA</p>
+                        <p className="text-xs text-[#9b95ad]">A IA analisa o erro e sugere causa raiz + correção</p>
+                      </div>
+                    </a>
+
+                    {/* Passo 3: Verificar detalhes */}
+                    <div className="flex items-center gap-3 p-3 rounded-lg bg-cyan-500/10 border border-cyan-500/20">
+                      <span className="w-6 h-6 rounded-full bg-cyan-500/20 text-cyan-400 text-xs font-bold flex items-center justify-center flex-shrink-0">3</span>
+                      <div>
+                        <p className="text-sm font-medium text-cyan-300">Resolver e monitorar</p>
+                        <p className="text-xs text-[#9b95ad]">Após corrigir, o sistema detecta automaticamente a recuperação</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Indicadores de alerta para métricas altas */}
+              {!hasProblem && (int.errorRate > 5 || int.latency > 500) && (
+                <div className="mt-3 pt-3 border-t border-amber-500/20">
+                  <div className="flex items-center gap-2">
+                    <span className="text-amber-400 text-xs">⚡</span>
+                    <span className="text-xs text-amber-400">
+                      {int.errorRate > 5 && int.latency > 500
+                        ? 'Atenção: taxa de erro e latência elevadas'
+                        : int.errorRate > 5
+                        ? 'Atenção: taxa de erro acima do normal'
+                        : 'Atenção: latência elevada'}
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
-          ))}
+          );})}
           {integrations.length === 0 && (
-            <p className="text-[#9b95ad] text-sm">Nenhuma integracao encontrada.</p>
+            <p className="text-[#9b95ad] text-sm">Nenhuma integração encontrada.</p>
           )}
         </div>
       )}
