@@ -247,21 +247,55 @@ export default function ClientDetailPage({
                 </div>
               )}
 
-              {/* Indicadores de alerta para métricas altas */}
-              {!hasProblem && (int.errorRate > 5 || int.latency > 500) && (
-                <div className="mt-3 pt-3 border-t border-amber-500/20">
-                  <div className="flex items-center gap-2">
-                    <span className="text-amber-400 text-xs">⚡</span>
-                    <span className="text-xs text-amber-400">
-                      {int.errorRate > 5 && int.latency > 500
-                        ? 'Atenção: taxa de erro e latência elevadas'
-                        : int.errorRate > 5
-                        ? 'Atenção: taxa de erro acima do normal'
-                        : 'Atenção: latência elevada'}
-                    </span>
+              {/* Análise de métricas com sugestões */}
+              {!hasProblem && (() => {
+                const issues: { severity: string; color: string; icon: string; title: string; detail: string; action: string }[] = [];
+
+                // Taxa de erro
+                if (int.errorRate > 50) {
+                  issues.push({ severity: 'CRÍTICO', color: 'rose', icon: '🔴', title: 'Taxa de erro crítica', detail: `${int.errorRate}% dos requests estão falhando. Isso indica um problema grave que precisa de atenção imediata.`, action: 'Diagnosticar com IA agora' });
+                } else if (int.errorRate > 20) {
+                  issues.push({ severity: 'ALTO', color: 'orange', icon: '🟠', title: 'Taxa de erro elevada', detail: `${int.errorRate}% de erros. Pode indicar configuração incorreta de campos ou timeout em BAPIs.`, action: 'Verificar mapeamento de campos' });
+                } else if (int.errorRate > 5) {
+                  issues.push({ severity: 'MÉDIO', color: 'amber', icon: '🟡', title: 'Taxa de erro acima do normal', detail: `${int.errorRate}% de erros. Recomendado investigar antes que escale.`, action: 'Monitorar nas próximas horas' });
+                }
+
+                // Latência
+                if (int.latency > 1000) {
+                  issues.push({ severity: 'ALTO', color: 'orange', icon: '🐌', title: 'Latência muito alta', detail: `${int.latency}ms de latência média. O normal é abaixo de 300ms. Pode haver gargalo na rede ou no servidor SAP.`, action: 'Verificar conexão RFC e rede' });
+                } else if (int.latency > 500) {
+                  issues.push({ severity: 'MÉDIO', color: 'amber', icon: '⏱️', title: 'Latência elevada', detail: `${int.latency}ms. Acima do ideal (300ms). Pode impactar a performance de integrações síncronas.`, action: 'Otimizar queries ou aumentar timeout' });
+                }
+
+                // Uptime
+                if (int.uptime < 90) {
+                  issues.push({ severity: 'ALTO', color: 'orange', icon: '📉', title: 'Uptime abaixo do SLA', detail: `${int.uptime}% de disponibilidade. A meta mínima é 95%. Verifique estabilidade do servidor.`, action: 'Revisar infraestrutura' });
+                } else if (int.uptime < 95) {
+                  issues.push({ severity: 'MÉDIO', color: 'amber', icon: '📊', title: 'Uptime precisa melhorar', detail: `${int.uptime}% de disponibilidade. Está próximo do limite aceitável (95%).`, action: 'Acompanhar tendência' });
+                }
+
+                if (issues.length === 0) return null;
+
+                return (
+                  <div className="mt-4 pt-4 border-t border-white/[0.05] space-y-2">
+                    {issues.map((issue, idx) => (
+                      <div key={idx} className={`rounded-lg p-3 bg-${issue.color}-500/5 border border-${issue.color}-500/15`} style={{ backgroundColor: `rgba(${issue.color === 'rose' ? '244,63,94' : issue.color === 'orange' ? '249,115,22' : '245,158,11'},0.05)`, borderColor: `rgba(${issue.color === 'rose' ? '244,63,94' : issue.color === 'orange' ? '249,115,22' : '245,158,11'},0.15)` }}>
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm">{issue.icon}</span>
+                            <span className="text-sm font-semibold text-[#e2e0ea]">{issue.title}</span>
+                          </div>
+                          <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full" style={{ backgroundColor: `rgba(${issue.color === 'rose' ? '244,63,94' : issue.color === 'orange' ? '249,115,22' : '245,158,11'},0.15)`, color: `rgb(${issue.color === 'rose' ? '251,113,133' : issue.color === 'orange' ? '251,146,60' : '252,211,77'})` }}>{issue.severity}</span>
+                        </div>
+                        <p className="text-xs text-[#9b95ad] mb-2">{issue.detail}</p>
+                        <a href={`/diagnostics?clientId=${id}`} className="inline-flex items-center gap-1 text-xs font-medium text-purple-400 hover:text-purple-300 transition">
+                          💡 {issue.action} →
+                        </a>
+                      </div>
+                    ))}
                   </div>
-                </div>
-              )}
+                );
+              })()}
             </div>
           );})}
           {integrations.length === 0 && (
