@@ -5,6 +5,16 @@ import { useRouter } from "next/navigation";
 import { getClients, getAlertStats, getAlerts } from "@/lib/api";
 import HealthScoreRing from "@/components/HealthScoreRing";
 
+interface ClientRaw {
+  id: string;
+  name: string;
+  healthScore: number;
+  integrations?: unknown[];
+  integrationCount?: number;
+  alertCount?: number;
+  _count?: { alerts: number };
+}
+
 interface Client {
   id: string;
   name: string;
@@ -44,7 +54,14 @@ export default function DashboardPage() {
           getAlertStats(),
           getAlerts({ limit: "5" }),
         ]);
-        setClients(Array.isArray(clientsData) ? clientsData : clientsData.data || []);
+        const rawClients: ClientRaw[] = Array.isArray(clientsData) ? clientsData : clientsData.data || [];
+        setClients(rawClients.map((c) => ({
+          id: c.id,
+          name: c.name,
+          healthScore: c.healthScore,
+          integrationCount: c.integrationCount || (c.integrations?.length ?? 0),
+          alertCount: c.alertCount || (c._count?.alerts ?? 0),
+        })));
         setStats(statsData);
         setRecentAlerts(Array.isArray(alertsData) ? alertsData.slice(0, 5) : alertsData.data?.slice(0, 5) || []);
       } catch {
