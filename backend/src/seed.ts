@@ -67,106 +67,248 @@ async function main() {
   });
   console.log('Clients created: 3');
 
-  // 4. Create integrations
-  // Client 1 - Metalúrgica: 3 integrations
+  // 4. Create integrations with realistic configs for each type
+  // Client 1 - Metalúrgica
   const int1a = await prisma.integration.create({
     data: {
       name: 'SAP ECC → Protheus (Pedidos de Venda)',
+      description: 'Envio automático de pedidos de venda do SAP ECC para o Protheus via IDoc ORDERS05. Inclui dados de cabeçalho, itens, condições de preço e parceiro.',
       type: 'IDoc',
       status: 'ACTIVE',
-      latency: 120,
-      errorRate: 1.2,
-      uptime: 99.5,
+      latency: 120, errorRate: 1.2, uptime: 99.5,
       clientId: client1.id,
+      config: {
+        host: '10.0.1.50',
+        systemNumber: '00',
+        client: '100',
+        partnerNumber: 'PROT_METAL_100',
+        partnerType: 'LS',
+        messageType: 'ORDERS',
+        port: 'SAPPORT',
+        user: 'IDOC_METAL',
+        password: 'M3t@l_2026!',
+      },
     },
   });
 
   const int1b = await prisma.integration.create({
     data: {
       name: 'BAPI_MATERIAL_GETLIST (Consulta Materiais)',
+      description: 'Consulta de materiais via RFC para sincronização de cadastro entre SAP e WMS. Busca por grupo de mercadoria, centro e tipo de material.',
       type: 'RFC',
       status: 'ACTIVE',
-      latency: 85,
-      errorRate: 0.3,
-      uptime: 99.9,
+      latency: 85, errorRate: 0.3, uptime: 99.9,
       clientId: client1.id,
+      config: {
+        host: '10.0.1.50',
+        systemNumber: '00',
+        client: '100',
+        user: 'RFC_CONSULTA',
+        password: 'Rfc@2026#',
+        instanceNumber: '01',
+        language: 'PT',
+      },
     },
   });
 
   const int1c = await prisma.integration.create({
     data: {
       name: 'SAP PI/PO → WMS (Movimentação Estoque)',
+      description: 'Integração SOAP para movimentação de estoque entre SAP e WMS. Usa web service para envio de entrada/saída de mercadoria (MIGO).',
       type: 'SOAP',
       status: 'WARNING',
-      latency: 340,
-      errorRate: 4.5,
-      uptime: 96.2,
+      latency: 340, errorRate: 4.5, uptime: 96.2,
       clientId: client1.id,
+      config: {
+        wsdlUrl: 'https://pipo.metalurgica.local:50001/XISOAPAdapter/MessageServlet?senderParty=&senderService=BC_METAL&receiverParty=&receiverService=WMS&interface=SI_GOODS_MOVEMENT&interfaceNamespace=urn:metalurgica:wms:stock',
+        user: 'PIUSER_METAL',
+        password: 'Pi@W3s_2026',
+        namespace: 'urn:metalurgica:wms:stock',
+        soapAction: 'http://sap.com/xi/WebService/soap1.1',
+      },
     },
   });
 
-  // Client 2 - Distribuidora: 3 integrations
+  // Client 2 - Distribuidora
   const int2a = await prisma.integration.create({
     data: {
       name: 'IDoc ORDERS05 (Pedidos de Compra)',
+      description: 'Recebimento de pedidos de compra via IDoc. Parceiro Protheus envia pedidos que são convertidos em ordens de compra no SAP MM.',
       type: 'IDoc',
       status: 'ERROR',
-      latency: 890,
-      errorRate: 12.3,
-      uptime: 85.1,
+      latency: 890, errorRate: 12.3, uptime: 85.1,
       clientId: client2.id,
+      config: {
+        host: '172.16.0.100',
+        systemNumber: '01',
+        client: '200',
+        partnerNumber: 'PROT_DIST_200',
+        partnerType: 'LS',
+        messageType: 'ORDERS',
+        port: 'A000000001',
+        user: 'IDOC_DISTRIB',
+        password: 'D1str!b_2026',
+      },
     },
   });
 
   const int2b = await prisma.integration.create({
     data: {
       name: 'SAP CPI → Salesforce (Clientes)',
+      description: 'Sincronização de cadastro de clientes entre SAP e Salesforce via SAP CPI. REST API com OAuth2 para criação e atualização de accounts.',
       type: 'REST',
       status: 'ACTIVE',
-      latency: 200,
-      errorRate: 2.1,
-      uptime: 98.7,
+      latency: 200, errorRate: 2.1, uptime: 98.7,
       clientId: client2.id,
+      config: {
+        baseUrl: 'https://dist-nacional.crm.salesforce.com/services/data/v58.0',
+        authType: 'OAuth2',
+        authValue: 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...',
+        headers: JSON.stringify({ 'Content-Type': 'application/json', 'Sforce-Query-Options': 'batchSize=200' }),
+        healthEndpoint: '/limits',
+      },
     },
   });
 
   const int2c = await prisma.integration.create({
     data: {
       name: 'RFC BAPI_ACC_DOCUMENT_POST (Lançamentos FI)',
+      description: 'Postagem de documentos contábeis via RFC. Integração com sistema fiscal Mastersaf para lançamentos de impostos e provisões.',
       type: 'RFC',
       status: 'WARNING',
-      latency: 450,
-      errorRate: 5.8,
-      uptime: 93.4,
+      latency: 450, errorRate: 5.8, uptime: 93.4,
       clientId: client2.id,
+      config: {
+        host: '172.16.0.100',
+        systemNumber: '01',
+        client: '200',
+        user: 'RFC_FINANCEIRO',
+        password: 'F1n@nc_2026!',
+        instanceNumber: '00',
+        language: 'PT',
+      },
     },
   });
 
-  // Client 3 - Agro: 2 integrations
+  // Client 3 - Agro
   const int3a = await prisma.integration.create({
     data: {
       name: 'IDoc DESADV (Aviso de Expedição)',
+      description: 'Envio de avisos de expedição para transportadoras via IDoc DESADV. Inclui dados de peso, volume, placa do veículo e romaneio.',
       type: 'IDoc',
       status: 'ACTIVE',
-      latency: 65,
-      errorRate: 0.1,
-      uptime: 99.98,
+      latency: 65, errorRate: 0.1, uptime: 99.98,
       clientId: client3.id,
+      config: {
+        host: '192.168.10.5',
+        systemNumber: '00',
+        client: '300',
+        partnerNumber: 'TRANSP_AGRO_01',
+        partnerType: 'KU',
+        messageType: 'DESADV',
+        port: 'SAPAGRO',
+        user: 'IDOC_AGRO',
+        password: 'Agr0_N3_2026',
+      },
     },
   });
 
   const int3b = await prisma.integration.create({
     data: {
       name: 'SAP S/4HANA → EDI ANTT (Exportação)',
+      description: 'Integração REST com o sistema da ANTT para envio de CTe e MDFe de exportação. Usa certificado digital A1 para assinatura.',
       type: 'REST',
       status: 'ACTIVE',
-      latency: 110,
-      errorRate: 0.5,
-      uptime: 99.8,
+      latency: 110, errorRate: 0.5, uptime: 99.8,
       clientId: client3.id,
+      config: {
+        baseUrl: 'https://edi.antt.gov.br/api/v2',
+        authType: 'Bearer Token',
+        authValue: 'tk_agro_prod_2026_xK9mN...',
+        headers: JSON.stringify({ 'Content-Type': 'application/xml', 'X-Certificate-Thumbprint': 'A1B2C3D4E5F6...' }),
+        healthEndpoint: '/status',
+      },
     },
   });
-  console.log('Integrations created: 8');
+
+  // Additional integrations to show more types
+  await prisma.integration.create({
+    data: {
+      name: 'SAP OData → Fiori Launchpad (Dados Mestre)',
+      description: 'Serviço OData para alimentar apps Fiori de consulta de materiais, fornecedores e clientes. Entity set A_Product.',
+      type: 'OData',
+      status: 'ACTIVE',
+      latency: 95, errorRate: 0.2, uptime: 99.95,
+      clientId: client1.id,
+      config: {
+        serviceUrl: 'https://s4hana.metalurgica.local/sap/opu/odata/sap/API_PRODUCT_SRV',
+        user: 'FIORI_ADMIN',
+        password: 'F10r1_2026!',
+        entitySet: 'A_Product',
+        sapClient: '100',
+      },
+    },
+  });
+
+  await prisma.integration.create({
+    data: {
+      name: 'CNAB Banco Itaú (Retorno Pagamentos)',
+      description: 'Leitura de arquivos de retorno CNAB 240 do Banco Itaú via SFTP. Processamento automático de baixas de títulos no SAP FI.',
+      type: 'FILE',
+      status: 'ACTIVE',
+      latency: 0, errorRate: 0, uptime: 100,
+      clientId: client2.id,
+      config: {
+        protocol: 'SFTP',
+        host: 'sftp.itau.com.br',
+        port: '22',
+        path: '/cnab240/retorno/',
+        user: 'dist_nacional_cnab',
+        password: 'Cn@b_1tau_2026!',
+        filePattern: '*.RET',
+      },
+    },
+  });
+
+  await prisma.integration.create({
+    data: {
+      name: 'Protheus SQL Server (Consulta Estoque)',
+      description: 'Conexão direta ao banco Protheus para consulta de posição de estoque em tempo real. Query na tabela SB2 (saldos por armazém).',
+      type: 'DATABASE',
+      status: 'ACTIVE',
+      latency: 35, errorRate: 0, uptime: 99.99,
+      clientId: client3.id,
+      config: {
+        driver: 'SQL Server',
+        host: '192.168.10.20',
+        port: '1433',
+        database: 'PROTHEUS_PROD',
+        user: 'saplink_reader',
+        password: 'R3ader_Pr0th_2026',
+        query: "SELECT B2_COD, B2_LOCAL, B2_QATU FROM SB2010 WHERE D_E_L_E_T_ = '' AND B2_QATU > 0",
+      },
+    },
+  });
+
+  await prisma.integration.create({
+    data: {
+      name: 'Webhook Mastersaf → SAP (Notas Fiscais)',
+      description: 'Recebimento de eventos do Mastersaf quando NF-e é autorizada. Endpoint customizado que atualiza status no SAP via BAPI.',
+      type: 'CUSTOM',
+      status: 'ACTIVE',
+      latency: 150, errorRate: 1.0, uptime: 98.5,
+      clientId: client1.id,
+      config: {
+        url: 'https://saplink-agent.metalurgica.local:8443/webhook/mastersaf',
+        method: 'POST',
+        headers: JSON.stringify({ 'Content-Type': 'application/json', 'X-Webhook-Secret': 'wh_mastersaf_2026_secret' }),
+        body: JSON.stringify({ event: 'nfe_authorized', docnum: '${DOCNUM}', chave: '${CHAVE_NFE}', status: '${STATUS}' }),
+        expectedStatus: '200',
+      },
+    },
+  });
+
+  console.log('Integrations created: 12 (RFC, IDoc, REST, SOAP, OData, FILE, DATABASE, CUSTOM)');
 
   // 5. Create alerts (15 total)
   const alerts = [
