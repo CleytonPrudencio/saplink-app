@@ -15,9 +15,9 @@ interface Client {
 }
 
 interface Preset {
-  id: string;
-  name: string;
-  description: string;
+  id: string | number;
+  name?: string;
+  description?: string;
   query: string;
 }
 
@@ -113,10 +113,10 @@ function DiagnosticsContent() {
               <button
                 key={preset.id}
                 onClick={() => setQuery(preset.query)}
-                className="bg-[#1a1527] rounded-xl p-4 border border-white/[0.08] hover:bg-[#231d35] transition-colors text-left cursor-pointer"
+                className="bg-[#1a1527] rounded-xl p-4 border border-white/[0.08] hover:bg-[#231d35] hover:border-purple-500/30 transition-colors text-left cursor-pointer"
               >
-                <p className="text-sm font-medium">{preset.name}</p>
-                <p className="text-xs text-[#9b95ad] mt-1">{preset.description}</p>
+                <p className="text-sm font-medium text-[#e2e0ea]">{preset.name || preset.query}</p>
+                {preset.description && <p className="text-xs text-[#9b95ad] mt-1">{preset.description}</p>}
               </button>
             ))}
             {presets.length === 0 && (
