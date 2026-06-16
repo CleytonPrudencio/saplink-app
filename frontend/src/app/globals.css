@@ -7,3 +7,17 @@ html {
 body {
   -webkit-font-smoothing: antialiased;
 }
+
+/* Impressão / exportar PDF do relatório white-label */
+@media print {
+  .no-print { display: none !important; }
+  aside { display: none !important; }
+  main { margin: 0 !important; padding: 0 !important; }
+  * {
+    background: #fff !important;
+    color: #000 !important;
+    box-shadow: none !important;
+    border-color: #ddd !important;
+  }
+  a { color: #000 !important; text-decoration: none; }
+}

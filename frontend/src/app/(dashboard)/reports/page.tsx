@@ -126,9 +126,14 @@ export default function ReportsPage() {
         </div>
       )}
 
-      {/* Back button */}
+      {/* Back + Exportar PDF */}
       {activeReport && (
-        <button onClick={() => setActiveReport(null)} className="text-sm text-[#9b95ad] hover:text-white transition cursor-pointer">← Voltar aos relatórios</button>
+        <div className="flex items-center justify-between no-print">
+          <button onClick={() => setActiveReport(null)} className="text-sm text-[#9b95ad] hover:text-white transition cursor-pointer">← Voltar aos relatórios</button>
+          <button onClick={() => window.print()} className="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-cyan-400 text-white text-sm font-semibold">
+            Exportar PDF
+          </button>
+        </div>
       )}
 
       {reportLoading && <div className="text-[#9b95ad]">Carregando dados...</div>}

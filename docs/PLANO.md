@@ -37,7 +37,7 @@ Objetivo: dá pra cadastrar empresa, cobrar, cortar quem não paga, operar o ten
 ### 1C. Núcleo operacional + UX
 - [x] 1.12 CRUD de clientes na UI — criar/excluir + empty-state com CTA (`clients/page.tsx`); editar PENDENTE
 - [x] 1.13 White-label real — rota `/api/consultancy/branding` + logo/cor/nome no Sidebar + form em Settings
-- [ ] 1.14 Export de relatório em PDF (white-label) — PENDENTE
+- [x] 1.14 Export de relatório em PDF — botão "Exportar PDF" (`window.print` + CSS `@media print` que oculta menu e usa fundo branco)
 - [x] 1.15 Diagnóstico de IA assíncrono — job PENDING→DONE/FAILED, POST 202 + polling `GET /diagnostics/:id` (não trava a tela)
 - [~] 1.16 Validação com `zod` (billing/webhook/branding prontos; demais rotas PENDENTE)
 - [x] 1.17 Auth: rate-limit no login + reset de senha (forgot/reset endpoints); verificação de e-mail PENDENTE
