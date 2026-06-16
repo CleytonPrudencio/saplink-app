@@ -35,13 +35,13 @@ Objetivo: dá pra cadastrar empresa, cobrar, cortar quem não paga, operar o ten
 - [x] 1.11 UI de billing (status, planos, checkout, aviso de suspensão) — `app/(dashboard)/billing`
 
 ### 1C. Núcleo operacional + UX
-- [~] 1.12 CRUD de clientes — API pronta (`createClient/updateClient/deleteClient`); FORM na UI PENDENTE
-- [ ] 1.13 White-label real (campos `logoUrl`/`primaryColor` no schema + /me; aplicar na UI) — PARCIAL
+- [x] 1.12 CRUD de clientes na UI — criar/excluir + empty-state com CTA (`clients/page.tsx`); editar PENDENTE
+- [x] 1.13 White-label real — rota `/api/consultancy/branding` + logo/cor/nome no Sidebar + form em Settings
 - [ ] 1.14 Export de relatório em PDF (white-label) — PENDENTE
 - [ ] 1.15 Diagnóstico de IA assíncrono (job + polling/streaming) — PENDENTE
-- [~] 1.16 Validação com `zod` (billing/webhook prontos; demais rotas PENDENTE)
-- [~] 1.17 Auth: rate-limit no login (FEITO); reset/verificação de e-mail PENDENTE
-- [ ] 1.18 Feedback de erro visível + toasts — front: 403 de assinatura já redireciona p/ billing
+- [~] 1.16 Validação com `zod` (billing/webhook/branding prontos; demais rotas PENDENTE)
+- [x] 1.17 Auth: rate-limit no login + reset de senha (forgot/reset endpoints); verificação de e-mail PENDENTE
+- [~] 1.18 Feedback de erro visível — 403 de assinatura redireciona p/ billing; toasts globais PENDENTE
 
 ## Fase 2 — Core real: conector SAP  (substitui o simulado)
 - [ ] 2.1 Agente on-premise (Docker no cliente) p/ RFC/IDoc via HTTPS outbound

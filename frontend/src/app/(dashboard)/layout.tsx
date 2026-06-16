@@ -5,12 +5,18 @@ import { useRouter } from "next/navigation";
 import { getMe } from "@/lib/api";
 import Sidebar from "@/components/Sidebar";
 
+interface Consultancy {
+  name?: string;
+  logoUrl?: string | null;
+  primaryColor?: string | null;
+}
+
 interface User {
   id: string;
   name: string;
   email: string;
   role: string;
-  consultancyName?: string;
+  consultancy?: Consultancy;
 }
 
 export default function DashboardLayout({
@@ -50,7 +56,7 @@ export default function DashboardLayout({
 
   return (
     <div className="min-h-screen flex">
-      <Sidebar user={user} />
+      <Sidebar user={user} consultancy={user?.consultancy} />
       <main className="flex-1 ml-0 md:ml-64 p-6 md:p-8 overflow-auto min-h-screen">
         {children}
       </main>

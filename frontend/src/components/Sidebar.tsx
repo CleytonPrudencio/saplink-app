@@ -11,8 +11,15 @@ interface User {
   role: string;
 }
 
+interface Consultancy {
+  name?: string;
+  logoUrl?: string | null;
+  primaryColor?: string | null;
+}
+
 interface SidebarProps {
   user: User | null;
+  consultancy?: Consultancy | null;
 }
 
 const menuItems = [
@@ -27,7 +34,7 @@ const menuItems = [
   { href: "/settings", label: "Configuracoes", icon: "\u2699\uFE0F" },
 ];
 
-export default function Sidebar({ user }: SidebarProps) {
+export default function Sidebar({ user, consultancy }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -46,9 +53,18 @@ export default function Sidebar({ user }: SidebarProps) {
     <div className="flex flex-col h-full">
       <div className="p-6">
         <Link href="/" className="block" onClick={() => setMobileOpen(false)}>
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-500 to-cyan-400 bg-clip-text text-transparent">
-            ◆ SAPLINK
-          </h1>
+          {consultancy?.logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={consultancy.logoUrl} alt={consultancy.name || "Logo"} className="max-h-10 max-w-[180px] object-contain" />
+          ) : consultancy?.primaryColor ? (
+            <h1 className="text-2xl font-bold" style={{ color: consultancy.primaryColor }}>
+              ◆ {consultancy.name || "SAPLINK"}
+            </h1>
+          ) : (
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-500 to-cyan-400 bg-clip-text text-transparent">
+              ◆ {consultancy?.name || "SAPLINK"}
+            </h1>
+          )}
         </Link>
       </div>
 

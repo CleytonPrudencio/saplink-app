@@ -10,6 +10,7 @@ import diagnosticRoutes from './routes/diagnostics';
 import deadCodeRoutes from './routes/dead-code';
 import billingRoutes from './routes/billing';
 import platformRoutes from './routes/platform';
+import consultancyRoutes from './routes/consultancy';
 import { authMiddleware } from './middleware/auth';
 import { tenancyMiddleware } from './middleware/tenancy';
 import { requireActiveSubscription } from './middleware/subscription';
@@ -40,6 +41,7 @@ app.get('/health', async (_req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/billing', billingRoutes);
 app.use('/api/platform', platformRoutes);
+app.use('/api/consultancy', consultancyRoutes);
 
 // Rotas de negócio: exigem assinatura ATIVA (corte do inadimplente)
 const tenantGate = [authMiddleware, tenancyMiddleware, requireActiveSubscription];

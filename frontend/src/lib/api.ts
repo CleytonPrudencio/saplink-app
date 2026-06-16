@@ -101,6 +101,28 @@ export async function cancelSubscription() {
   return data;
 }
 
+// Consultancy / white-label
+export async function getConsultancy() {
+  const { data } = await api.get('/consultancy');
+  return data;
+}
+
+export async function updateBranding(payload: { name?: string; logoUrl?: string | null; primaryColor?: string | null }) {
+  const { data } = await api.put('/consultancy/branding', payload);
+  return data;
+}
+
+// Password reset
+export async function forgotPassword(email: string) {
+  const { data } = await api.post('/auth/forgot-password', { email });
+  return data;
+}
+
+export async function resetPassword(token: string, password: string) {
+  const { data } = await api.post('/auth/reset-password', { token, password });
+  return data;
+}
+
 // Integrations
 export async function getIntegrations(clientId: string) {
   const { data } = await api.get(`/integrations/client/${clientId}`);

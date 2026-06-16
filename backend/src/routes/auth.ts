@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import prisma from '../lib/prisma';
 import { authMiddleware } from '../middleware/auth';
 import { JWT_SECRET, JWT_EXPIRES_IN } from '../config';
@@ -141,6 +142,56 @@ router.post('/login', loginLimiter, async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Login error:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// POST /forgot-password — gera token e (em prod) envia e-mail. Resposta neutra (não revela e-mail).
+router.post('/forgot-password', async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body || {};
+    if (!email) {
+      res.status(400).json({ error: 'Email é obrigatório' });
+      return;
+    }
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (user) {
+      const token = crypto.randomBytes(32).toString('hex');
+      await prisma.passwordResetToken.create({
+        data: { userId: user.id, token, expiresAt: new Date(Date.now() + 60 * 60 * 1000) },
+      });
+      const link = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${token}`;
+      // TODO produção: enviar e-mail. Sem SMTP, registra no log do servidor.
+      console.log(`[reset-senha] ${email}: ${link}`);
+    }
+    res.json({ message: 'Se o e-mail existir, enviaremos as instruções de redefinição.' });
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// POST /reset-password — troca a senha usando token válido
+router.post('/reset-password', async (req: Request, res: Response) => {
+  try {
+    const { token, password } = req.body || {};
+    if (!token || !password || String(password).length < 8) {
+      res.status(400).json({ error: 'Token e nova senha (mín. 8 caracteres) são obrigatórios' });
+      return;
+    }
+    const prt = await prisma.passwordResetToken.findUnique({ where: { token } });
+    if (!prt || prt.usedAt || prt.expiresAt < new Date()) {
+      res.status(400).json({ error: 'Link inválido ou expirado.' });
+      return;
+    }
+    await prisma.user.update({
+      where: { id: prt.userId },
+      data: { password: await bcrypt.hash(password, 10) },
+    });
+    await prisma.passwordResetToken.update({ where: { id: prt.id }, data: { usedAt: new Date() } });
+    res.json({ message: 'Senha redefinida com sucesso.' });
+  } catch (error) {
+    console.error('Reset password error:', error);
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
