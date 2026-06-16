@@ -7,6 +7,7 @@ import {
   getPresets,
   createDiagnostic,
   getDiagnosticHistory,
+  getDiagnostic,
 } from "@/lib/api";
 
 interface Client {
@@ -78,16 +79,26 @@ function DiagnosticsContent() {
     setError("");
 
     try {
-      const result = await createDiagnostic({
-        clientId: selectedClient,
-        query: query.trim(),
-      });
-      setResponse(result.response || result.result || JSON.stringify(result, null, 2));
-      // Refresh history
+      // Cria o job (202) e faz polling do status — a IA roda em background no servidor
+      const job = await createDiagnostic({ clientId: selectedClient, query: query.trim() });
+      const id = job.id;
+      let done = false;
+      for (let i = 0; i < 120 && !done; i++) {
+        await new Promise((r) => setTimeout(r, 3000));
+        const d = await getDiagnostic(id);
+        if (d.status === "DONE") {
+          setResponse(d.response);
+          done = true;
+        } else if (d.status === "FAILED") {
+          setError(d.response || "Falha ao gerar o diagnóstico.");
+          done = true;
+        }
+      }
+      if (!done) setError("O diagnóstico está demorando mais que o esperado — aparecerá no histórico em instantes.");
       const hist = await getDiagnosticHistory(selectedClient);
       setHistory(Array.isArray(hist) ? hist : hist.data || []);
-    } catch {
-      setError("Erro ao executar diagnostico.");
+    } catch (err: any) {
+      setError(err?.response?.data?.error || "Erro ao executar diagnostico.");
     } finally {
       setAnalyzing(false);
     }
@@ -176,7 +187,7 @@ function DiagnosticsContent() {
           {analyzing ? (
             <div className="flex items-center gap-3 text-[#9b95ad]">
               <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
-              Processando analise...
+              A IA está analisando o ambiente... isso pode levar até ~2 min. Pode continuar usando o sistema.
             </div>
           ) : (
             <div className="text-sm whitespace-pre-wrap">{response}</div>

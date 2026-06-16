@@ -165,6 +165,11 @@ export async function getDiagnosticHistory(clientId: string) {
   return data;
 }
 
+export async function getDiagnostic(id: string) {
+  const { data } = await api.get(`/diagnostics/${id}`);
+  return data;
+}
+
 export async function getPresets() {
   const { data } = await api.get('/diagnostics/presets');
   return data;

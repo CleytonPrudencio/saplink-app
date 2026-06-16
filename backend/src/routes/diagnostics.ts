@@ -72,22 +72,30 @@ router.post('/', async (req: Request, res: Response) => {
       })),
     };
 
-    // Limite mensal do plano para diagnósticos de IA
+    // Limite mensal do plano (antes de criar o job)
     await assertWithinLimit(req.consultancyId!, 'aiDiagnostics');
 
-    const response = await diagnose(query, context);
-
-    // Save diagnostic + contabiliza uso
+    // Cria o job PENDENTE e responde NA HORA (202). A IA roda em background.
+    const consultancyId = req.consultancyId!;
     const diagnostic = await prisma.diagnostic.create({
-      data: {
-        query,
-        response,
-        clientId,
-      },
+      data: { query, clientId, status: 'PENDING', response: '' },
     });
-    await incrementAiUsage(req.consultancyId!);
+    res.status(202).json(diagnostic);
 
-    res.status(201).json(diagnostic);
+    // Processamento assíncrono (não bloqueia a resposta)
+    (async () => {
+      try {
+        const response = await diagnose(query, context);
+        await prisma.diagnostic.update({ where: { id: diagnostic.id }, data: { response, status: 'DONE' } });
+        await incrementAiUsage(consultancyId);
+      } catch (e) {
+        console.error('Diagnostic async error:', e);
+        await prisma.diagnostic.update({
+          where: { id: diagnostic.id },
+          data: { status: 'FAILED', response: 'Não foi possível gerar o diagnóstico. Tente novamente.' },
+        });
+      }
+    })();
   } catch (error) {
     if (error instanceof LimitError) {
       res.status(402).json({ error: error.message });
@@ -96,6 +104,18 @@ router.post('/', async (req: Request, res: Response) => {
     console.error('Diagnostic error:', error);
     res.status(500).json({ error: 'Erro ao processar diagnóstico' });
   }
+});
+
+// GET /:id — status/resultado de um diagnóstico (para polling). Escopo do tenant.
+router.get('/:id', async (req: Request, res: Response) => {
+  const d = await prisma.diagnostic.findFirst({
+    where: { id: req.params.id, client: { consultancyId: req.consultancyId! } },
+  });
+  if (!d) {
+    res.status(404).json({ error: 'Diagnóstico não encontrado' });
+    return;
+  }
+  res.json(d);
 });
 
 // GET /client/:clientId — list diagnostic history

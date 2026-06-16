@@ -92,7 +92,8 @@ model Alert {
 model Diagnostic {
   id        String   @id @default(uuid())
   query     String
-  response  String
+  response  String   @default("")
+  status    String   @default("DONE") // PENDING | DONE | FAILED
   clientId  String
   client    Client   @relation(fields: [clientId], references: [id])
   createdAt DateTime @default(now())
