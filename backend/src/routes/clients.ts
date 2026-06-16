@@ -2,6 +2,8 @@ import { Router, Request, Response } from 'express';
 import prisma from '../lib/prisma';
 import { authMiddleware } from '../middleware/auth';
 import { tenancyMiddleware } from '../middleware/tenancy';
+import { requireConsultancyAdmin } from '../middleware/roles';
+import { assertWithinLimit, LimitError } from '../services/billing';
 
 const router = Router();
 router.use(authMiddleware, tenancyMiddleware);
@@ -54,19 +56,21 @@ router.get('/:id', async (req: Request, res: Response) => {
   }
 });
 
-// POST / — create client
-router.post('/', async (req: Request, res: Response) => {
+// POST / — create client (só admin do tenant; respeita limite do plano)
+router.post('/', requireConsultancyAdmin, async (req: Request, res: Response) => {
   try {
     const { name, cnpj } = req.body;
 
-    if (!name) {
+    if (!name || typeof name !== 'string' || name.trim().length === 0) {
       res.status(400).json({ error: 'Nome do cliente é obrigatório' });
       return;
     }
 
+    await assertWithinLimit(req.consultancyId!, 'clients');
+
     const client = await prisma.client.create({
       data: {
-        name,
+        name: name.trim(),
         cnpj: cnpj || null,
         consultancyId: req.consultancyId!,
       },
@@ -74,13 +78,17 @@ router.post('/', async (req: Request, res: Response) => {
 
     res.status(201).json(client);
   } catch (error) {
+    if (error instanceof LimitError) {
+      res.status(402).json({ error: error.message });
+      return;
+    }
     console.error('Create client error:', error);
     res.status(500).json({ error: 'Erro ao criar cliente' });
   }
 });
 
-// PUT /:id — update client
-router.put('/:id', async (req: Request, res: Response) => {
+// PUT /:id — update client (só admin do tenant)
+router.put('/:id', requireConsultancyAdmin, async (req: Request, res: Response) => {
   try {
     const existing = await prisma.client.findFirst({
       where: {
@@ -112,8 +120,8 @@ router.put('/:id', async (req: Request, res: Response) => {
   }
 });
 
-// DELETE /:id — delete client
-router.delete('/:id', async (req: Request, res: Response) => {
+// DELETE /:id — delete client (só admin do tenant)
+router.delete('/:id', requireConsultancyAdmin, async (req: Request, res: Response) => {
   try {
     const existing = await prisma.client.findFirst({
       where: {

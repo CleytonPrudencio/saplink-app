@@ -3,6 +3,7 @@ import prisma from '../lib/prisma';
 import { authMiddleware } from '../middleware/auth';
 import { tenancyMiddleware } from '../middleware/tenancy';
 import { diagnose } from '../services/ai';
+import { assertWithinLimit, incrementAiUsage, LimitError } from '../services/billing';
 
 const router = Router();
 router.use(authMiddleware, tenancyMiddleware);
@@ -71,9 +72,12 @@ router.post('/', async (req: Request, res: Response) => {
       })),
     };
 
+    // Limite mensal do plano para diagnósticos de IA
+    await assertWithinLimit(req.consultancyId!, 'aiDiagnostics');
+
     const response = await diagnose(query, context);
 
-    // Save diagnostic
+    // Save diagnostic + contabiliza uso
     const diagnostic = await prisma.diagnostic.create({
       data: {
         query,
@@ -81,9 +85,14 @@ router.post('/', async (req: Request, res: Response) => {
         clientId,
       },
     });
+    await incrementAiUsage(req.consultancyId!);
 
     res.status(201).json(diagnostic);
   } catch (error) {
+    if (error instanceof LimitError) {
+      res.status(402).json({ error: error.message });
+      return;
+    }
     console.error('Diagnostic error:', error);
     res.status(500).json({ error: 'Erro ao processar diagnóstico' });
   }

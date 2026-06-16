@@ -12,4 +12,6 @@ COPY . .
 
 EXPOSE 8080
 
-CMD ["sh", "-c", "npx prisma migrate deploy && npm run seed && node --import tsx src/server.ts"]
+# Seed NÃO roda no boot (evita risco de dados). Rode manualmente uma vez em banco novo:
+#   docker compose exec backend npm run seed
+CMD ["sh", "-c", "npx prisma migrate deploy && node --import tsx src/server.ts"]

@@ -17,9 +17,17 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401 && typeof window !== 'undefined') {
-      localStorage.removeItem('token');
-      window.location.href = '/login';
+    if (typeof window !== 'undefined') {
+      const status = error.response?.status;
+      if (status === 401) {
+        localStorage.removeItem('token');
+        window.location.href = '/login';
+      } else if (status === 403 && error.response?.data?.error === 'subscription_inactive') {
+        // Assinatura suspensa/inadimplente: leva para a tela de pagamento
+        if (!window.location.pathname.startsWith('/billing')) {
+          window.location.href = '/billing';
+        }
+      }
     }
     return Promise.reject(error);
   }
@@ -54,6 +62,42 @@ export async function getClients() {
 
 export async function getClient(id: string) {
   const { data } = await api.get(`/clients/${id}`);
+  return data;
+}
+
+export async function createClient(payload: { name: string; cnpj?: string }) {
+  const { data } = await api.post('/clients', payload);
+  return data;
+}
+
+export async function updateClient(id: string, payload: { name?: string; cnpj?: string }) {
+  const { data } = await api.put(`/clients/${id}`, payload);
+  return data;
+}
+
+export async function deleteClient(id: string) {
+  const { data } = await api.delete(`/clients/${id}`);
+  return data;
+}
+
+// Billing
+export async function getBilling() {
+  const { data } = await api.get('/billing');
+  return data;
+}
+
+export async function getPlans() {
+  const { data } = await api.get('/billing/plans');
+  return data;
+}
+
+export async function checkoutPlan(planKey: string) {
+  const { data } = await api.post('/billing/checkout', { planKey });
+  return data;
+}
+
+export async function cancelSubscription() {
+  const { data } = await api.post('/billing/cancel');
   return data;
 }
 

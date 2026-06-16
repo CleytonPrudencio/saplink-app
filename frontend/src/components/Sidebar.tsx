@@ -23,6 +23,7 @@ const menuItems = [
   { href: "/diagnostics", label: "Diagnostico IA", icon: "\uD83E\uDD16" },
   { href: "/dead-code", label: "Dead Code", icon: "\uD83D\uDD0D" },
   { href: "/reports", label: "Relatorios", icon: "\uD83D\uDCC4" },
+  { href: "/billing", label: "Cobran\u00E7a", icon: "\uD83D\uDCB3" },
   { href: "/settings", label: "Configuracoes", icon: "\u2699\uFE0F" },
 ];
 

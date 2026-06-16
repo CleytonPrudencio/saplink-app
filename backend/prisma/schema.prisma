@@ -8,25 +8,40 @@ datasource db {
 }
 
 model Consultancy {
-  id        String   @id @default(uuid())
-  name      String
-  cnpj      String?  @unique
-  plan      String   @default("STARTER")
-  logoUrl   String?
-  createdAt DateTime @default(now())
-  users     User[]
-  clients   Client[]
+  id            String         @id @default(uuid())
+  name          String
+  cnpj          String?        @unique
+  plan          String         @default("STARTER") // legado; fonte da verdade = Subscription
+  logoUrl       String?
+  primaryColor  String?        // white-label (hex)
+  createdAt     DateTime       @default(now())
+  users         User[]
+  clients       Client[]
+  subscription  Subscription?
+  invoices      Invoice[]
+  usageCounters UsageCounter[]
 }
 
 model User {
-  id            String      @id @default(uuid())
-  email         String      @unique
+  id            String               @id @default(uuid())
+  email         String               @unique
   password      String
   name          String
-  role          String      @default("CONSULTANT_USER")
+  role          String               @default("CONSULTANCY_USER") // PLATFORM_ADMIN | CONSULTANCY_ADMIN | CONSULTANCY_USER
   consultancyId String
-  consultancy   Consultancy @relation(fields: [consultancyId], references: [id])
-  createdAt     DateTime    @default(now())
+  consultancy   Consultancy          @relation(fields: [consultancyId], references: [id])
+  createdAt     DateTime             @default(now())
+  resetTokens   PasswordResetToken[]
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
 }
 
 model Client {
@@ -39,6 +54,7 @@ model Client {
   integrations  Integration[]
   alerts        Alert[]
   diagnostics   Diagnostic[]
+  deadCode      DeadCode[]
   createdAt     DateTime      @default(now())
 }
 
@@ -90,5 +106,71 @@ model DeadCode {
   usageCount     Int       @default(0)
   recommendation String
   clientId       String
+  client         Client    @relation(fields: [clientId], references: [id])
   createdAt      DateTime  @default(now())
+}
+
+// ===== Billing / Assinatura =====
+
+model Plan {
+  key                      String         @id // STARTER | PRO | ENTERPRISE
+  name                     String
+  priceCents               Int
+  interval                 String         @default("MONTH")
+  maxClients               Int
+  maxIntegrations          Int
+  maxAiDiagnosticsPerMonth Int
+  maxUsers                 Int
+  active                   Boolean        @default(true)
+  subscriptions            Subscription[]
+}
+
+model Subscription {
+  id                     String       @id @default(uuid())
+  consultancyId          String       @unique
+  consultancy            Consultancy  @relation(fields: [consultancyId], references: [id])
+  planKey                String
+  plan                   Plan         @relation(fields: [planKey], references: [key])
+  status                 String       @default("TRIALING") // TRIALING | ACTIVE | PAST_DUE | SUSPENDED | CANCELED
+  trialEndsAt            DateTime?
+  currentPeriodEnd       DateTime?
+  graceUntil             DateTime?
+  cancelAtPeriodEnd      Boolean      @default(false)
+  provider               String       @default("manual") // manual | stripe | asaas | iugu
+  providerCustomerId     String?
+  providerSubscriptionId String?
+  createdAt              DateTime     @default(now())
+  updatedAt              DateTime     @updatedAt
+  invoices               Invoice[]
+}
+
+model Invoice {
+  id                String        @id @default(uuid())
+  consultancyId     String
+  consultancy       Consultancy   @relation(fields: [consultancyId], references: [id])
+  subscriptionId    String?
+  subscription      Subscription? @relation(fields: [subscriptionId], references: [id])
+  amountCents       Int
+  status            String        @default("OPEN") // OPEN | PAID | FAILED
+  providerInvoiceId String?
+  dueDate           DateTime?
+  paidAt            DateTime?
+  createdAt         DateTime      @default(now())
+}
+
+model UsageCounter {
+  id            String      @id @default(uuid())
+  consultancyId String
+  consultancy   Consultancy @relation(fields: [consultancyId], references: [id])
+  period        String // YYYY-MM
+  aiDiagnostics Int         @default(0)
+
+  @@unique([consultancyId, period])
+}
+
+model WebhookEvent {
+  id              String   @id @default(uuid())
+  provider        String
+  providerEventId String   @unique
+  processedAt     DateTime @default(now())
 }

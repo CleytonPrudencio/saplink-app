@@ -25,8 +25,43 @@ const MOCK_RESPONSE = `**Causa Raiz:** [Simulação] Erro de configuração no c
 - Documente o mapeamento de campos no Integration Directory para referência da equipe`;
 
 export async function diagnose(query: string, context: object): Promise<string> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const userMessage = `Contexto do cliente:
+${JSON.stringify(context, null, 2)}
 
+Consulta do usuário:
+${query}`;
+
+  // 1) Ollama local (grátis), se OLLAMA_URL estiver configurado
+  const ollamaUrl = process.env.OLLAMA_URL;
+  if (ollamaUrl) {
+    const model = process.env.OLLAMA_MODEL || 'qwen2.5:3b';
+    try {
+      const resp = await fetch(`${ollamaUrl}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model,
+          stream: false,
+          // num_predict limita o tamanho da resposta -> muito mais rápido em CPU
+          options: { num_predict: 450, temperature: 0.4 },
+          messages: [
+            { role: 'system', content: SYSTEM_PROMPT },
+            { role: 'user', content: userMessage },
+          ],
+        }),
+      });
+      if (!resp.ok) throw new Error(`Ollama HTTP ${resp.status}`);
+      const data = (await resp.json()) as { message?: { content?: string } };
+      const text = data?.message?.content?.trim();
+      return text && text.length > 0 ? text : MOCK_RESPONSE;
+    } catch (error) {
+      console.error('Ollama diagnosis error:', error);
+      return MOCK_RESPONSE;
+    }
+  }
+
+  // 2) Claude (Anthropic), se houver chave
+  const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     // Return mock response when no API key is configured
     return MOCK_RESPONSE;
@@ -34,12 +69,6 @@ export async function diagnose(query: string, context: object): Promise<string> 
 
   try {
     const client = new Anthropic({ apiKey });
-
-    const userMessage = `Contexto do cliente:
-${JSON.stringify(context, null, 2)}
-
-Consulta do usuário:
-${query}`;
 
     const response = await client.messages.create({
       model: 'claude-sonnet-4-20250514',

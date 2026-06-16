@@ -3,8 +3,20 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import prisma from '../lib/prisma';
 import { authMiddleware } from '../middleware/auth';
+import { JWT_SECRET, JWT_EXPIRES_IN } from '../config';
+import { startTrial } from '../services/billing';
+import rateLimit from 'express-rate-limit';
 
 const router = Router();
+
+// Anti brute-force: máx 10 tentativas de login por IP a cada 15 min
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Muitas tentativas. Tente novamente em alguns minutos.' },
+});
 
 // POST /register
 router.post('/register', async (req: Request, res: Response) => {
@@ -37,12 +49,14 @@ router.post('/register', async (req: Request, res: Response) => {
         email,
         password: hashedPassword,
         name,
-        role: 'CONSULTANT_ADMIN',
+        role: 'CONSULTANCY_ADMIN',
         consultancyId: consultancy.id,
       },
     });
 
-    const secret = process.env.JWT_SECRET || 'saplink-jwt-secret';
+    // Novo tenant começa com período de teste
+    await startTrial(consultancy.id, 'STARTER');
+
     const token = jwt.sign(
       {
         userId: user.id,
@@ -50,8 +64,8 @@ router.post('/register', async (req: Request, res: Response) => {
         role: user.role,
         consultancyId: consultancy.id,
       },
-      secret,
-      { expiresIn: '7d' }
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRES_IN }
     );
 
     res.status(201).json({
@@ -75,7 +89,7 @@ router.post('/register', async (req: Request, res: Response) => {
 });
 
 // POST /login
-router.post('/login', async (req: Request, res: Response) => {
+router.post('/login', loginLimiter, async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
 
@@ -100,7 +114,6 @@ router.post('/login', async (req: Request, res: Response) => {
       return;
     }
 
-    const secret = process.env.JWT_SECRET || 'saplink-jwt-secret';
     const token = jwt.sign(
       {
         userId: user.id,
@@ -108,8 +121,8 @@ router.post('/login', async (req: Request, res: Response) => {
         role: user.role,
         consultancyId: user.consultancyId,
       },
-      secret,
-      { expiresIn: '7d' }
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRES_IN }
     );
 
     res.json({
@@ -155,6 +168,7 @@ router.get('/me', authMiddleware, async (req: Request, res: Response) => {
         name: user.consultancy.name,
         plan: user.consultancy.plan,
         logoUrl: user.consultancy.logoUrl,
+        primaryColor: user.consultancy.primaryColor,
       },
     });
   } catch (error) {

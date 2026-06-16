@@ -4,16 +4,14 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('Seeding SAPLINK database...');
+  // Idempotente: NUNCA apaga dados. Só popula se o banco estiver vazio.
+  const existing = await prisma.consultancy.count();
+  if (existing > 0) {
+    console.log('Seed pulado: banco já populado (nada foi apagado).');
+    return;
+  }
 
-  // Clean existing data
-  await prisma.diagnostic.deleteMany();
-  await prisma.deadCode.deleteMany();
-  await prisma.alert.deleteMany();
-  await prisma.integration.deleteMany();
-  await prisma.client.deleteMany();
-  await prisma.user.deleteMany();
-  await prisma.consultancy.deleteMany();
+  console.log('Seeding SAPLINK database (banco vazio)...');
 
   // 1. Create consultancy
   const consultancy = await prisma.consultancy.create({

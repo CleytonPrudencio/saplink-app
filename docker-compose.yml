@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:16-alpine
@@ -12,6 +10,53 @@ services:
       - "5433:5432"
     volumes:
       - saplink_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U saplink -d saplink"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: saplink-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama
+
+  backend:
+    build:
+      context: ./backend
+    container_name: saplink-backend
+    environment:
+      DATABASE_URL: "postgresql://saplink:saplink123@postgres:5432/saplink"
+      JWT_SECRET: "saplink-jwt-secret-2026-super-seguro"
+      ANTHROPIC_API_KEY: ""
+      # IA local grátis via Ollama (deixe OLLAMA_URL vazio para usar Claude/mock)
+      OLLAMA_URL: "http://ollama:11434"
+      OLLAMA_MODEL: "qwen2.5:3b"
+      PORT: "8080"
+      SIMULATION_INTERVAL: "30000"
+      BILLING_WEBHOOK_SECRET: "dev-billing-webhook-secret"
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: saplink-frontend
+    environment:
+      NEXT_PUBLIC_API_URL: "http://localhost:8080/api"
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
 
 volumes:
   saplink_data:
+  ollama_models:
