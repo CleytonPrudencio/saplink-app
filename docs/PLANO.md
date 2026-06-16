@@ -22,7 +22,7 @@ Objetivo: dá pra cadastrar empresa, cobrar, cortar quem não paga, operar o ten
 ### 1A. RBAC + gestão de usuários
 - [x] 1.1 Papéis `PLATFORM_ADMIN | CONSULTANCY_ADMIN | CONSULTANCY_USER` + middleware `requireRole` (`middleware/roles.ts`)
 - [x] 1.2 Gating das rotas mutáveis de cliente (criar/editar/deletar só admin) — testado 403
-- [ ] 1.3 Fluxo de convite de usuários ao tenant (endpoint + UI) — PENDENTE
+- [x] 1.3 Gestão de usuários do tenant (`routes/users.ts` + UI em Settings): criar/listar/remover, senha temporária, limite de plano, RBAC
 - [x] 1.4 Painel super-admin backend (`routes/platform.ts`: listar/suspender/reativar) — testado; UI PENDENTE
 
 ### 1B. Billing + corte de acesso  — CONCLUÍDO e testado e2e

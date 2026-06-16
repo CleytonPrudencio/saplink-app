@@ -112,6 +112,22 @@ export async function updateBranding(payload: { name?: string; logoUrl?: string 
   return data;
 }
 
+// Usuários do tenant
+export async function getUsers() {
+  const { data } = await api.get('/users');
+  return data;
+}
+
+export async function createUser(payload: { name: string; email: string; role?: string }) {
+  const { data } = await api.post('/users', payload);
+  return data;
+}
+
+export async function deleteUser(id: string) {
+  const { data } = await api.delete(`/users/${id}`);
+  return data;
+}
+
 // Password reset
 export async function forgotPassword(email: string) {
   const { data } = await api.post('/auth/forgot-password', { email });

@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getMe, updateBranding } from "@/lib/api";
+import { getMe, updateBranding, getUsers, createUser, deleteUser } from "@/lib/api";
+
+interface TeamUser {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+}
 
 interface Consultancy {
   id: string;
@@ -30,6 +37,19 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [savedMsg, setSavedMsg] = useState("");
 
+  const [team, setTeam] = useState<TeamUser[]>([]);
+  const [nu, setNu] = useState({ name: "", email: "", role: "CONSULTANCY_USER" });
+  const [addingUser, setAddingUser] = useState(false);
+  const [userMsg, setUserMsg] = useState("");
+
+  async function loadTeam() {
+    try {
+      setTeam(await getUsers());
+    } catch {
+      /* sem permissão ou erro: ignora */
+    }
+  }
+
   useEffect(() => {
     getMe()
       .then((data) => {
@@ -37,10 +57,37 @@ export default function SettingsPage() {
         setName(data.consultancy?.name || "");
         setLogoUrl(data.consultancy?.logoUrl || "");
         setPrimaryColor(data.consultancy?.primaryColor || "#a855f7");
+        if (data.role === "CONSULTANCY_ADMIN" || data.role === "PLATFORM_ADMIN") loadTeam();
       })
       .catch(() => setError("Erro ao carregar dados do usuario."))
       .finally(() => setLoading(false));
   }, []);
+
+  async function onAddUser(e: React.FormEvent) {
+    e.preventDefault();
+    setAddingUser(true);
+    setUserMsg("");
+    try {
+      const created = await createUser({ name: nu.name.trim(), email: nu.email.trim(), role: nu.role });
+      setUserMsg(`Usuário criado. Senha temporária: ${created.tempPassword}`);
+      setNu({ name: "", email: "", role: "CONSULTANCY_USER" });
+      await loadTeam();
+    } catch (err: any) {
+      setUserMsg(err?.response?.data?.error || "Não foi possível criar o usuário.");
+    } finally {
+      setAddingUser(false);
+    }
+  }
+
+  async function onRemoveUser(id: string, nm: string) {
+    if (!window.confirm(`Remover ${nm}?`)) return;
+    try {
+      await deleteUser(id);
+      await loadTeam();
+    } catch (err: any) {
+      alert(err?.response?.data?.error || "Não foi possível remover.");
+    }
+  }
 
   async function onSaveBranding(e: React.FormEvent) {
     e.preventDefault();
@@ -105,6 +152,44 @@ export default function SettingsPage() {
             {saving ? "Salvando..." : "Salvar marca"}
           </button>
         </form>
+      )}
+
+      {isAdmin && (
+        <div className="bg-[#1a1527] rounded-xl p-6 border border-white/[0.08] max-w-2xl space-y-4">
+          <h2 className="text-lg font-semibold">Usuários da equipe</h2>
+          <div className="space-y-2">
+            {team.map((u) => (
+              <div key={u.id} className="flex items-center justify-between bg-[#0f0b1a] rounded-lg px-3 py-2">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium truncate">{u.name} <span className="text-[#9b95ad]">· {u.email}</span></p>
+                  <p className="text-xs text-[#9b95ad]">{u.role}</p>
+                </div>
+                {u.id !== user.id && (
+                  <button onClick={() => onRemoveUser(u.id, u.name)} aria-label={`Remover ${u.name}`}
+                    className="text-[#9b95ad] hover:text-rose-400 px-2">✕</button>
+                )}
+              </div>
+            ))}
+            {team.length === 0 && <p className="text-sm text-[#9b95ad]">Nenhum usuário ainda.</p>}
+          </div>
+
+          <form onSubmit={onAddUser} className="grid grid-cols-1 sm:grid-cols-4 gap-2 pt-2 border-t border-white/[0.06]">
+            <input value={nu.name} onChange={(e) => setNu({ ...nu, name: e.target.value })} required placeholder="Nome"
+              className="bg-[#0f0b1a] border border-white/[0.1] rounded-lg px-3 py-2 text-sm" />
+            <input value={nu.email} onChange={(e) => setNu({ ...nu, email: e.target.value })} required type="email" placeholder="email@empresa.com"
+              className="bg-[#0f0b1a] border border-white/[0.1] rounded-lg px-3 py-2 text-sm sm:col-span-1" />
+            <select value={nu.role} onChange={(e) => setNu({ ...nu, role: e.target.value })}
+              className="bg-[#0f0b1a] border border-white/[0.1] rounded-lg px-3 py-2 text-sm">
+              <option value="CONSULTANCY_USER">Usuário</option>
+              <option value="CONSULTANCY_ADMIN">Admin</option>
+            </select>
+            <button type="submit" disabled={addingUser}
+              className="px-3 py-2 rounded-lg bg-purple-500 text-white text-sm font-semibold disabled:opacity-40">
+              {addingUser ? "..." : "Adicionar"}
+            </button>
+          </form>
+          {userMsg && <p className="text-sm text-amber-300 break-all">{userMsg}</p>}
+        </div>
       )}
     </div>
   );
