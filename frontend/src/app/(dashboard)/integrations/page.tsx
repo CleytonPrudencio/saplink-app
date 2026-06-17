@@ -13,12 +13,19 @@ interface Integration {
   status: string;
   clientName?: string;
   clientId?: string;
+  client?: { id: string; name: string };
+  _count?: { alerts: number };
+  updatedAt?: string;
   description?: string;
   latency?: number;
   errorRate?: number;
   uptime?: number;
   config?: Record<string, unknown>;
   lastTestedAt?: string;
+}
+
+function clientOf(i: Integration) {
+  return { id: i.client?.id || i.clientId || "", name: i.client?.name || i.clientName || "—" };
 }
 
 interface TestResult {
@@ -60,6 +67,12 @@ export default function IntegrationsPage() {
   const [editForm, setEditForm] = useState<{ name: string; description: string; config: Record<string, string> }>({ name: "", description: "", config: {} });
   const [savingEdit, setSavingEdit] = useState(false);
   const { notify } = useToast();
+
+  // Filtros
+  const [search, setSearch] = useState("");
+  const [filterClient, setFilterClient] = useState("");
+  const [filterType, setFilterType] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
 
   useEffect(() => {
     loadIntegrations();
@@ -161,6 +174,26 @@ export default function IntegrationsPage() {
     offline: integrations.filter((i) => i.status === "OFFLINE").length,
   };
 
+  // Listas únicas para os selects
+  const clientOptions = Array.from(
+    new Map(integrations.map((i) => [clientOf(i).id, clientOf(i).name])).entries()
+  ).filter(([id]) => id).sort((a, b) => a[1].localeCompare(b[1]));
+  // dedupe por tipo normalizado (o seed mistura "OData"/"ODATA")
+  const typeOptions = Array.from(new Set(integrations.map((i) => (i.type || "").toUpperCase()).filter(Boolean))).sort();
+
+  const filtered = integrations.filter((i) => {
+    if (filterClient && clientOf(i).id !== filterClient) return false;
+    if (filterType && (i.type || "").toUpperCase() !== filterType) return false;
+    if (filterStatus && i.status !== filterStatus) return false;
+    if (search) {
+      const q = search.toLowerCase();
+      if (!i.name.toLowerCase().includes(q) && !clientOf(i).name.toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
+  const hasFilters = !!(search || filterClient || filterType || filterStatus);
+  function clearFilters() { setSearch(""); setFilterClient(""); setFilterType(""); setFilterStatus(""); }
+
   if (loading) return <div className="text-[#9b95ad]">Carregando...</div>;
   if (error) return <div className="text-rose-400">{error}</div>;
 
@@ -192,27 +225,65 @@ export default function IntegrationsPage() {
         </div>
       </div>
 
-      {/* Stats Bar */}
+      {/* Stats Bar (clicáveis: filtram por status) */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: "Total", value: stats.total, color: "text-purple-400" },
-          { label: "Ativas", value: stats.active, color: "text-emerald-400" },
-          { label: "Com Erro", value: stats.error, color: "text-rose-400" },
-          { label: "Offline", value: stats.offline, color: "text-gray-400" },
+          { label: "Total", value: stats.total, color: "text-purple-400", status: "" },
+          { label: "Ativas", value: stats.active, color: "text-emerald-400", status: "ACTIVE" },
+          { label: "Com Erro", value: stats.error, color: "text-rose-400", status: "ERROR" },
+          { label: "Offline", value: stats.offline, color: "text-gray-400", status: "OFFLINE" },
         ].map((stat) => (
-          <div
+          <button
             key={stat.label}
-            className="bg-[#1a1527] rounded-xl p-4 border border-white/[0.08]"
+            onClick={() => setFilterStatus(stat.status)}
+            className={`text-left bg-[#1a1527] rounded-xl p-4 border transition cursor-pointer ${filterStatus === stat.status ? "border-purple-500/50" : "border-white/[0.08] hover:border-white/[0.2]"}`}
           >
             <p className="text-xs text-[#9b95ad] uppercase tracking-wider">{stat.label}</p>
             <p className={`text-2xl font-bold mt-1 ${stat.color}`}>{stat.value}</p>
-          </div>
+          </button>
         ))}
       </div>
 
+      {/* Filtros */}
+      <div className="bg-[#1a1527] rounded-xl p-3 border border-white/[0.08] flex flex-col lg:flex-row gap-2 lg:items-center">
+        <div className="relative flex-1 min-w-0">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9b95ad] text-sm">🔍</span>
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar por nome ou cliente..."
+            className="w-full pl-9 pr-3 py-2 bg-[#0f0b1a] border border-white/[0.1] rounded-lg text-sm focus:outline-none focus:border-purple-500/50"
+          />
+        </div>
+        <select value={filterClient} onChange={(e) => setFilterClient(e.target.value)} className="px-3 py-2 bg-[#0f0b1a] border border-white/[0.1] rounded-lg text-sm focus:outline-none focus:border-purple-500/50">
+          <option value="">Todos os clientes</option>
+          {clientOptions.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+        </select>
+        <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="px-3 py-2 bg-[#0f0b1a] border border-white/[0.1] rounded-lg text-sm focus:outline-none focus:border-purple-500/50">
+          <option value="">Todos os tipos</option>
+          {typeOptions.map((t) => <option key={t} value={t}>{t.replace(/_/g, " ")}</option>)}
+        </select>
+        <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="px-3 py-2 bg-[#0f0b1a] border border-white/[0.1] rounded-lg text-sm focus:outline-none focus:border-purple-500/50">
+          <option value="">Todos os status</option>
+          <option value="ACTIVE">Ativas</option>
+          <option value="ERROR">Com erro</option>
+          <option value="OFFLINE">Offline</option>
+          <option value="PENDING">Pendentes</option>
+        </select>
+        {hasFilters && (
+          <button onClick={clearFilters} className="px-3 py-2 text-sm text-[#9b95ad] hover:text-white rounded-lg hover:bg-white/[0.06] transition cursor-pointer shrink-0">
+            Limpar
+          </button>
+        )}
+      </div>
+
+      {hasFilters && (
+        <p className="text-xs text-[#9b95ad] -mt-3">Mostrando {filtered.length} de {integrations.length} integrações</p>
+      )}
+
       {/* Integration Cards */}
       <div className="space-y-3">
-        {integrations.map((integ) => {
+        {filtered.map((integ) => {
           const sc = statusConfig[integ.status] || statusConfig.OFFLINE;
           const tc = typeColors[integ.type] || "bg-gray-500/20 text-gray-400";
           const isExpanded = expandedId === integ.id;
@@ -237,9 +308,7 @@ export default function IntegrationsPage() {
                 {/* Name & Client */}
                 <div className="flex-1 min-w-0">
                   <p className="font-medium truncate">{integ.name}</p>
-                  {integ.clientName && (
-                    <p className="text-xs text-[#9b95ad] mt-0.5">{integ.clientName}</p>
-                  )}
+                  <p className="text-xs text-[#9b95ad] mt-0.5">{clientOf(integ).name}</p>
                 </div>
 
                 {/* Status Badge */}
@@ -409,10 +478,10 @@ export default function IntegrationsPage() {
 
                     {/* Actions */}
                     <div className="flex gap-3 pt-2">
-                      <a href={`/diagnostics?clientId=${integ.clientId}`} className="px-4 py-2 rounded-lg bg-purple-500/15 border border-purple-500/20 text-purple-400 text-xs font-medium hover:bg-purple-500/20 transition">
+                      <a href={`/diagnostics?clientId=${clientOf(integ).id}&integrationId=${integ.id}&auto=1`} className="px-4 py-2 rounded-lg bg-purple-500/15 border border-purple-500/20 text-purple-400 text-xs font-medium hover:bg-purple-500/20 transition">
                         🤖 Diagnosticar com IA
                       </a>
-                      <a href={`/clients/${integ.clientId}`} className="px-4 py-2 rounded-lg bg-white/5 border border-white/[0.08] text-[#9b95ad] text-xs font-medium hover:text-white transition">
+                      <a href={`/clients/${clientOf(integ).id}`} className="px-4 py-2 rounded-lg bg-white/5 border border-white/[0.08] text-[#9b95ad] text-xs font-medium hover:text-white transition">
                         👁️ Ver cliente
                       </a>
                     </div>
@@ -422,6 +491,13 @@ export default function IntegrationsPage() {
             </div>
           );
         })}
+
+        {filtered.length === 0 && integrations.length > 0 && (
+          <div className="bg-[#1a1527] rounded-xl p-8 border border-white/[0.08] text-center">
+            <p className="text-[#9b95ad]">Nenhuma integração corresponde aos filtros.</p>
+            <button onClick={clearFilters} className="mt-3 px-4 py-2 text-sm text-purple-400 hover:text-purple-300 cursor-pointer">Limpar filtros</button>
+          </div>
+        )}
 
         {integrations.length === 0 && (
           <div className="bg-[#1a1527] rounded-xl p-8 border border-white/[0.08] text-center">
