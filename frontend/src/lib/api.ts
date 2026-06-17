@@ -268,6 +268,21 @@ export async function deleteIntegration(id: string) {
   return data;
 }
 
+export async function syncIntegration(id: string) {
+  const { data } = await api.post(`/integrations/${id}/sync`);
+  return data;
+}
+
+export async function syncAllIntegrations() {
+  const { data } = await api.post('/integrations/sync-all');
+  return data;
+}
+
+export async function updateIntegration(id: string, payload: Record<string, unknown>) {
+  const { data } = await api.put(`/integrations/${id}`, payload);
+  return data;
+}
+
 // Dead Code
 export async function getDeadCode(clientId: string) {
   const { data } = await api.get(`/dead-code/client/${clientId}`);

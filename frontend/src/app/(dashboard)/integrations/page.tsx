@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getAllIntegrations, testIntegration, deleteIntegration } from "@/lib/api";
+import { getAllIntegrations, testIntegration, deleteIntegration, syncIntegration, syncAllIntegrations, updateIntegration } from "@/lib/api";
+import { Modal, Field, inputClass } from "@/components/Modal";
+import { useToast } from "@/components/Toast";
 
 interface Integration {
   id: string;
@@ -52,10 +54,64 @@ export default function IntegrationsPage() {
   const [testingId, setTestingId] = useState<string | null>(null);
   const [testResults, setTestResults] = useState<Record<string, TestResult>>({});
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [syncingId, setSyncingId] = useState<string | null>(null);
+  const [syncingAll, setSyncingAll] = useState(false);
+  const [editing, setEditing] = useState<Integration | null>(null);
+  const [editForm, setEditForm] = useState<{ name: string; description: string; config: Record<string, string> }>({ name: "", description: "", config: {} });
+  const [savingEdit, setSavingEdit] = useState(false);
+  const { notify } = useToast();
 
   useEffect(() => {
     loadIntegrations();
   }, []);
+
+  async function handleSync(id: string) {
+    setSyncingId(id);
+    try {
+      const r = await syncIntegration(id);
+      notify(r?.probe?.ok ? "Sincronizado: integração no ar." : "Sincronizado: integração com falha/offline.", r?.probe?.ok ? "success" : "error");
+      await loadIntegrations();
+    } catch (e: any) {
+      notify(e?.response?.data?.error || "Não foi possível sincronizar.", "error");
+    } finally {
+      setSyncingId(null);
+    }
+  }
+
+  async function handleSyncAll() {
+    setSyncingAll(true);
+    try {
+      const r = await syncAllIntegrations();
+      notify(`Sincronizadas ${r.synced} integração(ões) reais.`, "success");
+      await loadIntegrations();
+    } catch {
+      notify("Falha ao sincronizar.", "error");
+    } finally {
+      setSyncingAll(false);
+    }
+  }
+
+  function openEdit(integ: Integration) {
+    const cfg: Record<string, string> = {};
+    Object.entries(integ.config || {}).forEach(([k, v]) => { cfg[k] = v === "••••••" ? "" : String(v ?? ""); });
+    setEditForm({ name: integ.name, description: integ.description || "", config: cfg });
+    setEditing(integ);
+  }
+
+  async function saveEdit() {
+    if (!editing) return;
+    setSavingEdit(true);
+    try {
+      await updateIntegration(editing.id, { name: editForm.name, description: editForm.description, config: editForm.config });
+      notify("Integração atualizada.", "success");
+      setEditing(null);
+      await loadIntegrations();
+    } catch (e: any) {
+      notify(e?.response?.data?.error || "Falha ao salvar.", "error");
+    } finally {
+      setSavingEdit(false);
+    }
+  }
 
   async function loadIntegrations() {
     try {
@@ -118,12 +174,22 @@ export default function IntegrationsPage() {
             Gerencie todas as integracoes SAP dos seus clientes
           </p>
         </div>
-        <button
-          onClick={() => router.push("/integrations/new")}
-          className="px-5 py-2.5 bg-gradient-to-r from-purple-600 to-purple-500 text-white text-sm font-medium rounded-lg hover:from-purple-500 hover:to-purple-400 transition-all cursor-pointer shrink-0"
-        >
-          + Nova Integracao
-        </button>
+        <div className="flex gap-2 shrink-0">
+          <button
+            onClick={handleSyncAll}
+            disabled={syncingAll}
+            className="px-4 py-2.5 bg-white/[0.06] text-[#e2e0ea] text-sm font-medium rounded-lg hover:bg-white/[0.12] transition-all cursor-pointer disabled:opacity-50"
+            title="Coleta dados reais das integrações OData/REST"
+          >
+            {syncingAll ? "Sincronizando..." : "↻ Sincronizar tudo"}
+          </button>
+          <button
+            onClick={() => router.push("/integrations/new")}
+            className="px-5 py-2.5 bg-gradient-to-r from-purple-600 to-purple-500 text-white text-sm font-medium rounded-lg hover:from-purple-500 hover:to-purple-400 transition-all cursor-pointer"
+          >
+            + Nova Integracao
+          </button>
+        </div>
       </div>
 
       {/* Stats Bar */}
@@ -190,6 +256,20 @@ export default function IntegrationsPage() {
 
                 {/* Actions */}
                 <div className="flex gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    onClick={() => handleSync(integ.id)}
+                    disabled={syncingId === integ.id}
+                    className="px-3 py-1.5 text-xs font-medium bg-cyan-500/20 text-cyan-300 rounded-lg hover:bg-cyan-500/30 transition-colors cursor-pointer disabled:opacity-50"
+                    title="Coleta dados reais (OData/REST)"
+                  >
+                    {syncingId === integ.id ? "..." : "Sincronizar"}
+                  </button>
+                  <button
+                    onClick={() => openEdit(integ)}
+                    className="px-3 py-1.5 text-xs font-medium bg-white/[0.06] text-[#e2e0ea] rounded-lg hover:bg-white/[0.12] transition-colors cursor-pointer"
+                  >
+                    Editar
+                  </button>
                   <button
                     onClick={() => handleTest(integ.id)}
                     disabled={isTesting}
@@ -355,6 +435,40 @@ export default function IntegrationsPage() {
           </div>
         )}
       </div>
+
+      {/* Modal de edição */}
+      <Modal open={!!editing} onClose={() => setEditing(null)} title="Editar integração" size="lg">
+        {editing && (
+          <div className="space-y-4">
+            <Field label="Nome"><input className={inputClass} value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} /></Field>
+            <Field label="Descrição"><input className={inputClass} value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} /></Field>
+            <div>
+              <p className="text-sm text-[#9b95ad] mb-2">Configuração de conexão</p>
+              <div className="space-y-2">
+                {Object.keys(editForm.config).map((k) => {
+                  const sensitive = /pass|secret|apikey|api_key|authvalue|token/i.test(k);
+                  return (
+                    <Field key={k} label={k + (sensitive ? " (deixe em branco p/ manter)" : "")}>
+                      <input
+                        className={inputClass}
+                        type={sensitive ? "password" : "text"}
+                        value={editForm.config[k]}
+                        placeholder={sensitive ? "•••••• (mantém o atual)" : ""}
+                        onChange={(e) => setEditForm({ ...editForm, config: { ...editForm.config, [k]: e.target.value } })}
+                      />
+                    </Field>
+                  );
+                })}
+                {Object.keys(editForm.config).length === 0 && <p className="text-sm text-[#9b95ad]">Sem configuração.</p>}
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <button onClick={() => setEditing(null)} className="px-4 py-2 rounded-lg text-sm bg-white/[0.06]">Cancelar</button>
+              <button disabled={savingEdit} onClick={saveEdit} className="px-4 py-2 rounded-lg text-sm font-semibold bg-purple-500 text-white disabled:opacity-40">Salvar</button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

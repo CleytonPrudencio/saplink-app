@@ -3,7 +3,7 @@ import prisma from '../lib/prisma';
 import { authMiddleware } from '../middleware/auth';
 import { tenancyMiddleware } from '../middleware/tenancy';
 import { syncIntegration, isMonitorable } from '../services/connectors';
-import { encryptConfig, decryptConfig, maskConfig } from '../lib/crypto';
+import { encryptConfig, decryptConfig, maskConfig, SENSITIVE } from '../lib/crypto';
 
 const router = Router();
 router.use(authMiddleware, tenancyMiddleware);
@@ -319,6 +319,19 @@ router.put('/:id', async (req: Request, res: Response) => {
 
     const { name, description, type, status, config, latency, errorRate, uptime } = req.body;
 
+    // Ao editar config: campo sensível vazio/mascarado mantém o valor atual (não apaga segredo)
+    let configData: Record<string, unknown> | null | undefined;
+    if (config !== undefined) {
+      const existing = (integration.config || {}) as Record<string, unknown>;
+      const merged: Record<string, unknown> = { ...(config as Record<string, unknown>) };
+      for (const k of Object.keys(merged)) {
+        if (SENSITIVE.test(k) && (merged[k] === '' || merged[k] === '••••••' || merged[k] == null)) {
+          merged[k] = existing[k];
+        }
+      }
+      configData = encryptConfig(merged);
+    }
+
     const updated = await prisma.integration.update({
       where: { id: req.params.id },
       data: {
@@ -326,7 +339,7 @@ router.put('/:id', async (req: Request, res: Response) => {
         ...(description !== undefined && { description }),
         ...(type !== undefined && { type }),
         ...(status !== undefined && { status }),
-        ...(config !== undefined && { config: encryptConfig(config) }),
+        ...(config !== undefined && { config: configData }),
         ...(latency !== undefined && { latency }),
         ...(errorRate !== undefined && { errorRate }),
         ...(uptime !== undefined && { uptime }),

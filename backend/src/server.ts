@@ -18,6 +18,7 @@ import { authMiddleware } from './middleware/auth';
 import { tenancyMiddleware } from './middleware/tenancy';
 import { requireActiveSubscription } from './middleware/subscription';
 import { simulateIntegrationData } from './services/simulator';
+import { syncIntegration, isMonitorable } from './services/connectors';
 import prisma from './lib/prisma';
 
 const app = express();
@@ -66,7 +67,7 @@ app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
 app.listen(PORT, () => {
   logger.info({ port: PORT, simulationIntervalS: SIMULATION_INTERVAL / 1000 }, 'SAPLINK Backend running');
 
-  // Auto-simulate every N seconds
+  // Auto-simulate every N seconds (apenas integrações SEM endpoint real)
   setInterval(async () => {
     try {
       const result = await simulateIntegrationData();
@@ -75,6 +76,19 @@ app.listen(PORT, () => {
       logger.error({ err: (error as Error).message }, 'simulator error');
     }
   }, SIMULATION_INTERVAL);
+
+  // Auto-sync REAL: integrações monitoráveis (OData/REST) coletadas de verdade do endpoint
+  const REAL_SYNC_INTERVAL = parseInt(process.env.REAL_SYNC_INTERVAL || '120000'); // 2 min
+  setInterval(async () => {
+    try {
+      const list = await prisma.integration.findMany();
+      const monitorable = list.filter(isMonitorable);
+      for (const i of monitorable) await syncIntegration(i.id);
+      if (monitorable.length) logger.debug({ synced: monitorable.length }, 'real-sync tick');
+    } catch (error) {
+      logger.error({ err: (error as Error).message }, 'real-sync error');
+    }
+  }, REAL_SYNC_INTERVAL);
 });
 
 export default app;
