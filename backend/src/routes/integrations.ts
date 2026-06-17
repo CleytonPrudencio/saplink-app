@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import prisma from '../lib/prisma';
 import { authMiddleware } from '../middleware/auth';
 import { tenancyMiddleware } from '../middleware/tenancy';
-import { syncIntegration, isMonitorable } from '../services/connectors';
+import { syncIntegration, isMonitorable, probe, probeUrl } from '../services/connectors';
 import { encryptConfig, decryptConfig, maskConfig, SENSITIVE } from '../lib/crypto';
 
 const router = Router();
@@ -227,48 +227,17 @@ router.post('/:id/test', async (req: Request, res: Response) => {
     let details: Record<string, unknown> = {};
     const startTime = Date.now();
 
-    // Test based on type
-    if (type === 'REST' || type === 'CUSTOM') {
-      const url = config.baseUrl || config.url;
-      if (!url) {
-        message = 'URL não configurada'; details = { field: 'baseUrl' };
-      } else {
-        try {
-          const healthUrl = config.healthEndpoint ? `${url}${config.healthEndpoint}` : url;
-          const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-          if (config.authType === 'Bearer Token' && config.authValue) headers['Authorization'] = `Bearer ${config.authValue}`;
-          if (config.authType === 'Basic Auth' && config.authValue) headers['Authorization'] = `Basic ${config.authValue}`;
-          if (config.authType === 'API Key' && config.authValue) headers['X-API-Key'] = config.authValue;
-
-          const response = await fetch(healthUrl, { method: 'GET', headers, signal: AbortSignal.timeout(10000) });
-          const latency = Date.now() - startTime;
-          success = response.ok;
-          message = success ? `Conexão estabelecida com sucesso (${response.status})` : `Servidor respondeu com status ${response.status}`;
-          details = { status: response.status, latency: `${latency}ms`, url: healthUrl };
-        } catch (e: unknown) {
-          message = `Falha na conexão: ${(e as Error).message}`;
-          details = { error: (e as Error).message };
-        }
-      }
-    } else if (type === 'ODATA') {
-      const url = config.serviceUrl;
-      if (!url) {
-        message = 'URL do serviço OData não configurada';
-      } else {
-        try {
-          const headers: Record<string, string> = { 'Accept': 'application/json' };
-          if (config.user && config.password) {
-            headers['Authorization'] = `Basic ${Buffer.from(`${config.user}:${config.password}`).toString('base64')}`;
-          }
-          const response = await fetch(`${url}/$metadata`, { method: 'GET', headers, signal: AbortSignal.timeout(10000) });
-          const latency = Date.now() - startTime;
-          success = response.ok;
-          message = success ? `Serviço OData acessível (${latency}ms)` : `Erro: status ${response.status}`;
-          details = { status: response.status, latency: `${latency}ms` };
-        } catch (e: unknown) {
-          message = `Falha: ${(e as Error).message}`;
-        }
-      }
+    // Teste via conector real (OData/REST/CUSTOM) — usa APIKey/Bearer/Basic e Accept correto
+    const probeTarget = probeUrl(integration.type, config);
+    if (probeTarget) {
+      const r = await probe(probeTarget, config);
+      success = r.ok;
+      message = r.ok
+        ? `Conexão estabelecida (HTTP ${r.httpStatus}, ${r.latencyMs}ms)`
+        : r.httpStatus
+          ? `Servidor respondeu com status ${r.httpStatus}`
+          : `Falha na conexão: ${r.error || 'sem resposta'}`;
+      details = { status: r.httpStatus, latency: `${r.latencyMs}ms`, url: probeTarget };
     } else {
       // RFC, IDoc, SOAP, FILE, DATABASE — simulate test (real connection needs agent)
       const hasRequiredFields = type === 'RFC' ? config.host && config.user : type === 'IDOC' ? config.host && config.partnerNumber : type === 'SOAP' ? config.wsdlUrl : type === 'FILE' ? config.host && config.path : type === 'DATABASE' ? config.host && config.database : config.url;
