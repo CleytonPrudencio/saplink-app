@@ -44,7 +44,10 @@ Objetivo: dá pra cadastrar empresa, cobrar, cortar quem não paga, operar o ten
 - [x] 1.18 Feedback de erro visível — toasts globais (`components/Toast`) + fix do catch silencioso em resolver-alerta; 403 redireciona p/ billing
 
 ## Fase 2 — Core real: conector SAP  (substitui o simulado)
-- [ ] 2.1 Agente on-premise (Docker no cliente) p/ RFC/IDoc via HTTPS outbound
+- [x] 2.1 Agente on-premise (Docker no cliente) p/ RFC/IDoc via HTTPS outbound — v1: app em `/agent`
+  (modo `mock` testável + `rfc` via node-rfc documentado), token por integração (hash SHA-256),
+  ingestão `POST /api/agent/report`, heartbeat→OFFLINE, enrollment na UI (token + docker run).
+  PENDENTE: RFC real em produção (depende do SAP NW RFC SDK no cliente)
 - [x] 2.2 Conector OData REAL (`services/connectors.ts`): probe HTTP/OData, Basic/Bearer/API-Key, latência/status reais, `POST /:id/sync` e `/sync-all` — testado contra serviço OData público. OAuth2/CSRF p/ escrita PENDENTE
 - [ ] 2.3 Conector CPI/Integration Suite (Message Processing Logs) — PENDENTE
 - [ ] 2.4 Conector AIF (status de mensagens) — PENDENTE

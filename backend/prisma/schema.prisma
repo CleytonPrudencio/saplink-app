@@ -71,6 +71,10 @@ model Integration {
   clientId    String
   client      Client   @relation(fields: [clientId], references: [id])
   alerts      Alert[]
+  // Agente on-premise (RFC/IDoc): token de ingestão e frescor da última leitura
+  agentTokenHash    String?   @unique
+  agentTokenHint    String?
+  lastAgentReportAt DateTime?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }

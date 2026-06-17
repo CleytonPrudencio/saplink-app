@@ -56,6 +56,17 @@ export function decryptConfig(config: unknown): Cfg | null {
   return out;
 }
 
+// ───────────────── Token do Agente on-premise ─────────────────
+// O token bruto é mostrado UMA vez ao gerar; no banco guardamos só o hash (SHA-256).
+export function generateAgentToken(): { token: string; hash: string; hint: string } {
+  const token = 'sla_' + crypto.randomBytes(24).toString('base64url');
+  return { token, hash: hashAgentToken(token), hint: token.slice(-4) };
+}
+
+export function hashAgentToken(token: string): string {
+  return crypto.createHash('sha256').update(token).digest('hex');
+}
+
 /** Mascara campos sensíveis para EXIBIÇÃO (nunca devolver o segredo). */
 export function maskConfig(config: unknown): Cfg | null {
   if (!config || typeof config !== 'object') return config as null;

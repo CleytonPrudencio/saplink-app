@@ -8,8 +8,13 @@ import {
   getAlerts,
   getDiagnosticHistory,
   resolveAlert,
+  generateAgentToken,
 } from "@/lib/api";
 import HealthScoreRing from "@/components/HealthScoreRing";
+import { Modal } from "@/components/Modal";
+
+// Tipos monitorados pelo Agente on-premise (sem endpoint HTTP direto)
+const AGENT_TYPES = new Set(["RFC", "IDOC", "BAPI", "SOAP", "FILE", "DATABASE"]);
 
 interface Integration {
   id: string;
@@ -19,6 +24,8 @@ interface Integration {
   latency?: number;
   errorRate?: number;
   uptime?: number;
+  agentConfigured?: boolean;
+  lastAgentReportAt?: string | null;
 }
 
 interface Alert {
@@ -60,6 +67,41 @@ export default function ClientDetailPage({
   const [activeTab, setActiveTab] = useState<Tab>("integrations");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  // Enrollment do Agente on-premise
+  const [agentModal, setAgentModal] = useState<Integration | null>(null);
+  const [agentToken, setAgentToken] = useState<string>("");
+  const [agentBusy, setAgentBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  async function openAgent(int: Integration) {
+    setAgentModal(int);
+    setAgentToken("");
+    setCopied(false);
+    setAgentBusy(true);
+    try {
+      const { token } = await generateAgentToken(int.id);
+      setAgentToken(token);
+      setIntegrations((prev) => prev.map((i) => (i.id === int.id ? { ...i, agentConfigured: true } : i)));
+    } catch {
+      setAgentToken("");
+    } finally {
+      setAgentBusy(false);
+    }
+  }
+
+  const agentUrl = typeof window !== "undefined" ? window.location.origin.replace(":3000", ":8080") : "https://api.saplink.app";
+  const dockerCmd = (token: string) =>
+    `docker run -d --name saplink-agent --restart unless-stopped \\\n  -e SAPLINK_URL=${agentUrl} \\\n  -e AGENT_TOKEN=${token} \\\n  -e SAP_MODE=mock \\\n  saplink/agent:latest`;
+
+  function agentFreshness(int: Integration): { label: string; color: string } {
+    if (!int.agentConfigured) return { label: "Agente não instalado", color: "text-[#9b95ad]" };
+    if (!int.lastAgentReportAt) return { label: "Aguardando 1ª leitura do agente", color: "text-amber-400" };
+    const ageMs = Date.now() - new Date(int.lastAgentReportAt).getTime();
+    if (ageMs > 180000) return { label: `Agente offline (última leitura há ${Math.round(ageMs / 60000)} min)`, color: "text-rose-400" };
+    const s = Math.round(ageMs / 1000);
+    return { label: `Agente ativo · última leitura há ${s < 60 ? s + "s" : Math.round(s / 60) + " min"}`, color: "text-emerald-400" };
+  }
 
   useEffect(() => {
     async function load() {
@@ -199,6 +241,28 @@ export default function ClientDetailPage({
                   </div>
                 </div>
               </div>
+
+              {/* Agente on-premise (RFC/IDoc/etc) */}
+              {AGENT_TYPES.has(int.type?.toUpperCase()) && (() => {
+                const fresh = agentFreshness(int);
+                return (
+                  <div className="mt-4 pt-4 border-t border-white/[0.06] flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span>🛰️</span>
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium text-[#e2e0ea]">Monitorado por Agente on-premise</p>
+                        <p className={`text-xs ${fresh.color} truncate`}>{fresh.label}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => openAgent(int)}
+                      className="shrink-0 px-3 py-1.5 text-xs font-medium bg-purple-500/15 text-purple-300 rounded-lg hover:bg-purple-500/25 transition cursor-pointer"
+                    >
+                      {int.agentConfigured ? "Novo token / instruções" : "Instalar agente"}
+                    </button>
+                  </div>
+                );
+              })()}
 
               {/* Ações de erro */}
               {hasProblem && (
@@ -374,6 +438,51 @@ export default function ClientDetailPage({
           </div>
         </div>
       )}
+
+      {/* Modal: enrollment do Agente on-premise */}
+      <Modal open={!!agentModal} onClose={() => setAgentModal(null)} title="Agente on-premise" size="lg">
+        {agentModal && (
+          <div className="space-y-4 text-sm">
+            <p className="text-[#9b95ad]">
+              <span className="text-[#e2e0ea] font-medium">{agentModal.name}</span> ({agentModal.type}) é monitorada por um
+              agente que roda na rede do cliente e fala com o SAP localmente — só tráfego de saída (HTTPS), sem abrir porta.
+            </p>
+
+            <div>
+              <p className="text-xs font-semibold text-[#9b95ad] uppercase tracking-wider mb-1">1. Token desta integração</p>
+              {agentBusy ? (
+                <p className="text-[#9b95ad]">Gerando token...</p>
+              ) : agentToken ? (
+                <>
+                  <code className="block bg-[#0f0b1a] border border-purple-500/30 rounded-lg px-3 py-2 break-all text-purple-300">{agentToken}</code>
+                  <p className="text-xs text-amber-400 mt-1">⚠️ Mostrado uma única vez. Copie agora — não fica salvo em claro.</p>
+                </>
+              ) : (
+                <p className="text-rose-400">Não foi possível gerar o token.</p>
+              )}
+            </div>
+
+            {agentToken && (
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-xs font-semibold text-[#9b95ad] uppercase tracking-wider">2. Rode o agente no servidor do cliente</p>
+                  <button
+                    onClick={() => { navigator.clipboard?.writeText(dockerCmd(agentToken)); setCopied(true); }}
+                    className="text-xs text-purple-400 hover:text-purple-300 cursor-pointer"
+                  >
+                    {copied ? "✓ copiado" : "copiar"}
+                  </button>
+                </div>
+                <pre className="bg-[#0f0b1a] border border-white/[0.08] rounded-lg p-3 text-xs text-[#e2e0ea] overflow-auto whitespace-pre">{dockerCmd(agentToken)}</pre>
+                <p className="text-xs text-[#9b95ad] mt-2">
+                  Para conexão RFC real, troque <code className="text-purple-300">SAP_MODE=mock</code> por <code className="text-purple-300">rfc</code> e
+                  informe host/sysnr/client/usuário (requer o SAP NW RFC SDK na imagem). Detalhes no README do agente.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

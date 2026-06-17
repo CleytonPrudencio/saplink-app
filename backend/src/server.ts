@@ -14,11 +14,13 @@ import billingRoutes from './routes/billing';
 import platformRoutes from './routes/platform';
 import consultancyRoutes from './routes/consultancy';
 import userRoutes from './routes/users';
+import agentRoutes from './routes/agent';
 import { authMiddleware } from './middleware/auth';
 import { tenancyMiddleware } from './middleware/tenancy';
 import { requireActiveSubscription } from './middleware/subscription';
 import { simulateIntegrationData } from './services/simulator';
 import { syncIntegration, isMonitorable } from './services/connectors';
+import { markStaleAgents } from './services/agent';
 import prisma from './lib/prisma';
 
 const app = express();
@@ -48,6 +50,7 @@ app.use('/api/billing', billingRoutes);
 app.use('/api/platform', platformRoutes);
 app.use('/api/consultancy', consultancyRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/agent', agentRoutes); // agente on-premise: auth por token próprio, sem JWT
 
 // Rotas de negócio: exigem assinatura ATIVA (corte do inadimplente)
 const tenantGate = [authMiddleware, tenancyMiddleware, requireActiveSubscription];
@@ -89,6 +92,17 @@ app.listen(PORT, () => {
       logger.error({ err: (error as Error).message }, 'real-sync error');
     }
   }, REAL_SYNC_INTERVAL);
+
+  // Heartbeat do Agente on-premise: marca OFFLINE quem parou de reportar
+  const AGENT_STALE_MS = parseInt(process.env.AGENT_STALE_MS || '180000'); // 3 min
+  setInterval(async () => {
+    try {
+      const n = await markStaleAgents(AGENT_STALE_MS);
+      if (n) logger.warn({ offline: n }, 'agentes offline (sem heartbeat)');
+    } catch (error) {
+      logger.error({ err: (error as Error).message }, 'agent heartbeat error');
+    }
+  }, 60000);
 });
 
 export default app;

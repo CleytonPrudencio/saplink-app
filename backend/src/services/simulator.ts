@@ -8,6 +8,7 @@ export async function simulateIntegrationData() {
 
   for (const integration of integrations) {
     if (isMonitorable(integration)) continue; // dado real vem do conector, não da simulação
+    if (integration.agentTokenHash) continue; // monitorada pelo Agente on-premise (dado real do push)
 
     const statusRoll = Math.random();
     let newStatus = integration.status;

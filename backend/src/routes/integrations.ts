@@ -3,8 +3,17 @@ import prisma from '../lib/prisma';
 import { authMiddleware } from '../middleware/auth';
 import { tenancyMiddleware } from '../middleware/tenancy';
 import { syncIntegration, isMonitorable, probe, probeUrl, analyzeFix } from '../services/connectors';
-import { encryptConfig, decryptConfig, maskConfig, SENSITIVE } from '../lib/crypto';
+import { encryptConfig, decryptConfig, maskConfig, SENSITIVE, generateAgentToken } from '../lib/crypto';
 import { requireConsultancyAdmin } from '../middleware/roles';
+
+// Tipos que exigem o Agente on-premise (não monitoráveis por HTTP direto)
+const AGENT_TYPES = new Set(['RFC', 'IDOC', 'BAPI', 'SOAP', 'FILE', 'DATABASE']);
+
+// Serializa para o cliente: nunca expõe agentTokenHash; mascara config; deriva agentConfigured
+function publicIntegration<T extends { config?: unknown; agentTokenHash?: string | null }>(i: T) {
+  const { agentTokenHash, ...rest } = i as T & { agentTokenHash?: string | null };
+  return { ...rest, config: maskConfig(i.config), agentConfigured: !!agentTokenHash };
+}
 
 const router = Router();
 router.use(authMiddleware, tenancyMiddleware);
@@ -26,6 +35,25 @@ router.post('/:id/diagnose', async (req: Request, res: Response) => {
     console.error('Diagnose integration error:', error);
     res.status(500).json({ error: 'Erro ao diagnosticar integração' });
   }
+});
+
+// POST /:id/agent-token — gera (ou regenera) o token de ingestão do Agente on-premise (só admin)
+router.post('/:id/agent-token', requireConsultancyAdmin, async (req: Request, res: Response) => {
+  const integration = await prisma.integration.findUnique({
+    where: { id: req.params.id },
+    include: { client: true },
+  });
+  if (!integration || integration.client.consultancyId !== req.consultancyId!) {
+    res.status(404).json({ error: 'Integração não encontrada' });
+    return;
+  }
+  const { token, hash, hint } = generateAgentToken();
+  await prisma.integration.update({
+    where: { id: integration.id },
+    data: { agentTokenHash: hash, agentTokenHint: hint },
+  });
+  // token bruto retornado UMA vez — não é armazenado em claro
+  res.json({ token, hint, agentUrl: process.env.PUBLIC_API_URL || '' });
 });
 
 // POST /:id/auto-fix — a IA aplica a correção proposta (só admin) e re-sincroniza
@@ -114,7 +142,7 @@ router.get('/all', async (req: Request, res: Response) => {
       include: { client: { select: { id: true, name: true } }, _count: { select: { alerts: true } } },
       orderBy: { updatedAt: 'desc' },
     });
-    res.json(integrations.map((i) => ({ ...i, config: maskConfig(i.config) })));
+    res.json(integrations.map(publicIntegration));
   } catch (error) {
     console.error('List all integrations error:', error);
     res.status(500).json({ error: 'Erro ao listar integrações' });
@@ -239,7 +267,7 @@ router.get('/client/:clientId', async (req: Request, res: Response) => {
       include: { _count: { select: { alerts: true } } },
       orderBy: { updatedAt: 'desc' },
     });
-    res.json(integrations.map((i) => ({ ...i, config: maskConfig(i.config) })));
+    res.json(integrations.map(publicIntegration));
   } catch (error) {
     console.error('List integrations error:', error);
     res.status(500).json({ error: 'Erro ao listar integrações' });

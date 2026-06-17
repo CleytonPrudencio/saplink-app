@@ -118,9 +118,56 @@ export async function listODataEntitySets(serviceUrl: string, config: Cfg): Prom
  * Analisa uma integração em erro e, quando possível, propõe uma correção aplicável
  * dentro da plataforma (determinístico — baseado no probe real + $metadata).
  */
-export async function analyzeFix(integration: { type: string | null; name: string; config: unknown; errorRate?: number; uptime?: number }): Promise<FixProposal> {
+export async function analyzeFix(integration: { type: string | null; name: string; config: unknown; status?: string; errorRate?: number; uptime?: number; latency?: number; agentTokenHash?: string | null; lastAgentReportAt?: Date | null }): Promise<FixProposal> {
   const config = (decryptConfig(integration.config) || {}) as Cfg;
   const url = probeUrl(integration.type, config);
+
+  // Integração monitorada pelo Agente on-premise (RFC/IDoc): análise baseada no push
+  if (integration.agentTokenHash) {
+    const last = integration.lastAgentReportAt ? new Date(integration.lastAgentReportAt).getTime() : 0;
+    const ageMs = last ? Date.now() - last : Infinity;
+    const errorRate = integration.errorRate ?? 0;
+    const uptime = integration.uptime ?? 100;
+
+    if (!last) {
+      return {
+        problem: 'Aguardando o agente',
+        rootCause: 'Nenhum relatório recebido ainda. O Agente on-premise não está instalado ou não conseguiu se conectar ao SAPLINK.',
+        recommendation: 'Instale o Agente Docker no servidor do cliente com o token desta integração e confirme a saída HTTPS para o SAPLINK.',
+        steps: ['Gerar o token do agente nesta integração', 'Rodar o container do agente no ambiente do cliente', 'Confirmar a primeira leitura aqui'],
+        probe: null,
+        autoFix: { available: false, reason: 'Sem dados do agente para diagnosticar.' },
+      };
+    }
+    if (ageMs > Number(process.env.AGENT_STALE_MS || 180000)) {
+      return {
+        problem: 'Agente offline',
+        rootCause: `O agente parou de reportar há ${Math.round(ageMs / 60000)} min. O container do agente pode estar parado, ou perdeu a saída de rede para o SAPLINK.`,
+        recommendation: 'Verifique o container do agente no servidor do cliente e a conectividade HTTPS de saída.',
+        steps: ['Conferir se o container do agente está rodando (docker ps)', 'Ver os logs do agente', 'Validar firewall/proxy de saída para o SAPLINK'],
+        probe: null,
+        autoFix: { available: false, reason: 'O agente precisa voltar a reportar — ação no servidor do cliente.' },
+      };
+    }
+    if ((integration.status || '').toUpperCase() !== 'ACTIVE' || errorRate > 5 || uptime < 95) {
+      return {
+        problem: `Falha reportada pelo agente${errorRate ? ` (erros em ${errorRate}%)` : ''}`,
+        rootCause: `O agente reportou problemas no SAP (${integration.type}): status ${integration.status}, taxa de erro ${errorRate}%, uptime ${uptime}%. Indica IDocs em erro, dumps ABAP ou filas RFC presas.`,
+        recommendation: 'Investigar no SAP. A correção é no lado ABAP/Basis — não é aplicável remotamente pela plataforma.',
+        steps: ['BD87 — reprocessar IDocs em erro (status 51)', 'ST22 — analisar dumps ABAP recentes', 'SMQ1/SMQ2 — destravar filas qRFC/tRFC', 'SM58 — verificar tRFC com erro'],
+        probe: null,
+        autoFix: { available: false, reason: 'Correção RFC/IDoc acontece no SAP via Basis/ABAP — fora do alcance da plataforma.' },
+      };
+    }
+    return {
+      problem: 'Nenhum problema detectado',
+      rootCause: `O agente reportou saúde normal (status ${integration.status}, uptime ${uptime}%) há ${Math.round(ageMs / 1000)}s.`,
+      recommendation: 'Integração saudável. O agente continua reportando automaticamente.',
+      steps: [],
+      probe: null,
+      autoFix: { available: false, reason: 'A integração está saudável.' },
+    };
+  }
 
   if (!url) {
     return {

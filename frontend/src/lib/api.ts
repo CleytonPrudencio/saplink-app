@@ -293,6 +293,11 @@ export async function autoFixIntegration(id: string) {
   return data;
 }
 
+export async function generateAgentToken(id: string) {
+  const { data } = await api.post(`/integrations/${id}/agent-token`);
+  return data as { token: string; hint: string; agentUrl: string };
+}
+
 // Dead Code
 export async function getDeadCode(clientId: string) {
   const { data } = await api.get(`/dead-code/client/${clientId}`);

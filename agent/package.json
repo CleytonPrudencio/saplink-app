@@ -1,0 +1,13 @@
+{
+  "name": "saplink-agent",
+  "version": "1.0.0",
+  "description": "Agente on-premise do SAPLINK — coleta saúde do SAP (RFC/IDoc) na rede do cliente e empurra via HTTPS para a plataforma.",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
