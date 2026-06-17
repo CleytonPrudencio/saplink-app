@@ -1,0 +1,26 @@
+# Agente com RFC REAL (node-rfc + SAP NW RFC SDK).
+# Pré-requisito: baixe o "SAP NW RFC SDK 7.50" (Linux x86_64) no SAP for Me (precisa de S-user)
+# e coloque o .zip em agent/sdk/ antes do build:
+#   agent/sdk/nwrfc750P_x-70002752.zip   (o nome exato pode variar)
+#
+# Build:  docker build -f Dockerfile.rfc -t saplink/agent-rfc .
+# (glibc obrigatório — por isso bookworm, não alpine)
+FROM node:20-bookworm
+
+RUN apt-get update && apt-get install -y --no-install-recommends unzip && rm -rf /var/lib/apt/lists/*
+
+# Instala o SAP NW RFC SDK
+COPY sdk/ /tmp/sdk/
+RUN mkdir -p /usr/local/sap \
+  && unzip -o /tmp/sdk/*.zip -d /usr/local/sap \
+  && rm -rf /tmp/sdk
+ENV SAPNWRFC_HOME=/usr/local/sap/nwrfcsdk
+RUN echo "/usr/local/sap/nwrfcsdk/lib" > /etc/ld.so.conf.d/nwrfcsdk.conf && ldconfig
+
+WORKDIR /app
+COPY package.json ./
+# node-rfc compila contra o SDK acima
+RUN npm install node-rfc@3
+COPY src ./src
+USER node
+CMD ["node", "src/index.js"]

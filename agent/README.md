@@ -49,6 +49,8 @@ Veja [`.env.example`](.env.example). Obrigatórias: `SAPLINK_URL`, `AGENT_TOKEN`
 
 ## Modo rfc (RFC real)
 
+📘 Passo a passo completo (SAP gratuito/barato + SDK + build): [RFC-REAL.md](RFC-REAL.md).
+
 O `node-rfc` depende do **SAP NW RFC SDK** (proprietário; baixe com um S-user na SAP).
 Inclua o SDK na imagem e rode `npm i node-rfc` antes do build. Ajuste, em
 `src/sap.js`, o Function Module de contagem de IDocs em erro conforme o ambiente do
