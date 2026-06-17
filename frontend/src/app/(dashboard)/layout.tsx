@@ -46,6 +46,11 @@ export default function DashboardLayout({
       });
   }, [router]);
 
+  function handleLogout() {
+    localStorage.removeItem("token");
+    router.push("/login");
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#0f0b1a]">
@@ -57,8 +62,21 @@ export default function DashboardLayout({
   return (
     <div className="min-h-screen flex">
       <Sidebar user={user} consultancy={user?.consultancy} />
-      <main className="flex-1 ml-0 md:ml-64 p-6 md:p-8 overflow-auto min-h-screen">
-        {children}
+      <main className="flex-1 ml-0 md:ml-64 min-h-screen overflow-auto">
+        {/* Barra superior com usuário + sair (sempre visível) */}
+        <div className="sticky top-0 z-20 flex items-center justify-end gap-3 px-6 md:px-8 py-3 bg-[#0f0b1a]/80 backdrop-blur border-b border-white/[0.06] no-print">
+          <span className="text-sm text-[#9b95ad]">
+            {user?.name}
+            {user?.role ? <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-white/[0.06]">{user.role}</span> : null}
+          </span>
+          <button
+            onClick={handleLogout}
+            className="text-sm px-3 py-1.5 rounded-lg text-[#e2e0ea] bg-white/[0.06] hover:bg-rose-500/15 hover:text-rose-300 transition-colors cursor-pointer"
+          >
+            Sair
+          </button>
+        </div>
+        <div className="p-6 md:p-8">{children}</div>
       </main>
     </div>
   );
