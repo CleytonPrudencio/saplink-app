@@ -70,15 +70,19 @@ app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
 app.listen(PORT, () => {
   logger.info({ port: PORT, simulationIntervalS: SIMULATION_INTERVAL / 1000 }, 'SAPLINK Backend running');
 
-  // Auto-simulate every N seconds (apenas integrações SEM endpoint real)
-  setInterval(async () => {
-    try {
-      const result = await simulateIntegrationData();
-      logger.debug({ updated: result.updated }, 'simulator tick');
-    } catch (error) {
-      logger.error({ err: (error as Error).message }, 'simulator error');
-    }
-  }, SIMULATION_INTERVAL);
+  // Simulador de métricas: DESLIGADO por padrão (produção). Liga só com SIMULATION_ENABLED=true
+  // para demos. Em produção os dados vêm do conector OData/REST real e do Agente on-premise.
+  if (process.env.SIMULATION_ENABLED === 'true') {
+    logger.warn('SIMULAÇÃO LIGADA — gerando métricas aleatórias (apenas para demo, não usar em produção).');
+    setInterval(async () => {
+      try {
+        const result = await simulateIntegrationData();
+        logger.debug({ updated: result.updated }, 'simulator tick');
+      } catch (error) {
+        logger.error({ err: (error as Error).message }, 'simulator error');
+      }
+    }, SIMULATION_INTERVAL);
+  }
 
   // Auto-sync REAL: integrações monitoráveis (OData/REST) coletadas de verdade do endpoint
   const REAL_SYNC_INTERVAL = parseInt(process.env.REAL_SYNC_INTERVAL || '120000'); // 2 min

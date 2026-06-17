@@ -9,20 +9,17 @@ Para cada diagnóstico, forneça:
 2) **Passos de Correção** — Instruções detalhadas e práticas para resolver o problema, incluindo transações SAP quando aplicável
 3) **Prevenção** — Recomendações para evitar recorrência do problema`;
 
-const MOCK_RESPONSE = `**Causa Raiz:** [Simulação] Erro de configuração no campo CHARG (lote) da tabela MSEG durante o processamento do IDoc MATMAS05. O campo obrigatório WERKS (centro) não está sendo preenchido corretamente pelo sistema emissor, causando falha na validação do segmento E1MARAM.
+// Mensagem honesta quando NENHUM provedor de IA está disponível — não fabrica uma análise
+// que pareça real. Indica claramente a indisponibilidade do serviço.
+const AI_UNAVAILABLE = `⚠️ Diagnóstico automático indisponível no momento.
 
-**Correção:**
-1. Acesse a transação WE19 para testar o IDoc individualmente
-2. Verifique o mapeamento na transação BD87 para identificar IDocs com erro
-3. Na transação SALE, valide o modelo de distribuição entre os sistemas
-4. Corrija o preenchimento do campo WERKS no segmento E1MARCM do IDoc
-5. Reprocesse os IDocs pendentes via transação BD87 com status 51
+O serviço de IA não respondeu. Nenhuma análise foi gerada — isto não é um resultado real.
 
-**Prevenção:**
-- Configure validação automática no SAP PI/PO para verificar campos obrigatórios antes do envio
-- Implemente monitoramento proativo via transação SMQR para filas qRFC
-- Ative alertas no Solution Manager (SOLMAN) para falhas de IDoc acima de 5 por hora
-- Documente o mapeamento de campos no Integration Directory para referência da equipe`;
+O que fazer:
+- Tente novamente em alguns instantes.
+- Se persistir, verifique o serviço de IA (Ollama/Claude) na configuração do ambiente.
+
+Enquanto isso, use os dados de monitoramento (status, latência, taxa de erro, alertas) e as transações SAP de praxe (BD87, ST22, SMQ1/SMQ2, SM58) para a análise manual.`;
 
 export async function diagnose(query: string, context: object): Promise<string> {
   const userMessage = `Contexto do cliente:
@@ -55,10 +52,10 @@ ${query}`;
       if (!resp.ok) throw new Error(`Ollama HTTP ${resp.status}`);
       const data = (await resp.json()) as { message?: { content?: string } };
       const text = data?.message?.content?.trim();
-      return text && text.length > 0 ? text : MOCK_RESPONSE;
+      return text && text.length > 0 ? text : AI_UNAVAILABLE;
     } catch (error) {
       console.error('Ollama diagnosis error:', error);
-      return MOCK_RESPONSE;
+      return AI_UNAVAILABLE;
     }
   }
 
@@ -66,7 +63,7 @@ ${query}`;
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     // Return mock response when no API key is configured
-    return MOCK_RESPONSE;
+    return AI_UNAVAILABLE;
   }
 
   try {
@@ -89,6 +86,6 @@ ${query}`;
   } catch (error) {
     console.error('AI diagnosis error:', error);
     // Fallback to mock on error
-    return MOCK_RESPONSE;
+    return AI_UNAVAILABLE;
   }
 }

@@ -320,6 +320,7 @@ router.post('/:id/test', async (req: Request, res: Response) => {
     let success = false;
     let message = '';
     let details: Record<string, unknown> = {};
+    let updateStatus = true; // tipos por agente não têm status sobrescrito pelo teste
     const startTime = Date.now();
 
     // Teste via conector real (OData/REST/CUSTOM) — usa APIKey/Bearer/Basic e Accept correto
@@ -334,35 +335,31 @@ router.post('/:id/test', async (req: Request, res: Response) => {
           : `Falha na conexão: ${r.error || 'sem resposta'}`;
       details = { status: r.httpStatus, latency: `${r.latencyMs}ms`, url: probeTarget };
     } else {
-      // RFC, IDoc, SOAP, FILE, DATABASE — simulate test (real connection needs agent)
-      const hasRequiredFields = type === 'RFC' ? config.host && config.user : type === 'IDOC' ? config.host && config.partnerNumber : type === 'SOAP' ? config.wsdlUrl : type === 'FILE' ? config.host && config.path : type === 'DATABASE' ? config.host && config.database : config.url;
-
-      if (!hasRequiredFields) {
-        message = 'Configuração incompleta. Preencha todos os campos obrigatórios.';
-        details = { type };
+      // RFC/IDoc/SOAP/FILE/DATABASE: a plataforma NÃO testa diretamente — quem mede é o Agente.
+      // Reflete o estado real do agente em vez de fingir uma conexão bem-sucedida.
+      updateStatus = false; // o status é do agente; o teste não inventa
+      const last = integration.lastAgentReportAt ? new Date(integration.lastAgentReportAt).getTime() : 0;
+      const fresh = last && Date.now() - last < Number(process.env.AGENT_STALE_MS || 180000);
+      if (integration.agentTokenHash && fresh) {
+        success = integration.status === 'ACTIVE';
+        message = `Última leitura do Agente: status ${integration.status} (há ${Math.round((Date.now() - last) / 1000)}s).`;
+        details = { type, fonte: 'agente', status: integration.status, uptime: `${integration.uptime}%` };
+      } else if (integration.agentTokenHash) {
+        message = 'Agente instalado, mas sem leitura recente. Verifique o container do agente no servidor do cliente.';
+        details = { type, fonte: 'agente', ultimaLeitura: integration.lastAgentReportAt || 'nunca' };
       } else {
-        // Simulate successful connection (real test needs Docker agent on client server)
-        await new Promise(r => setTimeout(r, 1500 + Math.random() * 1000));
-        const latency = Date.now() - startTime;
-        success = true;
-        message = `Configuração validada com sucesso. Para teste real de conexão, o Agente Docker precisa estar instalado no servidor do cliente.`;
-        details = {
-          type, latency: `${latency}ms`,
-          note: 'A conexão real será testada pelo agente Docker no ambiente do cliente.',
-          configValid: true,
-          host: config.host || config.wsdlUrl || config.url || 'N/A',
-        };
+        message = 'Tipo monitorado pelo Agente on-premise. Gere o token e instale o Agente para o teste/monitoramento reais — a plataforma não conecta diretamente a RFC/IDoc.';
+        details = { type, proximoPasso: 'Instalar o Agente on-premise' };
       }
     }
 
-    // Update integration status based on test
-    await prisma.integration.update({
-      where: { id: req.params.id },
-      data: {
-        status: success ? 'ACTIVE' : 'ERROR',
-        latency: Date.now() - startTime,
-      },
-    });
+    // Atualiza status só para tipos testáveis por HTTP (agente é a fonte para os demais)
+    if (updateStatus) {
+      await prisma.integration.update({
+        where: { id: req.params.id },
+        data: { status: success ? 'ACTIVE' : 'ERROR', latency: Date.now() - startTime },
+      });
+    }
 
     res.json({ success, message, details, duration: `${Date.now() - startTime}ms` });
   } catch (error) {

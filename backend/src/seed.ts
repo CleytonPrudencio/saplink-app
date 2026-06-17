@@ -11,7 +11,14 @@ async function main() {
     return;
   }
 
-  console.log('Seeding SAPLINK database (banco vazio)...');
+  // Dados de demonstração (clientes/integrações/alertas fictícios) só com SEED_DEMO=true.
+  // Em produção o banco começa vazio — cadastre consultorias/clientes pela aplicação.
+  if (process.env.SEED_DEMO !== 'true') {
+    console.log('Produção: sem dados demo. Defina SEED_DEMO=true para popular o ambiente de teste.');
+    return;
+  }
+
+  console.log('Seeding SAPLINK database com DADOS DEMO (SEED_DEMO=true)...');
 
   // 1. Create consultancy
   const consultancy = await prisma.consultancy.create({
@@ -30,7 +37,7 @@ async function main() {
       email: 'admin@saplink.com',
       password: hashedPassword,
       name: 'Cleyton Admin',
-      role: 'CONSULTANT_ADMIN',
+      role: 'CONSULTANCY_ADMIN',
       consultancyId: consultancy.id,
     },
   });
@@ -71,7 +78,7 @@ async function main() {
     data: {
       name: 'SAP ECC → Protheus (Pedidos de Venda)',
       description: 'Envio automático de pedidos de venda do SAP ECC para o Protheus via IDoc ORDERS05. Inclui dados de cabeçalho, itens, condições de preço e parceiro.',
-      type: 'IDoc',
+      type: 'IDOC',
       status: 'ACTIVE',
       latency: 120, errorRate: 1.2, uptime: 99.5,
       clientId: client1.id,
@@ -114,7 +121,7 @@ async function main() {
       name: 'SAP PI/PO → WMS (Movimentação Estoque)',
       description: 'Integração SOAP para movimentação de estoque entre SAP e WMS. Usa web service para envio de entrada/saída de mercadoria (MIGO).',
       type: 'SOAP',
-      status: 'WARNING',
+      status: 'ACTIVE',
       latency: 340, errorRate: 4.5, uptime: 96.2,
       clientId: client1.id,
       config: {
@@ -132,7 +139,7 @@ async function main() {
     data: {
       name: 'IDoc ORDERS05 (Pedidos de Compra)',
       description: 'Recebimento de pedidos de compra via IDoc. Parceiro Protheus envia pedidos que são convertidos em ordens de compra no SAP MM.',
-      type: 'IDoc',
+      type: 'IDOC',
       status: 'ERROR',
       latency: 890, errorRate: 12.3, uptime: 85.1,
       clientId: client2.id,
@@ -173,7 +180,7 @@ async function main() {
       name: 'RFC BAPI_ACC_DOCUMENT_POST (Lançamentos FI)',
       description: 'Postagem de documentos contábeis via RFC. Integração com sistema fiscal Mastersaf para lançamentos de impostos e provisões.',
       type: 'RFC',
-      status: 'WARNING',
+      status: 'ACTIVE',
       latency: 450, errorRate: 5.8, uptime: 93.4,
       clientId: client2.id,
       config: {
@@ -193,7 +200,7 @@ async function main() {
     data: {
       name: 'IDoc DESADV (Aviso de Expedição)',
       description: 'Envio de avisos de expedição para transportadoras via IDoc DESADV. Inclui dados de peso, volume, placa do veículo e romaneio.',
-      type: 'IDoc',
+      type: 'IDOC',
       status: 'ACTIVE',
       latency: 65, errorRate: 0.1, uptime: 99.98,
       clientId: client3.id,
@@ -234,7 +241,7 @@ async function main() {
     data: {
       name: 'SAP OData → Fiori Launchpad (Dados Mestre)',
       description: 'Serviço OData para alimentar apps Fiori de consulta de materiais, fornecedores e clientes. Entity set A_Product.',
-      type: 'OData',
+      type: 'ODATA',
       status: 'ACTIVE',
       latency: 95, errorRate: 0.2, uptime: 99.95,
       clientId: client1.id,
