@@ -26,6 +26,8 @@ export function isMonitorable(integration: { type: string | null; config: unknow
 
 function authHeaders(config: Cfg): Record<string, string> {
   const h: Record<string, string> = { Accept: 'application/json' };
+  // SAP Business Accelerator Hub (sandbox) usa o header APIKey
+  if (config.apiKey) h['APIKey'] = config.apiKey;
   if (config.user && config.password) {
     h['Authorization'] = `Basic ${Buffer.from(`${config.user}:${config.password}`).toString('base64')}`;
   } else if (config.authType === 'Bearer Token' && config.authValue) {
