@@ -1,10 +1,14 @@
 import prisma from '../lib/prisma';
+import { isMonitorable } from './connectors';
 
-// Simula variações realistas nos dados das integrações
+// Simula variações realistas nos dados das integrações SEM endpoint real.
+// Integrações monitoráveis (OData/REST com URL) são deixadas para o sync real.
 export async function simulateIntegrationData() {
   const integrations = await prisma.integration.findMany();
 
   for (const integration of integrations) {
+    if (isMonitorable(integration)) continue; // dado real vem do conector, não da simulação
+
     const statusRoll = Math.random();
     let newStatus = integration.status;
     let newLatency = integration.latency;

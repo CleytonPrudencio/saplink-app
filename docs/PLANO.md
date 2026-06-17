@@ -45,10 +45,10 @@ Objetivo: dá pra cadastrar empresa, cobrar, cortar quem não paga, operar o ten
 
 ## Fase 2 — Core real: conector SAP  (substitui o simulado)
 - [ ] 2.1 Agente on-premise (Docker no cliente) p/ RFC/IDoc via HTTPS outbound
-- [ ] 2.2 Conector OData/S4HANA Cloud (CSRF + OAuth2)
-- [ ] 2.3 Conector CPI/Integration Suite (Message Processing Logs)
-- [ ] 2.4 Conector AIF (status de mensagens)
-- [ ] 2.5 Ingestão real substituindo `simulator.ts`
+- [x] 2.2 Conector OData REAL (`services/connectors.ts`): probe HTTP/OData, Basic/Bearer/API-Key, latência/status reais, `POST /:id/sync` e `/sync-all` — testado contra serviço OData público. OAuth2/CSRF p/ escrita PENDENTE
+- [ ] 2.3 Conector CPI/Integration Suite (Message Processing Logs) — PENDENTE
+- [ ] 2.4 Conector AIF (status de mensagens) — PENDENTE
+- [~] 2.5 Ingestão real substituindo `simulator.ts` — FEITO para OData/REST com URL (simulador pula monitoráveis; EWMA + alertas reais); RFC/IDoc dependem do agente
 - [ ] 2.6 Cofre/criptografia das credenciais SAP em repouso
 
 ## Fase 3 — Escala / operação

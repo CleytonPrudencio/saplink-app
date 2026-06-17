@@ -2,9 +2,41 @@ import { Router, Request, Response } from 'express';
 import prisma from '../lib/prisma';
 import { authMiddleware } from '../middleware/auth';
 import { tenancyMiddleware } from '../middleware/tenancy';
+import { syncIntegration, isMonitorable } from '../services/connectors';
 
 const router = Router();
 router.use(authMiddleware, tenancyMiddleware);
+
+// POST /:id/sync — coleta dados REAIS do endpoint (OData/REST) e atualiza métricas
+router.post('/:id/sync', async (req: Request, res: Response) => {
+  const integration = await prisma.integration.findUnique({
+    where: { id: req.params.id },
+    include: { client: true },
+  });
+  if (!integration || integration.client.consultancyId !== req.consultancyId!) {
+    res.status(404).json({ error: 'Integração não encontrada' });
+    return;
+  }
+  if (!isMonitorable(integration)) {
+    res.status(400).json({ error: 'Integração não monitorável diretamente (depende do agente on-premise).' });
+    return;
+  }
+  const result = await syncIntegration(integration.id);
+  const updated = await prisma.integration.findUnique({ where: { id: integration.id } });
+  res.json({ probe: result, integration: updated });
+});
+
+// POST /sync-all — sincroniza todas as integrações monitoráveis do tenant
+router.post('/sync-all', async (req: Request, res: Response) => {
+  const list = await prisma.integration.findMany({ where: { client: { consultancyId: req.consultancyId! } } });
+  const monitorable = list.filter(isMonitorable);
+  let synced = 0;
+  for (const i of monitorable) {
+    await syncIntegration(i.id);
+    synced++;
+  }
+  res.json({ synced, total: list.length });
+});
 
 // GET /all — list ALL integrations for consultancy
 router.get('/all', async (req: Request, res: Response) => {
