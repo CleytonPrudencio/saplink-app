@@ -10,10 +10,10 @@ import rateLimit from 'express-rate-limit';
 
 const router = Router();
 
-// Anti brute-force: máx 10 tentativas de login por IP a cada 15 min
+// Anti brute-force por IP (configurável). Default mais folgado p/ não bloquear uso legítimo.
 const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 10,
+  windowMs: parseInt(process.env.LOGIN_RATE_WINDOW_MS || String(15 * 60 * 1000)),
+  max: parseInt(process.env.LOGIN_RATE_MAX || '50'),
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Muitas tentativas. Tente novamente em alguns minutos.' },
