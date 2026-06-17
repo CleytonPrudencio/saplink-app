@@ -22,10 +22,11 @@ interface SidebarProps {
   consultancy?: Consultancy | null;
 }
 
-const menuItems = [
+// Menu da consultoria (empresa cliente do SAPLINK)
+const tenantMenu = [
   { href: "/", label: "Dashboard", icon: "\uD83D\uDCCA" },
   { href: "/clients", label: "Clientes", icon: "\uD83D\uDC65" },
-  { href: "/integrations", label: "Integra\u00e7\u00f5es", icon: "\uD83D\uDD17" },
+  { href: "/integrations", label: "Integra\u00E7\u00f5es", icon: "\uD83D\uDD17" },
   { href: "/alerts", label: "Alertas", icon: "\uD83D\uDD14" },
   { href: "/diagnostics", label: "Diagnostico IA", icon: "\uD83E\uDD16" },
   { href: "/dead-code", label: "Dead Code", icon: "\uD83D\uDD0D" },
@@ -34,10 +35,16 @@ const menuItems = [
   { href: "/settings", label: "Configuracoes", icon: "\u2699\uFE0F" },
 ];
 
+// Menu do super-admin da plataforma (gerencia tenants; sem cobran\u00E7a pr\u00F3pria)
+const platformMenu = [
+  { href: "/platform", label: "Consultorias", icon: "\uD83C\uDFE2" },
+];
+
 export default function Sidebar({ user, consultancy }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const menuItems = user?.role === "PLATFORM_ADMIN" ? platformMenu : tenantMenu;
 
   function isActive(href: string) {
     if (href === "/") return pathname === "/";

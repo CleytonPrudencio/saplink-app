@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { getMe } from "@/lib/api";
 import Sidebar from "@/components/Sidebar";
 
@@ -25,6 +25,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -39,12 +40,16 @@ export default function DashboardLayout({
       .then((data) => {
         setUser(data);
         setLoading(false);
+        // Super-admin não gerencia uma consultoria: vai pro painel da plataforma
+        if (data.role === "PLATFORM_ADMIN" && pathname === "/") {
+          router.replace("/platform");
+        }
       })
       .catch(() => {
         localStorage.removeItem("token");
         router.push("/login");
       });
-  }, [router]);
+  }, [router, pathname]);
 
   function handleLogout() {
     localStorage.removeItem("token");

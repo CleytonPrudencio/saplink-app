@@ -101,6 +101,22 @@ export async function cancelSubscription() {
   return data;
 }
 
+// Plataforma (super-admin) — gerencia tenants
+export async function getConsultancies() {
+  const { data } = await api.get('/platform/consultancies');
+  return data;
+}
+
+export async function suspendConsultancy(id: string) {
+  const { data } = await api.post(`/platform/consultancies/${id}/suspend`);
+  return data;
+}
+
+export async function activateConsultancy(id: string) {
+  const { data } = await api.post(`/platform/consultancies/${id}/activate`);
+  return data;
+}
+
 // Consultancy / white-label
 export async function getConsultancy() {
   const { data } = await api.get('/consultancy');
