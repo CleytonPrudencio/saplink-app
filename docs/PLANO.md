@@ -48,8 +48,8 @@ Objetivo: dá pra cadastrar empresa, cobrar, cortar quem não paga, operar o ten
 - [x] 2.2 Conector OData REAL (`services/connectors.ts`): probe HTTP/OData, Basic/Bearer/API-Key, latência/status reais, `POST /:id/sync` e `/sync-all` — testado contra serviço OData público. OAuth2/CSRF p/ escrita PENDENTE
 - [ ] 2.3 Conector CPI/Integration Suite (Message Processing Logs) — PENDENTE
 - [ ] 2.4 Conector AIF (status de mensagens) — PENDENTE
-- [~] 2.5 Ingestão real substituindo `simulator.ts` — FEITO para OData/REST com URL (simulador pula monitoráveis; EWMA + alertas reais); RFC/IDoc dependem do agente
-- [ ] 2.6 Cofre/criptografia das credenciais SAP em repouso
+- [x] 2.5 Ingestão real substituindo `simulator.ts` — OData/REST com URL (auto-sync 2min + botões Sincronizar/Sincronizar-tudo; EWMA + alertas reais); RFC/IDoc dependem do agente
+- [x] 2.6 Criptografia das credenciais SAP em repouso (AES-256-GCM, `lib/crypto.ts`); edição na UI preserva segredo
 
 ## Fase 3 — Escala / operação
 - [ ] 3.1 Postgres gerenciado com backup + PITR
