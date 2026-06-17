@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getAlerts, resolveAlert } from "@/lib/api";
+import { useToast } from "@/components/Toast";
 
 interface Alert {
   id: string;
@@ -18,6 +19,7 @@ export default function AlertsPage() {
   const [error, setError] = useState("");
   const [severityFilter, setSeverityFilter] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const { notify } = useToast();
 
   useEffect(() => {
     loadAlerts();
@@ -40,8 +42,9 @@ export default function AlertsPage() {
       setAlerts((prev) =>
         prev.map((a) => (a.id === id ? { ...a, status: "RESOLVED" } : a))
       );
+      notify("Alerta resolvido.", "success");
     } catch {
-      /* ignore */
+      notify("Não foi possível resolver o alerta. Tente novamente.", "error");
     }
   }
 

@@ -1,7 +1,9 @@
 import express from 'express';
 import type { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
+import pinoHttp from 'pino-http';
 import { CORS_ORIGINS } from './config';
+import { logger } from './lib/logger';
 import authRoutes from './routes/auth';
 import clientRoutes from './routes/clients';
 import integrationRoutes from './routes/integrations';
@@ -22,6 +24,7 @@ const app = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 8080;
 const SIMULATION_INTERVAL = parseInt(process.env.SIMULATION_INTERVAL || '30000'); // 30s default
 
+app.use(pinoHttp({ logger }));
 app.use(cors({ origin: CORS_ORIGINS, credentials: true }));
 app.use(express.json({ limit: '1mb' }));
 
@@ -54,22 +57,22 @@ app.use('/api/diagnostics', ...tenantGate, diagnosticRoutes);
 app.use('/api/dead-code', ...tenantGate, deadCodeRoutes);
 
 // Error handler global (último middleware)
-app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-  console.error('[unhandled]', err.message);
+app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
+  (req as any).log?.error({ err }, 'unhandled error');
+  logger.error({ err: err.message }, 'unhandled error');
   res.status(500).json({ error: 'Erro interno do servidor' });
 });
 
 app.listen(PORT, () => {
-  console.log(`SAPLINK Backend running on port ${PORT}`);
-  console.log(`Simulation interval: ${SIMULATION_INTERVAL / 1000}s`);
+  logger.info({ port: PORT, simulationIntervalS: SIMULATION_INTERVAL / 1000 }, 'SAPLINK Backend running');
 
   // Auto-simulate every N seconds
   setInterval(async () => {
     try {
       const result = await simulateIntegrationData();
-      console.log(`[Simulator] Updated ${result.updated} integrations at ${result.timestamp}`);
+      logger.debug({ updated: result.updated }, 'simulator tick');
     } catch (error) {
-      console.error('[Simulator] Error:', error);
+      logger.error({ err: (error as Error).message }, 'simulator error');
     }
   }, SIMULATION_INTERVAL);
 });

@@ -41,7 +41,7 @@ Objetivo: dá pra cadastrar empresa, cobrar, cortar quem não paga, operar o ten
 - [x] 1.15 Diagnóstico de IA assíncrono — job PENDING→DONE/FAILED, POST 202 + polling `GET /diagnostics/:id` (não trava a tela)
 - [~] 1.16 Validação com `zod` (billing/webhook/branding prontos; demais rotas PENDENTE)
 - [x] 1.17 Auth: rate-limit no login + reset de senha (forgot/reset endpoints); verificação de e-mail PENDENTE
-- [~] 1.18 Feedback de erro visível — 403 de assinatura redireciona p/ billing; toasts globais PENDENTE
+- [x] 1.18 Feedback de erro visível — toasts globais (`components/Toast`) + fix do catch silencioso em resolver-alerta; 403 redireciona p/ billing
 
 ## Fase 2 — Core real: conector SAP  (substitui o simulado)
 - [ ] 2.1 Agente on-premise (Docker no cliente) p/ RFC/IDoc via HTTPS outbound
@@ -54,8 +54,8 @@ Objetivo: dá pra cadastrar empresa, cobrar, cortar quem não paga, operar o ten
 ## Fase 3 — Escala / operação
 - [ ] 3.1 Postgres gerenciado com backup + PITR
 - [ ] 3.2 Scheduler do simulador/ingestão em worker único (lock)
-- [ ] 3.3 `/health` com check de DB; logger estruturado (pino) + Sentry + métricas
-- [ ] 3.4 CI/CD (lint, typecheck, build, migrate-check) + testes (auth, tenancy, billing)
+- [x] 3.3 `/health` com check de DB + error-handler global + logger estruturado pino (request log + redact de segredos); Sentry/métricas PENDENTE
+- [~] 3.4 CI (`docs/ci.workflow.yml`: typecheck+build+test) + testes do corte de acesso (vitest, 8); cobertura ampla PENDENTE
 - [ ] 3.5 IA gerenciada (Claude) ou Ollama GPU com fila
 - [ ] 3.6 Dockerfiles multi-stage, non-root, NODE_ENV=production
 - [ ] 3.7 LGPD: aceite de termos, export/exclusão de dados, DPA, auditoria
