@@ -6,7 +6,7 @@ export interface AuthPayload {
   userId: string;
   email: string;
   role: string;
-  consultancyId: string;
+  consultancyId?: string | null; // PLATFORM_ADMIN não tem consultoria
 }
 
 declare global {

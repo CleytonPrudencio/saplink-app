@@ -28,8 +28,8 @@ model User {
   password      String
   name          String
   role          String               @default("CONSULTANCY_USER") // PLATFORM_ADMIN | CONSULTANCY_ADMIN | CONSULTANCY_USER
-  consultancyId String
-  consultancy   Consultancy          @relation(fields: [consultancyId], references: [id])
+  consultancyId String?              // PLATFORM_ADMIN não pertence a nenhuma consultoria
+  consultancy   Consultancy?         @relation(fields: [consultancyId], references: [id])
   createdAt     DateTime             @default(now())
   resetTokens   PasswordResetToken[]
 }

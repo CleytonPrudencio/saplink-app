@@ -134,11 +134,9 @@ router.post('/login', loginLimiter, async (req: Request, res: Response) => {
         name: user.name,
         role: user.role,
       },
-      consultancy: {
-        id: user.consultancy.id,
-        name: user.consultancy.name,
-        plan: user.consultancy.plan,
-      },
+      consultancy: user.consultancy
+        ? { id: user.consultancy.id, name: user.consultancy.name, plan: user.consultancy.plan }
+        : null,
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -214,13 +212,15 @@ router.get('/me', authMiddleware, async (req: Request, res: Response) => {
       email: user.email,
       name: user.name,
       role: user.role,
-      consultancy: {
-        id: user.consultancy.id,
-        name: user.consultancy.name,
-        plan: user.consultancy.plan,
-        logoUrl: user.consultancy.logoUrl,
-        primaryColor: user.consultancy.primaryColor,
-      },
+      consultancy: user.consultancy
+        ? {
+            id: user.consultancy.id,
+            name: user.consultancy.name,
+            plan: user.consultancy.plan,
+            logoUrl: user.consultancy.logoUrl,
+            primaryColor: user.consultancy.primaryColor,
+          }
+        : null,
     });
   } catch (error) {
     console.error('Me error:', error);

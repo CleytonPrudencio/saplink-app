@@ -14,6 +14,6 @@ export function tenancyMiddleware(req: Request, res: Response, next: NextFunctio
     return;
   }
 
-  req.consultancyId = req.user.consultancyId;
+  req.consultancyId = req.user.consultancyId || undefined;
   next();
 }
