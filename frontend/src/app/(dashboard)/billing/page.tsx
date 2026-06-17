@@ -63,11 +63,17 @@ export default function BillingPage() {
 
   async function onCheckout(planKey: string) {
     setBusy(planKey);
+    setError("");
     try {
-      await checkoutPlan(planKey);
+      const r = await checkoutPlan(planKey);
+      // Com gateway (Asaas): redireciona para a página de pagamento (PIX/boleto/cartão)
+      if (r?.status === "redirect" && r?.url) {
+        window.location.href = r.url;
+        return;
+      }
       await load();
-    } catch {
-      setError("Não foi possível ativar o plano.");
+    } catch (e: any) {
+      setError(e?.response?.data?.error || "Não foi possível iniciar o pagamento.");
     } finally {
       setBusy("");
     }

@@ -7,6 +7,7 @@ import { authMiddleware } from '../middleware/auth';
 import { tenancyMiddleware } from '../middleware/tenancy';
 import { requireConsultancyAdmin, ROLES } from '../middleware/roles';
 import { assertWithinLimit, LimitError } from '../services/billing';
+import { sendUserInvite, emailEnabled } from '../services/email';
 
 const router = Router();
 router.use(authMiddleware, tenancyMiddleware);
@@ -55,8 +56,9 @@ router.post('/', requireConsultancyAdmin, async (req: Request, res: Response) =>
       },
       select: { id: true, name: true, email: true, role: true },
     });
-    // tempPassword volta só nesta resposta (admin repassa ao convidado)
-    res.status(201).json({ ...user, tempPassword });
+    // Envia o convite por e-mail; se não houver provedor, devolve a senha p/ o admin repassar
+    const sent = await sendUserInvite(email, name, tempPassword);
+    res.status(201).json({ ...user, ...(sent ? { invited: true } : { tempPassword }) });
   } catch (error) {
     if (error instanceof LimitError) {
       res.status(402).json({ error: error.message });

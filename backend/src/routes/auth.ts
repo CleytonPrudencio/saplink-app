@@ -6,6 +6,7 @@ import prisma from '../lib/prisma';
 import { authMiddleware } from '../middleware/auth';
 import { JWT_SECRET, JWT_EXPIRES_IN } from '../config';
 import { startTrial } from '../services/billing';
+import { sendPasswordReset } from '../services/email';
 import rateLimit from 'express-rate-limit';
 
 const router = Router();
@@ -158,9 +159,12 @@ router.post('/forgot-password', async (req: Request, res: Response) => {
       await prisma.passwordResetToken.create({
         data: { userId: user.id, token, expiresAt: new Date(Date.now() + 60 * 60 * 1000) },
       });
-      const link = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${token}`;
-      // TODO produção: enviar e-mail. Sem SMTP, registra no log do servidor.
-      console.log(`[reset-senha] ${email}: ${link}`);
+      const sent = await sendPasswordReset(email, token);
+      if (!sent) {
+        // Sem provedor de e-mail configurado: registra o link no log (dev)
+        const link = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${token}`;
+        console.log(`[reset-senha] ${email}: ${link}`);
+      }
     }
     res.json({ message: 'Se o e-mail existir, enviaremos as instruções de redefinição.' });
   } catch (error) {

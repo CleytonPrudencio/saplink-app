@@ -10,10 +10,35 @@ import {
   markPastDue,
   cancel as cancelSub,
 } from '../services/billing';
+import { asaasEnabled, createCheckout, handleWebhook } from '../services/asaas';
+import { logger } from '../lib/logger';
 
 const router = Router();
 
-// Webhook do gateway de pagamento (SEM auth de usuário; valida segredo + idempotência).
+// Webhook do Asaas (SEM auth de usuário). Valida o token configurado no painel do Asaas
+// (header asaas-access-token) e processa de forma idempotente.
+router.post('/webhook/asaas', async (req: Request, res: Response) => {
+  const expected = process.env.ASAAS_WEBHOOK_TOKEN;
+  if (expected) {
+    const got = req.header('asaas-access-token');
+    if (got !== expected) { res.status(401).json({ error: 'token inválido' }); return; }
+  }
+  const evt = req.body || {};
+  const eventId = `asaas:${evt.event}:${evt.payment?.id || evt.id || ''}`;
+  const already = await prisma.webhookEvent.findUnique({ where: { providerEventId: eventId } });
+  if (already) { res.json({ status: 'ignored', reason: 'evento já processado' }); return; }
+  try {
+    const result = await handleWebhook(evt);
+    await prisma.webhookEvent.create({ data: { provider: 'asaas', providerEventId: eventId } });
+    logger.info({ event: evt.event, ...result }, 'asaas webhook');
+    res.json({ status: 'ok', ...result });
+  } catch (e: any) {
+    logger.error({ err: e.message, event: evt.event }, 'asaas webhook error');
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Webhook genérico (manual/testes; valida segredo + idempotência).
 // Em produção: trocar a checagem de segredo por verificação de assinatura do provedor.
 const webhookSchema = z.object({
   provider: z.string().min(1),
@@ -111,6 +136,20 @@ router.post('/checkout', requireConsultancyAdmin, async (req: Request, res: Resp
     res.status(404).json({ error: 'Plano não encontrado' });
     return;
   }
+
+  // Com Asaas configurado: cria a assinatura real e devolve a URL de pagamento (sem ativar ainda).
+  // A ativação acontece no webhook PAYMENT_CONFIRMED.
+  if (asaasEnabled() && plan.priceCents > 0) {
+    try {
+      const { url } = await createCheckout(req.consultancyId!, plan.key);
+      res.json({ status: 'redirect', url, message: `Finalize o pagamento do plano ${plan.name}.` });
+    } catch (e: any) {
+      res.status(400).json({ error: e.message || 'Falha ao iniciar o pagamento.' });
+    }
+    return;
+  }
+
+  // Sem gateway (dev/demo): ativa direto.
   const sub = await activateSubscription(req.consultancyId!, plan.key);
   await prisma.invoice.create({
     data: { consultancyId: req.consultancyId!, subscriptionId: sub.id, amountCents: plan.priceCents, status: 'PAID', paidAt: new Date() },

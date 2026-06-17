@@ -37,8 +37,18 @@ services:
       OLLAMA_URL: "http://ollama:11434"
       OLLAMA_MODEL: "qwen2.5:3b"
       PORT: "8080"
+      SIMULATION_ENABLED: "${SIMULATION_ENABLED:-false}"
       SIMULATION_INTERVAL: "30000"
+      SEED_DEMO: "${SEED_DEMO:-false}"
       BILLING_WEBHOOK_SECRET: "dev-billing-webhook-secret"
+      FRONTEND_URL: "${FRONTEND_URL:-http://localhost:3000}"
+      # Pagamento (Asaas) — preencha no .env do host ou no ambiente
+      ASAAS_API_URL: "${ASAAS_API_URL:-https://sandbox.asaas.com/api/v3}"
+      ASAAS_API_KEY: "${ASAAS_API_KEY:-}"
+      ASAAS_WEBHOOK_TOKEN: "${ASAAS_WEBHOOK_TOKEN:-}"
+      # E-mail (Resend)
+      RESEND_API_KEY: "${RESEND_API_KEY:-}"
+      RESEND_FROM: "${RESEND_FROM:-SAPLINK <onboarding@resend.dev>}"
     ports:
       - "8080:8080"
     depends_on:
