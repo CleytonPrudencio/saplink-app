@@ -117,6 +117,16 @@ export async function activateConsultancy(id: string) {
   return data;
 }
 
+export async function getPlatformStats() {
+  const { data } = await api.get('/platform/stats');
+  return data;
+}
+
+export async function getConsultancyDetail(id: string) {
+  const { data } = await api.get(`/platform/consultancies/${id}`);
+  return data;
+}
+
 // Consultancy / white-label
 export async function getConsultancy() {
   const { data } = await api.get('/consultancy');
