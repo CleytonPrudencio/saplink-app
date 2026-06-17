@@ -38,6 +38,7 @@ const tenantMenu = [
 // Menu do super-admin da plataforma (gerencia tenants; sem cobran\u00E7a pr\u00F3pria)
 const platformMenu = [
   { href: "/platform", label: "Consultorias", icon: "\uD83C\uDFE2" },
+  { href: "/platform/revenue", label: "Receita", icon: "\uD83D\uDCB0" },
 ];
 
 export default function Sidebar({ user, consultancy }: SidebarProps) {

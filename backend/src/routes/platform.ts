@@ -1,4 +1,6 @@
 import { Router, Request, Response } from 'express';
+import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import prisma from '../lib/prisma';
 import { authMiddleware } from '../middleware/auth';
 import { requirePlatformAdmin } from '../middleware/roles';
@@ -39,6 +41,59 @@ router.get('/stats', async (_req: Request, res: Response) => {
     trialing: byStatus['TRIALING'] || 0,
     pastDue: byStatus['PAST_DUE'] || 0,
     suspended: (byStatus['SUSPENDED'] || 0) + (byStatus['CANCELED'] || 0),
+  });
+});
+
+// Painel de RECEITA — agregações financeiras
+router.get('/revenue', async (_req: Request, res: Response) => {
+  const [subs, plans, paidInvoices] = await Promise.all([
+    prisma.subscription.findMany({ include: { plan: true } }),
+    prisma.plan.findMany({ orderBy: { priceCents: 'asc' } }),
+    prisma.invoice.findMany({ where: { status: 'PAID' }, orderBy: { createdAt: 'desc' }, take: 500, include: { consultancy: { select: { name: true } } } }),
+  ]);
+
+  // MRR = assinaturas que faturam (ACTIVE/PAST_DUE)
+  let mrrCents = 0;
+  const byStatus: Record<string, number> = {};
+  const planMrr: Record<string, { name: string; priceCents: number; count: number; mrrCents: number }> = {};
+  for (const p of plans) planMrr[p.key] = { name: p.name, priceCents: p.priceCents, count: 0, mrrCents: 0 };
+  for (const s of subs) {
+    byStatus[s.status] = (byStatus[s.status] || 0) + 1;
+    if ((s.status === 'ACTIVE' || s.status === 'PAST_DUE') && s.plan) {
+      mrrCents += s.plan.priceCents;
+      const pm = planMrr[s.planKey];
+      if (pm) { pm.count += 1; pm.mrrCents += s.plan.priceCents; }
+    }
+  }
+
+  const totalPaidCents = paidInvoices.reduce((sum, i) => sum + i.amountCents, 0);
+
+  // Faturamento por mês (últimos 6 meses) a partir das faturas pagas
+  const now = new Date();
+  const months: { month: string; cents: number }[] = [];
+  for (let k = 5; k >= 0; k--) {
+    const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - k, 1));
+    const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+    months.push({ month: key, cents: 0 });
+  }
+  for (const inv of paidInvoices) {
+    const d = new Date(inv.paidAt || inv.createdAt);
+    const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+    const m = months.find((x) => x.month === key);
+    if (m) m.cents += inv.amountCents;
+  }
+
+  res.json({
+    mrrCents,
+    arrCents: mrrCents * 12,
+    totalPaidCents,
+    paidInvoicesCount: paidInvoices.length,
+    byStatus,
+    byPlan: Object.values(planMrr),
+    monthly: months,
+    recentInvoices: paidInvoices.slice(0, 15).map((i) => ({
+      id: i.id, amountCents: i.amountCents, paidAt: i.paidAt, createdAt: i.createdAt, consultancy: i.consultancy?.name,
+    })),
   });
 });
 
@@ -90,6 +145,49 @@ router.post('/consultancies/:id/suspend', async (req: Request, res: Response) =>
 router.post('/consultancies/:id/activate', async (req: Request, res: Response) => {
   await activateSubscription(req.params.id);
   res.json({ status: 'ok', message: 'Acesso reativado.' });
+});
+
+// === Ações de admin sobre qualquer usuário/consultoria ===
+
+// Resetar senha de qualquer usuário (retorna senha temporária)
+router.post('/users/:userId/reset-password', async (req: Request, res: Response) => {
+  const user = await prisma.user.findUnique({ where: { id: req.params.userId } });
+  if (!user) {
+    res.status(404).json({ error: 'Usuário não encontrado' });
+    return;
+  }
+  const tempPassword = crypto.randomBytes(6).toString('base64url');
+  await prisma.user.update({ where: { id: user.id }, data: { password: await bcrypt.hash(tempPassword, 10) } });
+  await prisma.passwordResetToken.deleteMany({ where: { userId: user.id } });
+  res.json({ status: 'ok', email: user.email, tempPassword });
+});
+
+// Editar cadastro de usuário (nome/papel)
+router.put('/users/:userId', async (req: Request, res: Response) => {
+  const { name, role } = req.body || {};
+  const data: { name?: string; role?: string } = {};
+  if (typeof name === 'string' && name.trim()) data.name = name.trim();
+  if (role === 'CONSULTANCY_ADMIN' || role === 'CONSULTANCY_USER') data.role = role;
+  if (Object.keys(data).length === 0) {
+    res.status(400).json({ error: 'Nada para atualizar' });
+    return;
+  }
+  const user = await prisma.user.update({
+    where: { id: req.params.userId },
+    data,
+    select: { id: true, name: true, email: true, role: true },
+  });
+  res.json(user);
+});
+
+// Editar cadastro da consultoria (nome/cnpj/plano)
+router.put('/consultancies/:id', async (req: Request, res: Response) => {
+  const { name, cnpj } = req.body || {};
+  const data: { name?: string; cnpj?: string | null } = {};
+  if (typeof name === 'string' && name.trim()) data.name = name.trim();
+  if (cnpj !== undefined) data.cnpj = cnpj || null;
+  const c = await prisma.consultancy.update({ where: { id: req.params.id }, data });
+  res.json({ id: c.id, name: c.name, cnpj: c.cnpj });
 });
 
 export default router;

@@ -127,6 +127,26 @@ export async function getConsultancyDetail(id: string) {
   return data;
 }
 
+export async function getRevenue() {
+  const { data } = await api.get('/platform/revenue');
+  return data;
+}
+
+export async function platformResetPassword(userId: string) {
+  const { data } = await api.post(`/platform/users/${userId}/reset-password`);
+  return data;
+}
+
+export async function platformUpdateUser(userId: string, payload: { name?: string; role?: string }) {
+  const { data } = await api.put(`/platform/users/${userId}`, payload);
+  return data;
+}
+
+export async function platformUpdateConsultancy(id: string, payload: { name?: string; cnpj?: string }) {
+  const { data } = await api.put(`/platform/consultancies/${id}`, payload);
+  return data;
+}
+
 // Consultancy / white-label
 export async function getConsultancy() {
   const { data } = await api.get('/consultancy');
