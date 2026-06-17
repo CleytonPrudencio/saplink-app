@@ -13,6 +13,9 @@ const cfg = {
     ashost: process.env.SAP_ASHOST, sysnr: process.env.SAP_SYSNR, client: process.env.SAP_CLIENT,
     user: process.env.SAP_USER, passwd: process.env.SAP_PASSWD, lang: process.env.SAP_LANG,
   },
+  soap: {
+    url: process.env.SAP_SOAP_URL, // endpoint do FM STFC_CONNECTION exposto via SOAMANAGER
+  },
 };
 
 function log(...a) { console.log(new Date().toISOString(), '[agent]', ...a); }

@@ -7,7 +7,45 @@ let mockUptimeBias = 0; // passeio aleatório leve para parecer real
 /** Coleta a saúde do SAP conforme o modo configurado. */
 export async function collectHealth(cfg) {
   if (cfg.mode === 'rfc') return collectViaRfc(cfg);
+  if (cfg.mode === 'soap') return collectViaSoap(cfg);
   return collectMock(cfg);
+}
+
+/**
+ * Executa o Function Module RFC-enabled STFC_CONNECTION exposto como web service SOAP
+ * (SOAMANAGER). Não precisa do SAP NW RFC SDK — é ABAP real rodando via HTTP.
+ * O FM ecoa REQUTEXT -> ECHOTEXT; saúde = HTTP 200 + eco correto.
+ */
+async function collectViaSoap(cfg) {
+  const url = cfg.soap?.url;
+  if (!url) throw new Error('SAP_SOAP_URL é obrigatório no modo soap.');
+  const marker = 'SAPLINK_PING';
+  const envelope =
+    `<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:urn="urn:sap-com:document:sap:rfc:functions">` +
+    `<soapenv:Body><urn:STFC_CONNECTION><REQUTEXT>${marker}</REQUTEXT></urn:STFC_CONNECTION></soapenv:Body></soapenv:Envelope>`;
+  const headers = { 'Content-Type': 'text/xml; charset=utf-8', SOAPAction: '""' };
+  if (cfg.sap.user && cfg.sap.passwd) {
+    headers.Authorization = 'Basic ' + Buffer.from(`${cfg.sap.user}:${cfg.sap.passwd}`).toString('base64');
+  }
+  const t0 = Date.now();
+  try {
+    const res = await fetch(url, { method: 'POST', headers, body: envelope, signal: AbortSignal.timeout(15000) });
+    const latency = Date.now() - t0;
+    const text = await res.text();
+    const echoed = text.includes(marker);
+    if (res.ok && echoed) {
+      return { ok: true, status: 'ACTIVE', latency, metrics: { rfcPing: true } };
+    }
+    return {
+      ok: false,
+      status: res.status === 401 || res.status === 403 ? 'ERROR' : 'ERROR',
+      latency,
+      message: res.ok ? 'Resposta SOAP sem eco esperado do FM.' : `SOAP HTTP ${res.status}`,
+      metrics: { rfcPing: false },
+    };
+  } catch (e) {
+    return { ok: false, status: 'OFFLINE', latency: Date.now() - t0, message: `Falha SOAP: ${e.message}`, metrics: { rfcPing: false } };
+  }
 }
 
 function collectMock(cfg) {

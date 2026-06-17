@@ -62,6 +62,29 @@ docker run -d --name saplink-agent-rfc --restart unless-stopped \
 O agente faz `RFC_PING` real, lê IDocs em erro/dumps quando os FMs existem, e empurra a
 saúde pro SAPLINK. No painel, a integração RFC fica **ACTIVE** com a latência real do ping.
 
+## Variante SEM S-user (modo `soap`) — ABAP real sem o SDK
+
+Se você não tem S-user para o SDK, exponha o FM padrão `STFC_CONNECTION` (RFC-enabled) como
+web service e o agente o executa via HTTP. É ABAP real rodando, sem `node-rfc`.
+
+1. No SAP, transação **SOAMANAGER** → *Web Service Configuration* → crie um serviço para
+   `STFC_CONNECTION` (ou use SE80 → *Enterprise Services* para gerar o serviço a partir do FM).
+2. Faça o *binding* e copie a **URL do endpoint** (calculated access URL).
+3. Rode o agente (imagem normal, sem SDK):
+
+```bash
+docker run -d --name saplink-agent-soap --restart unless-stopped \
+  -e SAPLINK_URL=https://SEU_BACKEND \
+  -e AGENT_TOKEN=<token da integração RFC> \
+  -e SAP_MODE=soap \
+  -e SAP_SOAP_URL='https://SEU_SAP:44300/sap/bc/srt/.../STFC_CONNECTION' \
+  -e SAP_USER=SAPLINK_MON -e SAP_PASSWD=<senha> \
+  saplink/agent:latest
+```
+
+O agente envia `STFC_CONNECTION(REQUTEXT=SAPLINK_PING)`; se o SAP devolver o eco, a integração
+fica **ACTIVE** com a latência real da execução do FM.
+
 ## 4. Encerrar (controlar custo)
 
 Pare/exclua o servidor Hetzner quando terminar — você paga só pelas horas usadas.
