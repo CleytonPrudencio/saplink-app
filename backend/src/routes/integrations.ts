@@ -109,12 +109,13 @@ router.get('/types', async (_req: Request, res: Response) => {
     },
     {
       type: 'OData', icon: '📊', name: 'OData Service',
-      description: 'SAP OData Services — Fiori Apps, S/4HANA APIs, Gateway',
+      description: 'SAP OData Services — Fiori Apps, S/4HANA APIs, Gateway, SAP API Hub',
       fields: [
-        { key: 'serviceUrl', label: 'URL do Serviço OData', placeholder: 'https://sap.exemplo.com/sap/opu/odata/sap/API_BUSINESS_PARTNER', required: true },
-        { key: 'user', label: 'Usuário', placeholder: 'ODATA_USER', required: true },
-        { key: 'password', label: 'Senha', placeholder: '********', required: true, type: 'password' },
-        { key: 'entitySet', label: 'Entity Set', placeholder: 'A_BusinessPartner', required: false },
+        { key: 'serviceUrl', label: 'URL do Serviço OData', placeholder: 'https://sandbox.api.sap.com/.../odata/v2', required: true },
+        { key: 'apiKey', label: 'API Key (SAP Business Accelerator Hub)', placeholder: 'cole sua APIKey do api.sap.com', required: false, type: 'password' },
+        { key: 'user', label: 'Usuário (Basic Auth — SAP on-premise)', placeholder: 'ODATA_USER', required: false },
+        { key: 'password', label: 'Senha (Basic Auth — SAP on-premise)', placeholder: '********', required: false, type: 'password' },
+        { key: 'entitySet', label: 'Entity Set', placeholder: 'Companies / A_BusinessPartner', required: false },
         { key: 'sapClient', label: 'SAP Client', placeholder: '100', required: false },
       ],
     },
