@@ -25,7 +25,8 @@ export function isMonitorable(integration: { type: string | null; config: unknow
 }
 
 function authHeaders(config: Cfg): Record<string, string> {
-  const h: Record<string, string> = { Accept: 'application/json' };
+  // json preferido, mas aceita xml ($metadata) e qualquer coisa — evita 406 no SAP
+  const h: Record<string, string> = { Accept: 'application/json, application/xml;q=0.9, */*;q=0.8' };
   // SAP Business Accelerator Hub (sandbox) usa o header APIKey
   if (config.apiKey) h['APIKey'] = config.apiKey;
   if (config.user && config.password) {
