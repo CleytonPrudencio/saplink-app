@@ -10,7 +10,9 @@ export async function requireActiveSubscription(req: Request, res: Response, nex
   try {
     const consultancyId = req.consultancyId;
     if (!consultancyId) {
-      res.status(401).json({ error: 'Não autenticado' });
+      // Autenticado, mas sem consultoria (ex.: super-admin). É 403 (forbidden),
+      // NÃO 401 — senão o front trata como sessão expirada e desloga em loop.
+      res.status(403).json({ error: 'no_tenant', message: 'Usuário sem consultoria associada.' });
       return;
     }
     const eff = await getEffectiveStatus(consultancyId);

@@ -81,7 +81,13 @@ export default function DashboardLayout({
             Sair
           </button>
         </div>
-        <div className="p-6 md:p-8">{children}</div>
+        <div className="p-6 md:p-8">
+          {user?.role === "PLATFORM_ADMIN" && !pathname.startsWith("/platform") ? (
+            <div className="text-[#9b95ad]">Redirecionando para o painel da plataforma...</div>
+          ) : (
+            children
+          )}
+        </div>
       </main>
     </div>
   );
