@@ -3,6 +3,7 @@ import prisma from '../lib/prisma';
 import { authMiddleware } from '../middleware/auth';
 import { tenancyMiddleware } from '../middleware/tenancy';
 import { syncIntegration, isMonitorable } from '../services/connectors';
+import { encryptConfig, decryptConfig, maskConfig } from '../lib/crypto';
 
 const router = Router();
 router.use(authMiddleware, tenancyMiddleware);
@@ -46,7 +47,7 @@ router.get('/all', async (req: Request, res: Response) => {
       include: { client: { select: { id: true, name: true } }, _count: { select: { alerts: true } } },
       orderBy: { updatedAt: 'desc' },
     });
-    res.json(integrations);
+    res.json(integrations.map((i) => ({ ...i, config: maskConfig(i.config) })));
   } catch (error) {
     console.error('List all integrations error:', error);
     res.status(500).json({ error: 'Erro ao listar integrações' });
@@ -170,7 +171,7 @@ router.get('/client/:clientId', async (req: Request, res: Response) => {
       include: { _count: { select: { alerts: true } } },
       orderBy: { updatedAt: 'desc' },
     });
-    res.json(integrations);
+    res.json(integrations.map((i) => ({ ...i, config: maskConfig(i.config) })));
   } catch (error) {
     console.error('List integrations error:', error);
     res.status(500).json({ error: 'Erro ao listar integrações' });
@@ -194,7 +195,7 @@ router.post('/', async (req: Request, res: Response) => {
     const integration = await prisma.integration.create({
       data: {
         name, description: description || null, type, clientId,
-        config: config || null,
+        config: config ? encryptConfig(config) : null,
         status: status || 'PENDING',
         latency: 0, errorRate: 0, uptime: 0,
       },
@@ -218,7 +219,7 @@ router.post('/:id/test', async (req: Request, res: Response) => {
       res.status(404).json({ error: 'Integração não encontrada' }); return;
     }
 
-    const config = (integration.config || {}) as Record<string, string>;
+    const config = (decryptConfig(integration.config) || {}) as Record<string, string>;
     const type = integration.type?.toUpperCase();
     let success = false;
     let message = '';
@@ -325,7 +326,7 @@ router.put('/:id', async (req: Request, res: Response) => {
         ...(description !== undefined && { description }),
         ...(type !== undefined && { type }),
         ...(status !== undefined && { status }),
-        ...(config !== undefined && { config }),
+        ...(config !== undefined && { config: encryptConfig(config) }),
         ...(latency !== undefined && { latency }),
         ...(errorRate !== undefined && { errorRate }),
         ...(uptime !== undefined && { uptime }),

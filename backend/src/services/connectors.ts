@@ -1,4 +1,5 @@
 import prisma from '../lib/prisma';
+import { decryptConfig } from '../lib/crypto';
 
 type Cfg = Record<string, string>;
 
@@ -64,7 +65,7 @@ export async function probe(url: string, config: Cfg): Promise<ProbeResult> {
 export async function syncIntegration(integrationId: string): Promise<ProbeResult | null> {
   const integration = await prisma.integration.findUnique({ where: { id: integrationId } });
   if (!integration) return null;
-  const config = (integration.config || {}) as Cfg;
+  const config = (decryptConfig(integration.config) || {}) as Cfg;
   const url = probeUrl(integration.type, config);
   if (!url) return null;
 
