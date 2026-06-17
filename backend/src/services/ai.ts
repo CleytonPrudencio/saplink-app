@@ -49,6 +49,8 @@ ${query}`;
             { role: 'user', content: userMessage },
           ],
         }),
+        // CPU pode demorar; mas sem timeout um Ollama travado deixaria o job PENDING pra sempre.
+        signal: AbortSignal.timeout(Number(process.env.OLLAMA_TIMEOUT_MS) || 180000),
       });
       if (!resp.ok) throw new Error(`Ollama HTTP ${resp.status}`);
       const data = (await resp.json()) as { message?: { content?: string } };

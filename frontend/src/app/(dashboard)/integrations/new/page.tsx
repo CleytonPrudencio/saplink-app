@@ -7,6 +7,7 @@ import {
   getClients,
   createIntegration,
   testIntegration,
+  updateIntegration,
 } from "@/lib/api";
 
 interface TypeField {
@@ -121,7 +122,6 @@ export default function NewIntegrationPage() {
     setTestResult(null);
     setCreateError("");
     try {
-      // Create temporarily to test, then we keep it
       const payload = {
         name,
         description,
@@ -129,12 +129,17 @@ export default function NewIntegrationPage() {
         clientId: selectedClientId,
         config: configValues,
       };
-      const created = await createIntegration(payload);
-      const tempId = created.id || created.data?.id;
-      setCreatedId(tempId);
+      // Cria uma vez; em re-testes, ATUALIZA a mesma integração (evita duplicar)
+      let testId = createdId;
+      if (testId) {
+        await updateIntegration(testId, payload);
+      } else {
+        const created = await createIntegration(payload);
+        testId = created.id || created.data?.id;
+        setCreatedId(testId);
+      }
 
-      // Now test
-      const result = await testIntegration(tempId);
+      const result = await testIntegration(testId);
       setTestResult(result);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Erro ao testar conexão";
