@@ -288,7 +288,7 @@ export default function ClientDetailPage({
                           <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full" style={{ backgroundColor: `rgba(${issue.color === 'rose' ? '244,63,94' : issue.color === 'orange' ? '249,115,22' : '245,158,11'},0.15)`, color: `rgb(${issue.color === 'rose' ? '251,113,133' : issue.color === 'orange' ? '251,146,60' : '252,211,77'})` }}>{issue.severity}</span>
                         </div>
                         <p className="text-xs text-[#9b95ad] mb-2">{issue.detail}</p>
-                        <a href={`/diagnostics?clientId=${id}`} className="inline-flex items-center gap-1 text-xs font-medium text-purple-400 hover:text-purple-300 transition">
+                        <a href={`/diagnostics?clientId=${id}&integrationId=${int.id}&auto=1`} className="inline-flex items-center gap-1 text-xs font-medium text-purple-400 hover:text-purple-300 transition">
                           💡 {issue.action} →
                         </a>
                       </div>

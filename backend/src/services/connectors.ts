@@ -118,7 +118,7 @@ export async function listODataEntitySets(serviceUrl: string, config: Cfg): Prom
  * Analisa uma integração em erro e, quando possível, propõe uma correção aplicável
  * dentro da plataforma (determinístico — baseado no probe real + $metadata).
  */
-export async function analyzeFix(integration: { type: string | null; name: string; config: unknown }): Promise<FixProposal> {
+export async function analyzeFix(integration: { type: string | null; name: string; config: unknown; errorRate?: number; uptime?: number }): Promise<FixProposal> {
   const config = (decryptConfig(integration.config) || {}) as Cfg;
   const url = probeUrl(integration.type, config);
 
@@ -136,11 +136,33 @@ export async function analyzeFix(integration: { type: string | null; name: strin
   const r = await probe(url, config);
   const status = r.httpStatus;
 
-  // Sem problema
+  // Sem problema na conexão ao vivo
   if (r.ok) {
+    const errorRate = integration.errorRate ?? 0;
+    const uptime = integration.uptime ?? 100;
+    const latencyHigh = r.latencyMs > 1000;
+
+    // Conexão OK, mas métricas históricas ainda degradadas (recuperação recente via média móvel)
+    if (errorRate > 5 || uptime < 95 || latencyHigh) {
+      const fatores: string[] = [];
+      if (errorRate > 5) fatores.push(`taxa de erro acumulada em ${errorRate}%`);
+      if (uptime < 95) fatores.push(`uptime em ${uptime}% (meta 95%)`);
+      if (latencyHigh) fatores.push(`latência de ${r.latencyMs}ms`);
+      return {
+        problem: 'Recuperação em andamento',
+        rootCause: `A conexão ao vivo está OK agora (HTTP ${status}, ${r.latencyMs}ms), mas as métricas ainda refletem falhas recentes: ${fatores.join(', ')}. Esses indicadores são uma média móvel e sobem/descem conforme as próximas sincronizações.`,
+        recommendation: latencyHigh
+          ? 'Acompanhe a latência: se persistir acima de 1s, investigue rede/servidor SAP. Caso contrário, as métricas se normalizam sozinhas com novas sincronizações bem-sucedidas.'
+          : 'Nenhuma ação necessária — as métricas se normalizam automaticamente com as próximas sincronizações bem-sucedidas. Force algumas sincronizações se quiser acelerar.',
+        steps: ['Sincronizar algumas vezes para acelerar a recuperação das métricas', latencyHigh ? 'Monitorar a latência nas próximas leituras' : 'Acompanhar uptime e taxa de erro voltando ao verde'],
+        probe: r,
+        autoFix: { available: false, reason: 'A conexão já está saudável; as métricas se recuperam sozinhas com o monitoramento.' },
+      };
+    }
+
     return {
       problem: 'Nenhum problema detectado',
-      rootCause: `O endpoint respondeu HTTP ${status} normalmente (${r.latencyMs}ms).`,
+      rootCause: `O endpoint respondeu HTTP ${status} normalmente (${r.latencyMs}ms) e as métricas estão saudáveis.`,
       recommendation: 'A integração está saudável. Continue o monitoramento automático.',
       steps: [],
       probe: r,
