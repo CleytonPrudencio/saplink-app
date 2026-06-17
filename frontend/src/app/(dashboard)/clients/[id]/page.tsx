@@ -225,7 +225,7 @@ export default function ClientDetailPage({
 
                     {/* Passo 2: Diagnosticar com IA */}
                     <a
-                      href={`/diagnostics?clientId=${id}`}
+                      href={`/diagnostics?clientId=${id}&integrationId=${int.id}&auto=1`}
                       className="w-full flex items-center gap-3 p-3 rounded-lg bg-purple-500/10 border border-purple-500/20 hover:bg-purple-500/15 transition text-left block"
                     >
                       <span className="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 text-xs font-bold flex items-center justify-center flex-shrink-0">2</span>

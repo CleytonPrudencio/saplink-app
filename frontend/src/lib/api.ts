@@ -283,6 +283,16 @@ export async function updateIntegration(id: string, payload: Record<string, unkn
   return data;
 }
 
+export async function diagnoseIntegration(id: string) {
+  const { data } = await api.post(`/integrations/${id}/diagnose`);
+  return data;
+}
+
+export async function autoFixIntegration(id: string) {
+  const { data } = await api.post(`/integrations/${id}/auto-fix`);
+  return data;
+}
+
 // Dead Code
 export async function getDeadCode(clientId: string) {
   const { data } = await api.get(`/dead-code/client/${clientId}`);

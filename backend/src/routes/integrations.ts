@@ -2,11 +2,78 @@ import { Router, Request, Response } from 'express';
 import prisma from '../lib/prisma';
 import { authMiddleware } from '../middleware/auth';
 import { tenancyMiddleware } from '../middleware/tenancy';
-import { syncIntegration, isMonitorable, probe, probeUrl } from '../services/connectors';
+import { syncIntegration, isMonitorable, probe, probeUrl, analyzeFix } from '../services/connectors';
 import { encryptConfig, decryptConfig, maskConfig, SENSITIVE } from '../lib/crypto';
+import { requireConsultancyAdmin } from '../middleware/roles';
 
 const router = Router();
 router.use(authMiddleware, tenancyMiddleware);
+
+// POST /:id/diagnose — analisa o erro REAL e propõe correção (auto-corrigível ou não)
+router.post('/:id/diagnose', async (req: Request, res: Response) => {
+  const integration = await prisma.integration.findUnique({
+    where: { id: req.params.id },
+    include: { client: true },
+  });
+  if (!integration || integration.client.consultancyId !== req.consultancyId!) {
+    res.status(404).json({ error: 'Integração não encontrada' });
+    return;
+  }
+  try {
+    const proposal = await analyzeFix(integration);
+    res.json({ integration: { id: integration.id, name: integration.name, type: integration.type, status: integration.status }, ...proposal });
+  } catch (error) {
+    console.error('Diagnose integration error:', error);
+    res.status(500).json({ error: 'Erro ao diagnosticar integração' });
+  }
+});
+
+// POST /:id/auto-fix — a IA aplica a correção proposta (só admin) e re-sincroniza
+router.post('/:id/auto-fix', requireConsultancyAdmin, async (req: Request, res: Response) => {
+  const integration = await prisma.integration.findUnique({
+    where: { id: req.params.id },
+    include: { client: true },
+  });
+  if (!integration || integration.client.consultancyId !== req.consultancyId!) {
+    res.status(404).json({ error: 'Integração não encontrada' });
+    return;
+  }
+  try {
+    // Recalcula a proposta no servidor (não confia no cliente)
+    const proposal = await analyzeFix(integration);
+    if (!proposal.autoFix.available) {
+      res.status(409).json({ error: 'Esta integração não tem correção automática disponível.', reason: proposal.autoFix.reason });
+      return;
+    }
+
+    const before = { status: integration.status, uptime: integration.uptime, errorRate: integration.errorRate, latency: integration.latency };
+    const current = (decryptConfig(integration.config) || {}) as Record<string, unknown>;
+    const merged = { ...current };
+    for (const c of proposal.autoFix.changes) merged[c.field] = c.to;
+
+    await prisma.integration.update({ where: { id: integration.id }, data: { config: encryptConfig(merged) } });
+
+    // Re-sincroniza para confirmar a recuperação
+    const probeResult = await syncIntegration(integration.id);
+    const updated = await prisma.integration.findUnique({ where: { id: integration.id } });
+    const after = updated
+      ? { status: updated.status, uptime: updated.uptime, errorRate: updated.errorRate, latency: updated.latency }
+      : before;
+
+    res.json({
+      applied: true,
+      changes: proposal.autoFix.changes,
+      summary: proposal.autoFix.summary,
+      recovered: updated?.status === 'ACTIVE',
+      before,
+      after,
+      probe: probeResult,
+    });
+  } catch (error) {
+    console.error('Auto-fix integration error:', error);
+    res.status(500).json({ error: 'Erro ao aplicar correção automática' });
+  }
+});
 
 // POST /:id/sync — coleta dados REAIS do endpoint (OData/REST) e atualiza métricas
 router.post('/:id/sync', async (req: Request, res: Response) => {
