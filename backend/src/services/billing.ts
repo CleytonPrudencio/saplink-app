@@ -19,10 +19,44 @@ function periodKey(d = new Date()): string {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
 }
 
+export interface SubInput {
+  status: string;
+  trialEndsAt?: Date | null;
+  graceUntil?: Date | null;
+}
+
 /**
- * Status EFETIVO da assinatura, já resolvendo expiração de trial/grace no tempo.
- * Retorna { status, allowed, reason }.
- *  - allowed=false => acesso deve ser cortado (só telas de billing liberadas).
+ * Decisão PURA de acesso (sem DB) — fácil de testar. Resolve trial/grace no tempo.
+ * allowed=false => acesso cortado (só billing liberado).
+ */
+export function decideAccess(sub: SubInput | null, now: Date): { status: string; allowed: boolean; reason?: string } {
+  if (!sub) {
+    return { status: 'NONE', allowed: false, reason: 'Nenhuma assinatura ativa.' };
+  }
+  if (sub.status === SUB_STATUS.TRIALING) {
+    if (sub.trialEndsAt && sub.trialEndsAt < now) {
+      return { status: SUB_STATUS.PAST_DUE, allowed: false, reason: 'Período de teste expirado.' };
+    }
+    return { status: SUB_STATUS.TRIALING, allowed: true };
+  }
+  if (sub.status === SUB_STATUS.ACTIVE) {
+    return { status: SUB_STATUS.ACTIVE, allowed: true };
+  }
+  if (sub.status === SUB_STATUS.PAST_DUE) {
+    if (sub.graceUntil && sub.graceUntil > now) {
+      return { status: SUB_STATUS.PAST_DUE, allowed: true, reason: 'Pagamento pendente — regularize para não perder o acesso.' };
+    }
+    return { status: SUB_STATUS.SUSPENDED, allowed: false, reason: 'Assinatura suspensa por falta de pagamento.' };
+  }
+  return {
+    status: sub.status,
+    allowed: false,
+    reason: sub.status === SUB_STATUS.CANCELED ? 'Assinatura cancelada.' : 'Assinatura suspensa.',
+  };
+}
+
+/**
+ * Status EFETIVO da assinatura (com DB), usando a decisão pura acima.
  */
 export async function getEffectiveStatus(consultancyId: string): Promise<{
   status: string;
@@ -34,41 +68,8 @@ export async function getEffectiveStatus(consultancyId: string): Promise<{
     where: { consultancyId },
     include: { plan: true },
   });
-
-  // Sem assinatura => trata como sem acesso (precisa assinar/trial)
-  if (!sub) {
-    return { status: 'NONE', allowed: false, reason: 'Nenhuma assinatura ativa.', subscription: null };
-  }
-
-  const now = new Date();
-
-  // Trial expirado sem virar ACTIVE => corta
-  if (sub.status === SUB_STATUS.TRIALING) {
-    if (sub.trialEndsAt && sub.trialEndsAt < now) {
-      return { status: SUB_STATUS.PAST_DUE, allowed: false, reason: 'Período de teste expirado.', subscription: sub };
-    }
-    return { status: SUB_STATUS.TRIALING, allowed: true, subscription: sub };
-  }
-
-  if (sub.status === SUB_STATUS.ACTIVE) {
-    return { status: SUB_STATUS.ACTIVE, allowed: true, subscription: sub };
-  }
-
-  // PAST_DUE: ainda liberado durante a carência (grace)
-  if (sub.status === SUB_STATUS.PAST_DUE) {
-    if (sub.graceUntil && sub.graceUntil > now) {
-      return { status: SUB_STATUS.PAST_DUE, allowed: true, reason: 'Pagamento pendente — regularize para não perder o acesso.', subscription: sub };
-    }
-    return { status: SUB_STATUS.SUSPENDED, allowed: false, reason: 'Assinatura suspensa por falta de pagamento.', subscription: sub };
-  }
-
-  // SUSPENDED / CANCELED => corta
-  return {
-    status: sub.status,
-    allowed: false,
-    reason: sub.status === SUB_STATUS.CANCELED ? 'Assinatura cancelada.' : 'Assinatura suspensa.',
-    subscription: sub,
-  };
+  const decision = decideAccess(sub as SubInput | null, new Date());
+  return { ...decision, subscription: sub };
 }
 
 /** Cria assinatura inicial em trial (no cadastro). */

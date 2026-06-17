@@ -66,7 +66,7 @@ router.post('/register', async (req: Request, res: Response) => {
         consultancyId: consultancy.id,
       },
       JWT_SECRET,
-      { expiresIn: JWT_EXPIRES_IN }
+      { expiresIn: JWT_EXPIRES_IN } as jwt.SignOptions
     );
 
     res.status(201).json({
@@ -123,7 +123,7 @@ router.post('/login', loginLimiter, async (req: Request, res: Response) => {
         consultancyId: user.consultancyId,
       },
       JWT_SECRET,
-      { expiresIn: JWT_EXPIRES_IN }
+      { expiresIn: JWT_EXPIRES_IN } as jwt.SignOptions
     );
 
     res.json({
