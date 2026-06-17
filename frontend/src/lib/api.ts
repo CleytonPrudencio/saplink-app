@@ -137,8 +137,13 @@ export async function platformResetPassword(userId: string) {
   return data;
 }
 
-export async function platformUpdateUser(userId: string, payload: { name?: string; role?: string }) {
+export async function platformUpdateUser(userId: string, payload: { name?: string; role?: string; email?: string }) {
   const { data } = await api.put(`/platform/users/${userId}`, payload);
+  return data;
+}
+
+export async function getPlatformClientDetail(id: string) {
+  const { data } = await api.get(`/platform/clients/${id}`);
   return data;
 }
 

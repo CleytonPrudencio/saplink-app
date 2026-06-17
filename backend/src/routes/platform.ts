@@ -109,6 +109,45 @@ router.get('/consultancies', async (_req: Request, res: Response) => {
   res.json(consultancies);
 });
 
+// Mascara campos sensíveis do config da integração
+function maskConfig(config: unknown): Record<string, unknown> | null {
+  if (!config || typeof config !== 'object') return config as null;
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(config as Record<string, unknown>)) {
+    out[k] = /pass|secret|apikey|api_key|authvalue|auth_value|token|client_secret/i.test(k) ? '••••••' : v;
+  }
+  return out;
+}
+
+// Detalhe completo de um CLIENTE (integrações com dados + alertas) — drill-down do super-admin
+router.get('/clients/:id', async (req: Request, res: Response) => {
+  const client = await prisma.client.findUnique({
+    where: { id: req.params.id },
+    include: {
+      integrations: { orderBy: { name: 'asc' } },
+      alerts: { where: { resolved: false }, orderBy: { createdAt: 'desc' }, take: 20 },
+      consultancy: { select: { id: true, name: true } },
+    },
+  });
+  if (!client) {
+    res.status(404).json({ error: 'Cliente não encontrado' });
+    return;
+  }
+  res.json({
+    id: client.id,
+    name: client.name,
+    cnpj: client.cnpj,
+    healthScore: client.healthScore,
+    consultancy: client.consultancy,
+    integrations: client.integrations.map((i) => ({
+      id: i.id, name: i.name, description: i.description, type: i.type, status: i.status,
+      latency: i.latency, errorRate: i.errorRate, uptime: i.uptime,
+      config: maskConfig(i.config), createdAt: i.createdAt, updatedAt: i.updatedAt,
+    })),
+    openAlerts: client.alerts.map((a) => ({ id: a.id, type: a.type, severity: a.severity, message: a.message, createdAt: a.createdAt })),
+  });
+});
+
 // Detalhe completo de um tenant (assinatura, usuários, clientes, faturas)
 router.get('/consultancies/:id', async (req: Request, res: Response) => {
   const id = req.params.id;
@@ -164,10 +203,18 @@ router.post('/users/:userId/reset-password', async (req: Request, res: Response)
 
 // Editar cadastro de usuário (nome/papel)
 router.put('/users/:userId', async (req: Request, res: Response) => {
-  const { name, role } = req.body || {};
-  const data: { name?: string; role?: string } = {};
+  const { name, role, email } = req.body || {};
+  const data: { name?: string; role?: string; email?: string } = {};
   if (typeof name === 'string' && name.trim()) data.name = name.trim();
   if (role === 'CONSULTANCY_ADMIN' || role === 'CONSULTANCY_USER') data.role = role;
+  if (typeof email === 'string' && email.trim()) {
+    const exists = await prisma.user.findUnique({ where: { email: email.trim() } });
+    if (exists && exists.id !== req.params.userId) {
+      res.status(409).json({ error: 'E-mail já em uso' });
+      return;
+    }
+    data.email = email.trim();
+  }
   if (Object.keys(data).length === 0) {
     res.status(400).json({ error: 'Nada para atualizar' });
     return;
