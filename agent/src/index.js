@@ -2,7 +2,7 @@
 // Roda na rede do cliente, lê a saúde do SAP localmente e empurra via HTTPS (só saída)
 // para a plataforma. Autentica por token próprio da integração (X-Agent-Token).
 
-import { collectHealth, collectSapItems, executeCommand, discoverCatalog } from './sap.js';
+import { collectHealth, collectSapItems, executeCommand, discoverCatalog, discoverTransports } from './sap.js';
 
 const cfg = {
   url: (process.env.SAPLINK_URL || '').replace(/\/$/, ''),
@@ -102,6 +102,14 @@ async function pushCatalogOnce() {
     if (status === 200) { catalogPushed = true; log(`catálogo: ${items.length} interface(s) (inativadas: ${body.deactivated ?? 0})`); }
   } catch (e) {
     log('falha ao enviar catálogo (rede):', e.message);
+  }
+  // D3 — transportes STMS
+  try {
+    const items = discoverTransports();
+    const { status, body } = await api('/api/agent/transports', { method: 'POST', body: JSON.stringify({ items }) });
+    if (status === 200) log(`transports: ${body.upserted ?? items.length} enviado(s)`);
+  } catch (e) {
+    log('falha ao enviar transports (rede):', e.message);
   }
 }
 

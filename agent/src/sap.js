@@ -165,6 +165,18 @@ export function discoverCatalog() {
   ];
 }
 
+/** Descobre transportes STMS recentes. No mock, gera amostras com importação nas últimas horas. */
+export function discoverTransports() {
+  const now = Date.now();
+  const h = (n) => new Date(now - n * 3600000).toISOString();
+  return [
+    { trNumber: 'DEVK900231', description: 'Ajuste em user-exit MIGO (ZMM)', owner: 'jsilva', status: 'IMPORTED', target: 'PRD', importedAt: h(2) },
+    { trNumber: 'DEVK900228', description: 'Nova estrutura de IDoc ORDERS05', owner: 'msouza', status: 'IMPORTED', target: 'PRD', importedAt: h(5) },
+    { trNumber: 'DEVK900219', description: 'Correção de mapeamento CPI', owner: 'jsilva', status: 'IMPORTED', target: 'QAS', importedAt: h(20) },
+    { trNumber: 'DEVK900205', description: 'Config SM59 destino Salesforce', owner: 'basis', status: 'IMPORTED', target: 'PRD', importedAt: h(50) },
+  ];
+}
+
 async function collectViaRfc(cfg) {
   // node-rfc é opcional: só funciona com o SAP NW RFC SDK instalado no host/imagem.
   let rfc;

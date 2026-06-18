@@ -100,6 +100,17 @@ export async function narrateDigest(context: object): Promise<string> {
   return runAI(DIGEST_PROMPT, userMessage, 450);
 }
 
+const SLA_PROMPT = `Você é um analista de níveis de serviço (SLA) de integrações SAP, escrevendo o
+relatório mensal de SLA de um cliente para apresentação executiva. Português brasileiro, tom formal e objetivo.
+Estruture: 1) Resultado do mês (cumpriu ou não a meta, com números); 2) Principais quebras (integrações que
+ficaram abaixo da meta, com nomes); 3) Recomendações para o próximo período. Máx ~180 palavras. Use só os dados do contexto.`;
+
+/** Relatório mensal de SLA narrado por IA. */
+export async function narrateSla(context: object): Promise<string> {
+  const userMessage = `Dados de SLA do cliente:\n${JSON.stringify(context, null, 2)}\n\nEscreva o relatório mensal de SLA.`;
+  return runAI(SLA_PROMPT, userMessage, 420);
+}
+
 /** Indica se algum provedor de IA está configurado (Ollama ou Claude). */
 export function aiEnabled(): boolean {
   return !!(process.env.OLLAMA_URL || process.env.ANTHROPIC_API_KEY);

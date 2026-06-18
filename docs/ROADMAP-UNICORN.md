@@ -24,9 +24,9 @@ Ordem por valor × esforço × dependência. Marcar `[x]` ao concluir.
 - [x] C3. **Portal do cliente final** — Client.portalToken; rota pública /api/portal/:token; página /portal/[token] white-label read-only; admin ativa/gera link nos clientes.
 
 ## Fase D — SLA & valor de negócio (vender pra C-level)
-- [ ] D1. **SLA por cliente** — define SLA, mede compliance, relatório mensal narrado por IA.
-- [ ] D2. **Impacto em R$** — integração → processo de negócio → custo/hora parada.
-- [ ] D3. **Radar de transports (STMS)** — correlaciona incidente com transporte recente.
+- [x] D1. **SLA por cliente** — meta uptime/latência por cliente, compliance medido, relatório mensal narrado por IA. /sla
+- [x] D2. **Impacto em R$** — custo/hora por integração + processo de negócio; R$/h em risco e exposição acumulada por idade do incidente.
+- [x] D3. **Radar de transports (STMS)** — Transport via agente; correlação automática incidente × transporte importado nas 24h anteriores. /transports
 
 ## Fase E — Inteligência preditiva & moat de dados
 - [ ] E1. **Previsão de falha** — anomalia em latência/erro/fila antes de quebrar.

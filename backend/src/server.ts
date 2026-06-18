@@ -24,6 +24,8 @@ import catalogRoutes from './routes/catalog';
 import channelRoutes from './routes/channels';
 import ticketRoutes from './routes/tickets';
 import portalRoutes from './routes/portal';
+import slaRoutes from './routes/sla';
+import transportRoutes from './routes/transports';
 import { authMiddleware } from './middleware/auth';
 import { tenancyMiddleware } from './middleware/tenancy';
 import { requireActiveSubscription } from './middleware/subscription';
@@ -95,6 +97,8 @@ app.use('/api/remediation', ...tenantGate, remediationRoutes);
 app.use('/api/catalog', ...tenantGate, catalogRoutes);
 app.use('/api/channels', ...tenantGate, channelRoutes);
 app.use('/api/tickets', ...tenantGate, ticketRoutes);
+app.use('/api/sla', ...tenantGate, slaRoutes);
+app.use('/api/transports', ...tenantGate, transportRoutes);
 
 // Error handler global (último middleware)
 app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {

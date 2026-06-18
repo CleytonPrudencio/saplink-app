@@ -72,6 +72,9 @@ model Client {
   healthScore   Int           @default(0)
   portalEnabled Boolean       @default(false) // C3: portal read-only do cliente final
   portalToken   String?       @unique          // token do link público do portal
+  slaUptimeTarget Float       @default(99.0)   // D1: meta de uptime (%)
+  slaMaxLatencyMs Int         @default(2000)   // D1: meta de latência (ms)
+  transports    Transport[]
   integrations  Integration[]
   alerts        Alert[]
   diagnostics   Diagnostic[]
@@ -106,6 +109,8 @@ model Integration {
   certHost        String?    // host cujo cert foi lido
   secretExpiresAt DateTime?  // expiração manual: senha RFC, client secret OAuth, cert SNC...
   secretLabel     String?    // descrição do segredo (ex.: "Senha do usuário RFC")
+  costPerHourCents Int       @default(0)  // D2: custo de parada por hora (centavos R$)
+  businessProcess  String?   // D2: processo de negócio impactado
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -223,6 +228,23 @@ model InterfaceCatalogItem {
   createdAt     DateTime     @default(now())
   @@unique([integrationId, kind, name])
   @@index([clientId, kind])
+}
+
+// D3 — transportes (STMS/TMS) reportados pelo agente, para correlação com incidentes.
+model Transport {
+  id            String       @id @default(uuid())
+  clientId      String
+  client        Client       @relation(fields: [clientId], references: [id])
+  integrationId String?
+  trNumber      String       // ex.: DEVK900123
+  description   String?
+  owner         String?
+  status        String?      // IMPORTED | ERROR
+  target        String?      // sistema alvo (QAS/PRD)
+  importedAt    DateTime?
+  createdAt     DateTime     @default(now())
+  @@unique([clientId, trNumber])
+  @@index([clientId])
 }
 
 model Diagnostic {

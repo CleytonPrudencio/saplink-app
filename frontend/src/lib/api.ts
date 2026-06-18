@@ -141,6 +141,53 @@ export async function updateAddons(payload: { extraIntegrations?: number; extraU
   return data;
 }
 
+// D1 — SLA por cliente
+export interface SlaClient {
+  clientId: string; client: string; uptimeTarget: number; maxLatencyMs: number;
+  avgUptime: number; avgLatency: number; integrations: number; meeting: number; compliance: number;
+  breaches: { name: string; type: string; uptime: number; latency: number; reason: string }[];
+}
+export async function getSla() {
+  const { data } = await api.get('/sla');
+  return data as { clients: SlaClient[]; overall: number };
+}
+export async function setSlaTargets(clientId: string, payload: { uptimeTarget?: number; maxLatencyMs?: number }) {
+  const { data } = await api.put(`/sla/${clientId}`, payload);
+  return data;
+}
+export async function getSlaReport(clientId: string) {
+  const { data } = await api.get(`/sla/${clientId}/report`);
+  return data as { data: SlaClient; narrative: string };
+}
+
+// D2 — Impacto em R$
+export interface ImpactItem {
+  integrationId: string; integration: string; client: string; status: string; businessProcess: string | null;
+  costPerHourCents: number; atRisk: boolean; hoursDown: number; accumulatedCents: number;
+}
+export async function getImpact() {
+  const { data } = await api.get('/sla/impact/all');
+  return data as { items: ImpactItem[]; totals: { monitoredWithCost: number; atRisk: number; riskPerHourCents: number; accumulatedCents: number } };
+}
+export async function getImpactIntegrations() {
+  const { data } = await api.get('/sla/impact/integrations');
+  return data as { integrations: { id: string; name: string; type: string; client?: string; costPerHourCents: number; businessProcess: string | null }[] };
+}
+export async function setIntegrationCost(integrationId: string, payload: { costPerHourCents?: number; businessProcess?: string }) {
+  const { data } = await api.put(`/sla/impact/${integrationId}`, payload);
+  return data;
+}
+
+// D3 — Radar de transports
+export async function getTransports(clientId?: string) {
+  const { data } = await api.get('/transports', { params: clientId ? { clientId } : {} });
+  return data as {
+    transports: { id: string; trNumber: string; description?: string | null; owner?: string | null; status?: string | null; target?: string | null; importedAt?: string | null; client?: string }[];
+    correlations: { alert: { id: string; severity: string; message: string; createdAt: string; client?: string }; suspects: { trNumber: string; description?: string | null; owner?: string | null; importedAt?: string | null; target?: string | null }[] }[];
+    summary: { transports: number; openIncidents: number; correlated: number };
+  };
+}
+
 // C1 — Canais de notificação / on-call
 export interface NotificationChannel {
   id: string; type: string; name: string; target: string; minSeverity: string; level: number; enabled: boolean;

@@ -33,6 +33,8 @@ const tenantMenu = [
   { href: "/validity", label: "Radar de validade", icon: "\uD83D\uDCE1" },
   { href: "/diagnostics", label: "Diagnostico IA", icon: "\uD83E\uDD16" },
   { href: "/catalog", label: "Catalogo", icon: "\uD83D\uDCDA" },
+  { href: "/sla", label: "SLA & Impacto", icon: "\uD83D\uDCCA" },
+  { href: "/transports", label: "Transports", icon: "\uD83D\uDE9A" },
   { href: "/ask", label: "Pergunte \u00E0 IA", icon: "\uD83D\uDCAC" },
   { href: "/dead-code", label: "Dead Code", icon: "\uD83D\uDD0D" },
   { href: "/reports", label: "Relatorios", icon: "\uD83D\uDCC4" },
