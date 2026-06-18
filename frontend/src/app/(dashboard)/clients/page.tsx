@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getClients, createClient, deleteClient } from "@/lib/api";
+import { getClients, createClient, deleteClient, getPortalStatus, enableClientPortal, disableClientPortal } from "@/lib/api";
 import HealthScoreRing from "@/components/HealthScoreRing";
 
 interface Client {
@@ -24,6 +24,25 @@ export default function ClientsPage() {
   const [cnpj, setCnpj] = useState("");
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
+
+  // C3 — portal por cliente
+  const [activePortal, setActivePortal] = useState("");
+  const [portalInfo, setPortalInfo] = useState<{ enabled: boolean; url: string | null } | null>(null);
+  const [portalBusy, setPortalBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  async function openPortal(clientId: string) {
+    if (activePortal === clientId) { setActivePortal(""); return; }
+    setActivePortal(clientId); setPortalInfo(null); setCopied(false);
+    try { setPortalInfo(await getPortalStatus(clientId)); } catch { setPortalInfo({ enabled: false, url: null }); }
+  }
+  async function togglePortal(clientId: string, enable: boolean) {
+    setPortalBusy(true);
+    try {
+      const r = enable ? await enableClientPortal(clientId) : await disableClientPortal(clientId);
+      setPortalInfo({ enabled: r.portalEnabled, url: "url" in r ? r.url : portalInfo?.url ?? null });
+    } catch { /* ignore */ } finally { setPortalBusy(false); }
+  }
 
   async function load() {
     setLoading(true);
@@ -147,15 +166,47 @@ export default function ClientsPage() {
                   </div>
                 </div>
               </div>
-              <button
-                onClick={() => onDelete(client.id, client.name)}
-                aria-label={`Excluir ${client.name}`}
-                className="text-[#9b95ad] hover:text-rose-400 text-lg px-1"
-                title="Excluir cliente"
-              >
-                ✕
-              </button>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => openPortal(client.id)}
+                  aria-label={`Portal de ${client.name}`}
+                  className="text-[#9b95ad] hover:text-cyan-300 text-lg px-1"
+                  title="Portal do cliente"
+                >
+                  🔗
+                </button>
+                <button
+                  onClick={() => onDelete(client.id, client.name)}
+                  aria-label={`Excluir ${client.name}`}
+                  className="text-[#9b95ad] hover:text-rose-400 text-lg px-1"
+                  title="Excluir cliente"
+                >
+                  ✕
+                </button>
+              </div>
             </div>
+
+            {activePortal === client.id && (
+              <div className="mt-3 pt-3 border-t border-white/[0.06] text-sm">
+                {!portalInfo ? (
+                  <p className="text-[#9b95ad] text-xs">Carregando portal...</p>
+                ) : portalInfo.enabled && portalInfo.url ? (
+                  <div className="space-y-2">
+                    <p className="text-xs text-emerald-400">Portal ativo (read-only para o cliente).</p>
+                    <div className="flex gap-1">
+                      <input readOnly value={portalInfo.url} className="flex-1 bg-[#0f0b1a] border border-white/[0.1] rounded-lg px-2 py-1 text-xs text-[#c9c5d6]" />
+                      <button onClick={() => { navigator.clipboard?.writeText(portalInfo.url!); setCopied(true); }} className="text-xs px-2 py-1 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] cursor-pointer">{copied ? "✓" : "Copiar"}</button>
+                    </div>
+                    <button onClick={() => togglePortal(client.id, false)} disabled={portalBusy} className="text-xs text-rose-300 hover:underline cursor-pointer disabled:opacity-40">Desativar portal</button>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <p className="text-xs text-[#9b95ad]">Gere um link público read-only com a saúde deste cliente (white-label).</p>
+                    <button onClick={() => togglePortal(client.id, true)} disabled={portalBusy} className="text-xs px-3 py-1.5 rounded-lg bg-purple-500/20 text-purple-200 hover:bg-purple-500/30 cursor-pointer disabled:opacity-40">{portalBusy ? "..." : "Ativar portal do cliente"}</button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         ))}
       </div>

@@ -27,6 +27,9 @@ model Consultancy {
   acceptedTermsAt DateTime?    // aceite dos termos no cadastro
   weeklyDigest  Boolean        @default(true)  // recebe o digest semanal por e-mail
   lastDigestAt  DateTime?      // último envio do digest semanal
+  escalateAfterMin Int         @default(30)    // C1: minutos até escalar alerta não resolvido
+  channels      NotificationChannel[]
+  ticketConfig  TicketConfig?
   plan          String         @default("STARTER") // legado; fonte da verdade = Subscription
   logoUrl       String?
   primaryColor  String?        // white-label (hex)
@@ -67,6 +70,8 @@ model Client {
   consultancyId String
   consultancy   Consultancy   @relation(fields: [consultancyId], references: [id])
   healthScore   Int           @default(0)
+  portalEnabled Boolean       @default(false) // C3: portal read-only do cliente final
+  portalToken   String?       @unique          // token do link público do portal
   integrations  Integration[]
   alerts        Alert[]
   diagnostics   Diagnostic[]
@@ -117,6 +122,41 @@ model Alert {
   integration   Integration? @relation(fields: [integrationId], references: [id])
   createdAt     DateTime     @default(now())
   resolvedAt    DateTime?
+  // C1/C2 — notificação multicanal + ticket sync
+  notifiedAt     DateTime?
+  escalationLevel Int         @default(0)
+  ticketKey      String?
+  ticketUrl      String?
+  ticketClosedAt DateTime?
+}
+
+// C1 — canais de notificação por consultoria, com níveis de escalonamento.
+model NotificationChannel {
+  id            String      @id @default(uuid())
+  consultancyId String
+  consultancy   Consultancy @relation(fields: [consultancyId], references: [id])
+  type          String      // SLACK | TEAMS | WEBHOOK | EMAIL
+  name          String
+  target        String      // URL do webhook ou e-mail
+  minSeverity   String      @default("MEDIUM") // MEDIUM | HIGH | CRITICAL
+  level         Int         @default(1)        // 1 = imediato, 2 = escalonamento
+  enabled       Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+}
+
+// C2 — configuração de ticket sync por consultoria (Jira/ServiceNow).
+model TicketConfig {
+  id            String      @id @default(uuid())
+  consultancyId String      @unique
+  consultancy   Consultancy @relation(fields: [consultancyId], references: [id])
+  provider      String      // JIRA | SERVICENOW
+  baseUrl       String
+  authUser      String      // e-mail (Jira) ou usuário (ServiceNow)
+  authToken     String      // API token (Jira) / senha (ServiceNow) — cifrado
+  projectKey    String?     // projeto Jira
+  minSeverity   String      @default("HIGH")
+  enabled       Boolean     @default(true)
+  createdAt     DateTime    @default(now())
 }
 
 // B1 — itens operacionais do SAP reportados pelo agente: IDocs em erro, filas qRFC/tRFC.

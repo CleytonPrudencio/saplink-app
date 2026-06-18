@@ -141,6 +141,78 @@ export async function updateAddons(payload: { extraIntegrations?: number; extraU
   return data;
 }
 
+// C1 — Canais de notificação / on-call
+export interface NotificationChannel {
+  id: string; type: string; name: string; target: string; minSeverity: string; level: number; enabled: boolean;
+}
+export async function getChannels() {
+  const { data } = await api.get('/channels');
+  return data as { channels: NotificationChannel[]; escalateAfterMin: number };
+}
+export async function createChannel(payload: { type: string; name: string; target: string; minSeverity?: string; level?: number }) {
+  const { data } = await api.post('/channels', payload);
+  return data;
+}
+export async function updateChannel(id: string, payload: Partial<NotificationChannel>) {
+  const { data } = await api.put(`/channels/${id}`, payload);
+  return data;
+}
+export async function deleteChannel(id: string) {
+  const { data } = await api.delete(`/channels/${id}`);
+  return data;
+}
+export async function testChannel(id: string) {
+  const { data } = await api.post(`/channels/${id}/test`);
+  return data as { ok: boolean };
+}
+export async function setEscalation(escalateAfterMin: number) {
+  const { data } = await api.put('/channels/settings/escalation', { escalateAfterMin });
+  return data;
+}
+
+// C2 — Ticket sync
+export interface TicketConfigView {
+  provider: string; baseUrl: string; authUser: string; projectKey?: string | null; minSeverity: string; enabled: boolean; hasToken: boolean;
+}
+export async function getTicketConfig() {
+  const { data } = await api.get('/tickets/config');
+  return data as { config: TicketConfigView | null };
+}
+export async function saveTicketConfig(payload: Record<string, unknown>) {
+  const { data } = await api.put('/tickets/config', payload);
+  return data;
+}
+export async function testTicketConfig() {
+  const { data } = await api.post('/tickets/config/test');
+  return data as { ok: boolean; key?: string; url?: string; reason?: string };
+}
+export async function getLinkedTickets() {
+  const { data } = await api.get('/tickets/linked');
+  return data as { alerts: { id: string; message: string; severity: string; ticketKey: string; ticketUrl: string; resolved: boolean; ticketClosedAt: string | null }[] };
+}
+
+// C3 — Portal do cliente final
+export async function getPortalStatus(clientId: string) {
+  const { data } = await api.get(`/clients/${clientId}/portal`);
+  return data as { portalEnabled: boolean; url: string | null };
+}
+export async function enableClientPortal(clientId: string) {
+  const { data } = await api.post(`/clients/${clientId}/portal/enable`);
+  return data as { portalEnabled: boolean; token: string; url: string };
+}
+export async function disableClientPortal(clientId: string) {
+  const { data } = await api.post(`/clients/${clientId}/portal/disable`);
+  return data as { portalEnabled: boolean };
+}
+export async function regenerateClientPortal(clientId: string) {
+  const { data } = await api.post(`/clients/${clientId}/portal/regenerate`);
+  return data as { portalEnabled: boolean; token: string; url: string };
+}
+export async function getPortal(token: string) {
+  const { data } = await api.get(`/portal/${token}`);
+  return data;
+}
+
 // B1 — Cockpit de IDoc/filas
 export interface SapItemView {
   id: string; kind: string; direction?: string | null; ref: string; messageType?: string | null;

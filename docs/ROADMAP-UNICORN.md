@@ -19,9 +19,9 @@ Ordem por valor × esforço × dependência. Marcar `[x]` ao concluir.
 - [x] B3. **Catálogo vivo de interfaces** — InterfaceCatalogItem, auto-descoberta pelo agente (WE20/SM59/msg types/OData), página /catalog buscável.
 
 ## Fase C — Alerta & integração de operação
-- [ ] C1. **On-call multicanal + escalonamento** — WhatsApp/Teams/Slack, plantão, política de escalonamento.
-- [ ] C2. **Ticket sync** — alerta vira chamado (Jira/ServiceNow) e sincroniza status.
-- [ ] C3. **Portal do cliente final** — white-label, read-only: o cliente da consultoria vê a própria saúde/SLA.
+- [x] C1. **On-call multicanal + escalonamento** — NotificationChannel (Slack/Teams/Webhook/Email) c/ níveis; dispatcher; escalonamento por tempo; /notifications.
+- [x] C2. **Ticket sync** — TicketConfig (Jira/ServiceNow); alerta abre chamado via REST e fecha ao resolver; token cifrado; teste de conexão.
+- [x] C3. **Portal do cliente final** — Client.portalToken; rota pública /api/portal/:token; página /portal/[token] white-label read-only; admin ativa/gera link nos clientes.
 
 ## Fase D — SLA & valor de negócio (vender pra C-level)
 - [ ] D1. **SLA por cliente** — define SLA, mede compliance, relatório mensal narrado por IA.

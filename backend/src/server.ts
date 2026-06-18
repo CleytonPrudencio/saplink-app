@@ -21,6 +21,9 @@ import validityRoutes from './routes/validity';
 import cockpitRoutes from './routes/cockpit';
 import remediationRoutes from './routes/remediation';
 import catalogRoutes from './routes/catalog';
+import channelRoutes from './routes/channels';
+import ticketRoutes from './routes/tickets';
+import portalRoutes from './routes/portal';
 import { authMiddleware } from './middleware/auth';
 import { tenancyMiddleware } from './middleware/tenancy';
 import { requireActiveSubscription } from './middleware/subscription';
@@ -29,6 +32,7 @@ import { syncIntegration, isMonitorable } from './services/connectors';
 import { markStaleAgents } from './services/agent';
 import { runDueDigests } from './services/digest';
 import { refreshAllCerts } from './services/validity';
+import { processAlerts } from './services/alertproc';
 import { stripeWebhookHandler } from './services/stripe';
 import prisma from './lib/prisma';
 
@@ -74,6 +78,7 @@ app.use('/api/platform', platformRoutes);
 app.use('/api/consultancy', consultancyRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/agent', agentRoutes); // agente on-premise: auth por token próprio, sem JWT
+app.use('/api/portal', portalRoutes); // portal público do cliente final: auth por token na URL
 
 // Rotas de negócio: exigem assinatura ATIVA (corte do inadimplente)
 const tenantGate = [authMiddleware, tenancyMiddleware, requireActiveSubscription];
@@ -88,6 +93,8 @@ app.use('/api/validity', ...tenantGate, validityRoutes);
 app.use('/api/cockpit', ...tenantGate, cockpitRoutes);
 app.use('/api/remediation', ...tenantGate, remediationRoutes);
 app.use('/api/catalog', ...tenantGate, catalogRoutes);
+app.use('/api/channels', ...tenantGate, channelRoutes);
+app.use('/api/tickets', ...tenantGate, ticketRoutes);
 
 // Error handler global (último middleware)
 app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
@@ -162,6 +169,18 @@ app.listen(PORT, () => {
   };
   setTimeout(runCertScan, 30000);
   setInterval(runCertScan, CERT_CHECK_MS);
+
+  // C1/C2 — processa alertas: notifica canais (Slack/Teams/Webhook/Email), escala
+  // não resolvidos e abre/fecha tickets (Jira/ServiceNow). A cada 60s.
+  const ALERT_PROC_MS = parseInt(process.env.ALERT_PROC_MS || '60000');
+  setInterval(async () => {
+    try {
+      const r = await processAlerts();
+      if (r.notified || r.escalated || r.closed) logger.info(r, 'alertas processados (notify/ticket)');
+    } catch (error) {
+      logger.error({ err: (error as Error).message }, 'alert processor error');
+    }
+  }, ALERT_PROC_MS);
 });
 
 export default app;

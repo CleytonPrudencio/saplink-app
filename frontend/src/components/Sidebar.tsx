@@ -29,6 +29,7 @@ const tenantMenu = [
   { href: "/integrations", label: "Integra\u00E7\u00f5es", icon: "\uD83D\uDD17" },
   { href: "/cockpit", label: "Cockpit", icon: "\uD83D\uDEF0\uFE0F" },
   { href: "/alerts", label: "Alertas", icon: "\uD83D\uDD14" },
+  { href: "/notifications", label: "On-call & Tickets", icon: "\uD83D\uDCE3", adminOnly: true },
   { href: "/validity", label: "Radar de validade", icon: "\uD83D\uDCE1" },
   { href: "/diagnostics", label: "Diagnostico IA", icon: "\uD83E\uDD16" },
   { href: "/catalog", label: "Catalogo", icon: "\uD83D\uDCDA" },

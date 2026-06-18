@@ -4,6 +4,7 @@ import { authMiddleware } from '../middleware/auth';
 import { tenancyMiddleware } from '../middleware/tenancy';
 import { requireConsultancyAdmin } from '../middleware/roles';
 import { assertWithinLimit, LimitError } from '../services/billing';
+import { enablePortal, disablePortal, regenerateToken, portalUrl } from '../services/portal';
 
 const router = Router();
 router.use(authMiddleware, tenancyMiddleware);
@@ -136,6 +137,9 @@ router.delete('/:id', requireConsultancyAdmin, async (req: Request, res: Respons
     }
 
     // Delete related records first
+    await prisma.remediationAction.deleteMany({ where: { clientId: req.params.id } });
+    await prisma.sapItem.deleteMany({ where: { clientId: req.params.id } });
+    await prisma.interfaceCatalogItem.deleteMany({ where: { clientId: req.params.id } });
     await prisma.alert.deleteMany({ where: { clientId: req.params.id } });
     await prisma.diagnostic.deleteMany({ where: { clientId: req.params.id } });
     await prisma.integration.deleteMany({ where: { clientId: req.params.id } });
@@ -146,6 +150,32 @@ router.delete('/:id', requireConsultancyAdmin, async (req: Request, res: Respons
     console.error('Delete client error:', error);
     res.status(500).json({ error: 'Erro ao remover cliente' });
   }
+});
+
+// C3 — portal do cliente final (admin)
+router.post('/:id/portal/enable', requireConsultancyAdmin, async (req: Request, res: Response) => {
+  const r = await enablePortal(req.consultancyId!, req.params.id);
+  if ('error' in r) { res.status(404).json({ error: 'Cliente não encontrado' }); return; }
+  res.json(r);
+});
+
+router.post('/:id/portal/disable', requireConsultancyAdmin, async (req: Request, res: Response) => {
+  const r = await disablePortal(req.consultancyId!, req.params.id);
+  if ('error' in r) { res.status(404).json({ error: 'Cliente não encontrado' }); return; }
+  res.json(r);
+});
+
+router.post('/:id/portal/regenerate', requireConsultancyAdmin, async (req: Request, res: Response) => {
+  const r = await regenerateToken(req.consultancyId!, req.params.id);
+  if ('error' in r) { res.status(404).json({ error: 'Cliente não encontrado' }); return; }
+  res.json(r);
+});
+
+// status do portal de um cliente
+router.get('/:id/portal', async (req: Request, res: Response) => {
+  const client = await prisma.client.findFirst({ where: { id: req.params.id, consultancyId: req.consultancyId! }, select: { portalEnabled: true, portalToken: true } });
+  if (!client) { res.status(404).json({ error: 'Cliente não encontrado' }); return; }
+  res.json({ portalEnabled: client.portalEnabled, url: client.portalToken ? portalUrl(client.portalToken) : null });
 });
 
 export default router;
