@@ -247,6 +247,37 @@ model Transport {
   @@index([clientId])
 }
 
+// E1 — amostras de métricas no tempo (para tendência/previsão).
+model MetricSample {
+  id            String   @id @default(uuid())
+  integrationId String
+  clientId      String
+  latency       Int      @default(0)
+  errorRate     Float    @default(0)
+  uptime        Float    @default(100)
+  queueDepth    Int      @default(0)
+  capturedAt    DateTime @default(now())
+  @@index([integrationId, capturedAt])
+}
+
+// F1/F2 — mensagens do SAP Cloud Integration (CPI) e do AIF.
+model CloudItem {
+  id            String   @id @default(uuid())
+  clientId      String
+  integrationId String?
+  source        String   // CPI | AIF
+  artifact      String   // nome do IFlow (CPI) ou interface (AIF)
+  messageId     String
+  direction     String?  // INBOUND | OUTBOUND
+  status        String?  // COMPLETED | FAILED | RETRY | ESCALATED
+  error         String?
+  occurredAt    DateTime?
+  createdAt     DateTime @default(now())
+  resolved      Boolean  @default(false)
+  @@unique([integrationId, source, messageId])
+  @@index([clientId, source, resolved])
+}
+
 model Diagnostic {
   id        String   @id @default(uuid())
   query     String

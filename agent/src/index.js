@@ -2,7 +2,7 @@
 // Roda na rede do cliente, lê a saúde do SAP localmente e empurra via HTTPS (só saída)
 // para a plataforma. Autentica por token próprio da integração (X-Agent-Token).
 
-import { collectHealth, collectSapItems, executeCommand, discoverCatalog, discoverTransports } from './sap.js';
+import { collectHealth, collectSapItems, executeCommand, discoverCatalog, discoverTransports, discoverCloud } from './sap.js';
 
 const cfg = {
   url: (process.env.SAPLINK_URL || '').replace(/\/$/, ''),
@@ -110,6 +110,14 @@ async function pushCatalogOnce() {
     if (status === 200) log(`transports: ${body.upserted ?? items.length} enviado(s)`);
   } catch (e) {
     log('falha ao enviar transports (rede):', e.message);
+  }
+  // F1/F2 — mensagens CPI/AIF
+  try {
+    const items = discoverCloud();
+    const { status, body } = await api('/api/agent/cloud-items', { method: 'POST', body: JSON.stringify({ items }) });
+    if (status === 200) log(`cloud (CPI/AIF): ${body.upserted ?? items.length} mensagem(ns)`);
+  } catch (e) {
+    log('falha ao enviar cloud-items (rede):', e.message);
   }
 }
 

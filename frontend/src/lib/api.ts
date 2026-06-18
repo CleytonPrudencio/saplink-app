@@ -141,6 +141,38 @@ export async function updateAddons(payload: { extraIntegrations?: number; extraU
   return data;
 }
 
+// E1 — Previsão de falha
+export interface Prediction {
+  integrationId: string; integration: string; client: string; status: string;
+  riskScore: number; level: "LOW" | "MEDIUM" | "HIGH"; forecast: string;
+  signals: string[]; samples: number; errorRate: number; uptime: number; latency: number; queueDepth: number;
+}
+export async function getPredict() {
+  const { data } = await api.get('/predict');
+  return data as { predictions: Prediction[]; summary: { high: number; medium: number; low: number } };
+}
+// E2 — Benchmark cross-cliente
+export interface BenchmarkRow {
+  type: string; count: number; marketCount: number; myUptime: number; marketUptime: number; uptimePercentile: number;
+  myErrorRate: number; marketErrorRate: number; myLatency: number; marketLatency: number;
+}
+export async function getBenchmark() {
+  const { data } = await api.get('/predict/benchmark');
+  return data as { rows: BenchmarkRow[]; marketTenants: number };
+}
+
+// F1/F2 — CPI / AIF
+export interface CloudItem {
+  id: string; source: string; artifact: string; messageId: string; direction?: string | null;
+  status?: string | null; error?: string | null; occurredAt?: string | null; resolved: boolean;
+}
+export async function getCloud(filters: { source?: string; status?: string; q?: string; clientId?: string } = {}) {
+  const params: Record<string, string> = {};
+  for (const k of ["source", "status", "q", "clientId"] as const) if (filters[k]) params[k] = filters[k]!;
+  const { data } = await api.get('/cloud', { params });
+  return data as { items: CloudItem[]; summary: { total: number; failed: number; bySource: Record<string, number> } };
+}
+
 // D1 — SLA por cliente
 export interface SlaClient {
   clientId: string; client: string; uptimeTarget: number; maxLatencyMs: number;

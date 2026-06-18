@@ -26,6 +26,8 @@ import ticketRoutes from './routes/tickets';
 import portalRoutes from './routes/portal';
 import slaRoutes from './routes/sla';
 import transportRoutes from './routes/transports';
+import predictRoutes from './routes/predict';
+import cloudRoutes from './routes/cloud';
 import { authMiddleware } from './middleware/auth';
 import { tenancyMiddleware } from './middleware/tenancy';
 import { requireActiveSubscription } from './middleware/subscription';
@@ -35,6 +37,7 @@ import { markStaleAgents } from './services/agent';
 import { runDueDigests } from './services/digest';
 import { refreshAllCerts } from './services/validity';
 import { processAlerts } from './services/alertproc';
+import { snapshotMetrics } from './services/predict';
 import { stripeWebhookHandler } from './services/stripe';
 import prisma from './lib/prisma';
 
@@ -99,6 +102,8 @@ app.use('/api/channels', ...tenantGate, channelRoutes);
 app.use('/api/tickets', ...tenantGate, ticketRoutes);
 app.use('/api/sla', ...tenantGate, slaRoutes);
 app.use('/api/transports', ...tenantGate, transportRoutes);
+app.use('/api/predict', ...tenantGate, predictRoutes);
+app.use('/api/cloud', ...tenantGate, cloudRoutes);
 
 // Error handler global (último middleware)
 app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
@@ -185,6 +190,19 @@ app.listen(PORT, () => {
       logger.error({ err: (error as Error).message }, 'alert processor error');
     }
   }, ALERT_PROC_MS);
+
+  // E1 — snapshot de métricas para previsão de falha (tendência). A cada 5 min.
+  const SAMPLE_MS = parseInt(process.env.METRIC_SAMPLE_MS || '300000');
+  const runSnapshot = async () => {
+    try {
+      const n = await snapshotMetrics();
+      if (n) logger.debug({ sampled: n }, 'snapshot de métricas');
+    } catch (error) {
+      logger.error({ err: (error as Error).message }, 'metric snapshot error');
+    }
+  };
+  setTimeout(runSnapshot, 45000);
+  setInterval(runSnapshot, SAMPLE_MS);
 });
 
 export default app;

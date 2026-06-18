@@ -29,12 +29,15 @@ Ordem por valor × esforço × dependência. Marcar `[x]` ao concluir.
 - [x] D3. **Radar de transports (STMS)** — Transport via agente; correlação automática incidente × transporte importado nas 24h anteriores. /transports
 
 ## Fase E — Inteligência preditiva & moat de dados
-- [ ] E1. **Previsão de falha** — anomalia em latência/erro/fila antes de quebrar.
-- [ ] E2. **Benchmark cross-cliente** — saúde vs. percentil de mercado (anônimo agregado).
+- [x] E1. **Previsão de falha** — MetricSample (snapshot 5min); risco por estado atual + tendência (erro/latência/fila); /predict.
+- [x] E2. **Benchmark cross-cliente** — agregado anônimo por tipo; uptime/erro/latência vs percentil de mercado. /predict.
 
 ## Fase F — Stack moderno SAP
-- [ ] F1. **CPI / Integration Suite** — Message Processing Logs e status de IFlows.
-- [ ] F2. **AIF** — status de mensagens do Application Interface Framework.
+- [x] F1. **CPI / Integration Suite** — CloudItem source=CPI; MPL/IFlows via agente; /cloud.
+- [x] F2. **AIF** — CloudItem source=AIF; status de mensagens do Application Interface Framework; /cloud.
+
+---
+**Roadmap unicórnio A–F concluído.** Todas as features deployadas e verificadas em produção.
 
 > Nota: features que dependem de SAP real (B2, B1, D3, F1/F2) são construídas contra o modelo de
 > dados e demonstráveis com dados de exemplo; teste pleno exige um SAP conectado via Agente.

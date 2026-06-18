@@ -6,6 +6,7 @@ import { ingestSapItems, SapItemInput } from '../services/cockpit';
 import { claimCommands, recordResult } from '../services/remediation';
 import { ingestCatalog, CatalogItemInput } from '../services/catalog';
 import { ingestTransports, TransportInput } from '../services/transports';
+import { ingestCloud, CloudItemInput } from '../services/cloud';
 
 // Rotas do Agente on-premise. SEM JWT/tenancy: o agente autentica por token próprio
 // (header x-agent-token), que mapeia direto para a integração.
@@ -117,6 +118,20 @@ router.post('/transports', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Agent transports error:', error);
     res.status(500).json({ error: 'Erro ao processar transports' });
+  }
+});
+
+// POST /api/agent/cloud-items — mensagens CPI/AIF descobertas pelo agente (F1/F2)
+router.post('/cloud-items', async (req: Request, res: Response) => {
+  const integration = await resolveIntegration(req);
+  if (!integration) { res.status(401).json({ error: 'Token do agente inválido' }); return; }
+  try {
+    const items = (req.body?.items || []) as CloudItemInput[];
+    const result = await ingestCloud(integration.id, integration.clientId, items);
+    res.json({ ok: true, ...result });
+  } catch (error) {
+    console.error('Agent cloud-items error:', error);
+    res.status(500).json({ error: 'Erro ao processar mensagens cloud' });
   }
 });
 

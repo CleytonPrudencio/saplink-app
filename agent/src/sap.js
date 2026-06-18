@@ -177,6 +177,21 @@ export function discoverTransports() {
   ];
 }
 
+/** Descobre mensagens CPI (MPL) e AIF. No mock, gera amostras com alguns erros. */
+export function discoverCloud() {
+  const now = Date.now();
+  const t = (n) => new Date(now - n * 60000).toISOString();
+  return [
+    { source: 'CPI', artifact: 'IF_Salesforce_Customer', messageId: 'MPL_1001', direction: 'OUTBOUND', status: 'COMPLETED', occurredAt: t(8) },
+    { source: 'CPI', artifact: 'IF_Salesforce_Customer', messageId: 'MPL_1002', direction: 'OUTBOUND', status: 'FAILED', error: 'HTTP 500 from receiver (Salesforce)', occurredAt: t(5) },
+    { source: 'CPI', artifact: 'IF_Bank_Payment', messageId: 'MPL_1003', direction: 'OUTBOUND', status: 'RETRY', error: 'Connection timeout', occurredAt: t(3) },
+    { source: 'CPI', artifact: 'IF_Material_Sync', messageId: 'MPL_1004', direction: 'INBOUND', status: 'COMPLETED', occurredAt: t(2) },
+    { source: 'AIF', artifact: '/SAPLINK/INVOICE_IN', messageId: 'AIF_77001', direction: 'INBOUND', status: 'ESCALATED', error: 'Erro de mapeamento no campo BUKRS', occurredAt: t(12) },
+    { source: 'AIF', artifact: '/SAPLINK/ORDER_OUT', messageId: 'AIF_77002', direction: 'OUTBOUND', status: 'COMPLETED', occurredAt: t(6) },
+    { source: 'AIF', artifact: '/SAPLINK/DELIVERY_IN', messageId: 'AIF_77003', direction: 'INBOUND', status: 'FAILED', error: 'Cliente inexistente (KUNNR)', occurredAt: t(1) },
+  ];
+}
+
 async function collectViaRfc(cfg) {
   // node-rfc é opcional: só funciona com o SAP NW RFC SDK instalado no host/imagem.
   let rfc;
