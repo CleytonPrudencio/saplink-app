@@ -10,7 +10,8 @@ import {
   markPastDue,
   cancel as cancelSub,
 } from '../services/billing';
-import { asaasEnabled, createCheckout, createInvoicePayment, handleWebhook } from '../services/asaas';
+import { asaasEnabled, createCheckout as asaasCheckout, createInvoicePayment as asaasInvoicePay, handleWebhook } from '../services/asaas';
+import { stripeEnabled, createCheckout as stripeCheckout, createInvoicePayment as stripeInvoicePay } from '../services/stripe';
 import { logger } from '../lib/logger';
 
 const router = Router();
@@ -202,10 +203,13 @@ router.post('/checkout', requireConsultancyAdmin, async (req: Request, res: Resp
     return;
   }
 
-  // Com Asaas: cria a cobrança real e devolve a URL (ativação vem no webhook PAYMENT_CONFIRMED).
-  if (asaasEnabled() && plan.priceCents > 0) {
+  // Com gateway (Stripe preferencial; Asaas como alternativa): cria a cobrança real e
+  // devolve a URL hospedada. A ativação vem no webhook.
+  if (plan.priceCents > 0 && (stripeEnabled() || asaasEnabled())) {
     try {
-      const { url } = await createCheckout(req.consultancyId!, plan.key, mode);
+      const { url } = stripeEnabled()
+        ? await stripeCheckout(req.consultancyId!, plan.key, mode)
+        : await asaasCheckout(req.consultancyId!, plan.key, mode);
       res.json({ status: 'redirect', url, mode, message: `Finalize o pagamento do plano ${plan.name}.` });
     } catch (e: any) {
       res.status(400).json({ error: e.message || 'Falha ao iniciar o pagamento.' });
@@ -229,9 +233,11 @@ router.post('/invoices/:id/pay', requireConsultancyAdmin, async (req: Request, r
   if (!invoice) { res.status(404).json({ error: 'Fatura não encontrada' }); return; }
   if (invoice.status === 'PAID') { res.status(409).json({ error: 'Fatura já paga' }); return; }
 
-  if (asaasEnabled()) {
+  if (stripeEnabled() || asaasEnabled()) {
     try {
-      const { url } = await createInvoicePayment(consultancyId, invoice.id);
+      const { url } = stripeEnabled()
+        ? await stripeInvoicePay(consultancyId, invoice.id)
+        : await asaasInvoicePay(consultancyId, invoice.id);
       res.json({ status: 'redirect', url });
     } catch (e: any) {
       res.status(400).json({ error: e.message || 'Falha ao gerar o pagamento.' });

@@ -42,7 +42,10 @@ services:
       SEED_DEMO: "${SEED_DEMO:-false}"
       BILLING_WEBHOOK_SECRET: "dev-billing-webhook-secret"
       FRONTEND_URL: "${FRONTEND_URL:-http://localhost:3000}"
-      # Pagamento (Asaas) — preencha no .env do host ou no ambiente
+      # Pagamento (Stripe — preferencial)
+      STRIPE_SECRET_KEY: "${STRIPE_SECRET_KEY:-}"
+      STRIPE_WEBHOOK_SECRET: "${STRIPE_WEBHOOK_SECRET:-}"
+      # Pagamento (Asaas — alternativa)
       ASAAS_API_URL: "${ASAAS_API_URL:-https://sandbox.asaas.com/api/v3}"
       ASAAS_API_KEY: "${ASAAS_API_KEY:-}"
       ASAAS_WEBHOOK_TOKEN: "${ASAAS_WEBHOOK_TOKEN:-}"

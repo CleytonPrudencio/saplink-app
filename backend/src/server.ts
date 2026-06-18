@@ -21,6 +21,7 @@ import { requireActiveSubscription } from './middleware/subscription';
 import { simulateIntegrationData } from './services/simulator';
 import { syncIntegration, isMonitorable } from './services/connectors';
 import { markStaleAgents } from './services/agent';
+import { stripeWebhookHandler } from './services/stripe';
 import prisma from './lib/prisma';
 
 const app = express();
@@ -29,6 +30,10 @@ const SIMULATION_INTERVAL = parseInt(process.env.SIMULATION_INTERVAL || '30000')
 
 app.use(pinoHttp({ logger }));
 app.use(cors({ origin: CORS_ORIGINS, credentials: true }));
+
+// Webhook Stripe precisa do corpo CRU (assinatura HMAC) — montar ANTES do express.json
+app.post('/api/billing/webhook/stripe', express.raw({ type: '*/*' }), stripeWebhookHandler);
+
 app.use(express.json({ limit: '1mb' }));
 
 // Health check com verificação do banco

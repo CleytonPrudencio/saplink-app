@@ -135,7 +135,16 @@ export default function BillingPage() {
       setLoading(false);
     }
   }
-  useEffect(() => { load(); }, []);
+  const [justPaid, setJustPaid] = useState(false);
+  useEffect(() => {
+    load();
+    if (typeof window !== "undefined" && window.location.search.includes("paid=1")) {
+      setJustPaid(true);
+      // webhook do gateway pode levar alguns segundos; recarrega o status
+      const t = setTimeout(() => load(), 4000);
+      return () => clearTimeout(t);
+    }
+  }, []);
 
   async function onCheckout(planKey: string) {
     setBusy(planKey);
@@ -196,6 +205,11 @@ export default function BillingPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Cobrança</h1>
+      {justPaid && (
+        <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-sm rounded-lg p-3">
+          ✓ Pagamento recebido! A assinatura é ativada assim que o gateway confirmar (alguns segundos).
+        </div>
+      )}
       {error && <div className="bg-rose-500/10 border border-rose-500/30 text-rose-400 text-sm rounded-lg p-3">{error}</div>}
 
       {suspended && (
