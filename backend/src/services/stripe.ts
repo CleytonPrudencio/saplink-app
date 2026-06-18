@@ -154,6 +154,8 @@ export async function stripeWebhookHandler(req: Request, res: Response): Promise
     return;
   }
 
+  if (!event?.id || !event?.type) { res.status(400).json({ error: 'evento inválido' }); return; }
+
   // Idempotência
   const already = await prisma.webhookEvent.findUnique({ where: { providerEventId: event.id } }).catch(() => null);
   if (already) { res.json({ received: true, duplicate: true }); return; }
