@@ -54,7 +54,7 @@ export async function getCatalog(consultancyId: string, f: CatalogFilters = {}) 
       where,
       orderBy: [{ kind: 'asc' }, { name: 'asc' }],
       take: 1000,
-      include: { client: { select: { name: true } }, integration: { select: { name: true } } },
+      include: { client: { select: { name: true } } },
     }),
     prisma.interfaceCatalogItem.findMany({ where: { clientId: { in: clientIds } }, select: { kind: true, active: true } }),
   ]);
@@ -70,7 +70,6 @@ export async function getCatalog(consultancyId: string, f: CatalogFilters = {}) 
     items: items.map((i) => ({
       id: i.id, kind: i.kind, name: i.name, detail: i.detail, attributes: i.attributes,
       active: i.active, lastSeenAt: i.lastSeenAt, client: i.client?.name, clientId: i.clientId,
-      integration: i.integration?.name,
     })),
     summary: { total: all.length, active, byKind },
   };
