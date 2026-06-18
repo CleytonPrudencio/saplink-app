@@ -15,6 +15,7 @@ import platformRoutes from './routes/platform';
 import consultancyRoutes from './routes/consultancy';
 import userRoutes from './routes/users';
 import agentRoutes from './routes/agent';
+import askRoutes from './routes/ask';
 import { authMiddleware } from './middleware/auth';
 import { tenancyMiddleware } from './middleware/tenancy';
 import { requireActiveSubscription } from './middleware/subscription';
@@ -74,6 +75,7 @@ app.use('/api/integrations', ...tenantGate, integrationRoutes);
 app.use('/api/alerts', ...tenantGate, alertRoutes);
 app.use('/api/diagnostics', ...tenantGate, diagnosticRoutes);
 app.use('/api/dead-code', ...tenantGate, deadCodeRoutes);
+app.use('/api/ask', ...tenantGate, askRoutes);
 
 // Error handler global (último middleware)
 app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {

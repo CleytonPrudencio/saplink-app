@@ -21,14 +21,14 @@ O que fazer:
 
 Enquanto isso, use os dados de monitoramento (status, latência, taxa de erro, alertas) e as transações SAP de praxe (BD87, ST22, SMQ1/SMQ2, SM58) para a análise manual.`;
 
-export async function diagnose(query: string, context: object): Promise<string> {
-  const userMessage = `Contexto do cliente:
-${JSON.stringify(context, null, 2)}
+const ASK_PROMPT = `Você é o copiloto de operações SAP de uma consultoria, dentro do SAPLINK.
+Você enxerga a carteira inteira (clientes, integrações, status, métricas e alertas).
+Responda em português brasileiro, de forma OBJETIVA e acionável, citando clientes e integrações
+específicos pelo nome quando relevante. Se a pergunta pedir uma ação, sugira a transação SAP ou o
+passo no SAPLINK. Não invente dados que não estão no contexto.`;
 
-Consulta do usuário:
-${query}`;
-
-  // 1) Ollama local (grátis), se OLLAMA_URL estiver configurado
+/** Chamada genérica de IA (Ollama → Claude → fallback). Retorna texto. */
+async function runAI(systemPrompt: string, userMessage: string, numPredict = 450): Promise<string> {
   const ollamaUrl = process.env.OLLAMA_URL;
   if (ollamaUrl) {
     const model = process.env.OLLAMA_MODEL || 'qwen2.5:3b';
@@ -39,14 +39,12 @@ ${query}`;
         body: JSON.stringify({
           model,
           stream: false,
-          // num_predict limita o tamanho da resposta -> muito mais rápido em CPU
-          options: { num_predict: 450, temperature: 0.4 },
+          options: { num_predict: numPredict, temperature: 0.4 },
           messages: [
-            { role: 'system', content: SYSTEM_PROMPT },
+            { role: 'system', content: systemPrompt },
             { role: 'user', content: userMessage },
           ],
         }),
-        // CPU pode demorar; mas sem timeout um Ollama travado deixaria o job PENDING pra sempre.
         signal: AbortSignal.timeout(Number(process.env.OLLAMA_TIMEOUT_MS) || 180000),
       });
       if (!resp.ok) throw new Error(`Ollama HTTP ${resp.status}`);
@@ -54,38 +52,36 @@ ${query}`;
       const text = data?.message?.content?.trim();
       return text && text.length > 0 ? text : AI_UNAVAILABLE;
     } catch (error) {
-      console.error('Ollama diagnosis error:', error);
+      console.error('Ollama error:', error);
       return AI_UNAVAILABLE;
     }
   }
 
-  // 2) Claude (Anthropic), se houver chave
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    // Return mock response when no API key is configured
-    return AI_UNAVAILABLE;
-  }
-
+  if (!apiKey) return AI_UNAVAILABLE;
   try {
     const client = new Anthropic({ apiKey });
-
     const response = await client.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 2048,
-      system: SYSTEM_PROMPT,
-      messages: [
-        {
-          role: 'user',
-          content: userMessage,
-        },
-      ],
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userMessage }],
     });
-
     const textBlock = response.content.find((block) => block.type === 'text');
-    return textBlock ? textBlock.text : 'Não foi possível gerar o diagnóstico.';
+    return textBlock && textBlock.type === 'text' ? textBlock.text : AI_UNAVAILABLE;
   } catch (error) {
-    console.error('AI diagnosis error:', error);
-    // Fallback to mock on error
+    console.error('AI error:', error);
     return AI_UNAVAILABLE;
   }
+}
+
+export async function diagnose(query: string, context: object): Promise<string> {
+  const userMessage = `Contexto do cliente:\n${JSON.stringify(context, null, 2)}\n\nConsulta do usuário:\n${query}`;
+  return runAI(SYSTEM_PROMPT, userMessage, 450);
+}
+
+/** Copiloto: pergunta em linguagem natural sobre a carteira inteira da consultoria. */
+export async function ask(question: string, context: object): Promise<string> {
+  const userMessage = `Dados da carteira (resumo):\n${JSON.stringify(context, null, 2)}\n\nPergunta: ${question}`;
+  return runAI(ASK_PROMPT, userMessage, 500);
 }

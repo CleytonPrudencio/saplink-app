@@ -89,6 +89,12 @@ export async function getPublicPlans() {
   return data;
 }
 
+// Copiloto "Pergunte ao SAPLINK"
+export async function askPortfolio(question: string) {
+  const { data } = await api.post('/ask', { question });
+  return data as { answer: string };
+}
+
 export async function checkoutPlan(planKey: string, mode: 'auto' | 'now' = 'auto') {
   const { data } = await api.post('/billing/checkout', { planKey, mode });
   return data;

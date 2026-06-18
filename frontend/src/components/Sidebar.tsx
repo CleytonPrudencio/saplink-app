@@ -29,6 +29,7 @@ const tenantMenu = [
   { href: "/integrations", label: "Integra\u00E7\u00f5es", icon: "\uD83D\uDD17" },
   { href: "/alerts", label: "Alertas", icon: "\uD83D\uDD14" },
   { href: "/diagnostics", label: "Diagnostico IA", icon: "\uD83E\uDD16" },
+  { href: "/ask", label: "Pergunte \u00E0 IA", icon: "\uD83D\uDCAC" },
   { href: "/dead-code", label: "Dead Code", icon: "\uD83D\uDD0D" },
   { href: "/reports", label: "Relatorios", icon: "\uD83D\uDCC4" },
   { href: "/billing", label: "Cobran\u00E7a", icon: "\uD83D\uDCB3", adminOnly: true },
