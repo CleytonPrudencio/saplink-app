@@ -96,6 +96,13 @@ router.use(authMiddleware, tenancyMiddleware);
 router.get('/', async (req: Request, res: Response) => {
   const consultancyId = req.consultancyId!;
   const eff = await getEffectiveStatus(consultancyId);
+
+  // Não-admin: só o status (para o gate de acesso). Sem dados financeiros.
+  if (req.user?.role !== 'CONSULTANCY_ADMIN') {
+    res.json({ status: eff.status, allowed: eff.allowed, reason: eff.reason ?? null });
+    return;
+  }
+
   const sub: any = eff.subscription;
   const plan = sub?.plan ?? null;
   const now = new Date();
