@@ -88,8 +88,18 @@ export async function getPlans() {
   return data;
 }
 
-export async function checkoutPlan(planKey: string) {
-  const { data } = await api.post('/billing/checkout', { planKey });
+export async function checkoutPlan(planKey: string, mode: 'auto' | 'now' = 'auto') {
+  const { data } = await api.post('/billing/checkout', { planKey, mode });
+  return data;
+}
+
+export async function payInvoice(invoiceId: string) {
+  const { data } = await api.post(`/billing/invoices/${invoiceId}/pay`);
+  return data;
+}
+
+export async function setAutoRenew(autoRenew: boolean) {
+  const { data } = await api.post('/billing/autorenew', { autoRenew });
   return data;
 }
 

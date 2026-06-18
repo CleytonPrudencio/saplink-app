@@ -10,7 +10,7 @@ import {
   markPastDue,
   cancel as cancelSub,
 } from '../services/billing';
-import { asaasEnabled, createCheckout, handleWebhook } from '../services/asaas';
+import { asaasEnabled, createCheckout, createInvoicePayment, handleWebhook } from '../services/asaas';
 import { logger } from '../lib/logger';
 
 const router = Router();
@@ -147,6 +147,7 @@ router.get('/', async (req: Request, res: Response) => {
     currentPeriodEnd: sub?.currentPeriodEnd ?? null,
     trialEndsAt: sub?.trialEndsAt ?? null,
     cancelAtPeriodEnd: sub?.cancelAtPeriodEnd ?? false,
+    autoRenew: sub?.autoRenew ?? true,
     usage: {
       clients: clientsCount,
       integrations: integrationsCount,
@@ -186,39 +187,72 @@ router.get('/plans', async (_req: Request, res: Response) => {
   res.json(plans);
 });
 
-// Checkout (provider manual): ativa a assinatura no plano escolhido.
-// Em produção, isto redireciona ao gateway; aqui simula pagamento aprovado.
-const checkoutSchema = z.object({ planKey: z.string().min(1) });
+// Checkout: mode 'auto' (cobrança automática/recorrente) ou 'now' (pagar agora, avulso).
+const checkoutSchema = z.object({ planKey: z.string().min(1), mode: z.enum(['auto', 'now']).default('auto') });
 router.post('/checkout', requireConsultancyAdmin, async (req: Request, res: Response) => {
   const parsed = checkoutSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: 'planKey é obrigatório' });
     return;
   }
-  const plan = await prisma.plan.findUnique({ where: { key: parsed.data.planKey } });
+  const { planKey, mode } = parsed.data;
+  const plan = await prisma.plan.findUnique({ where: { key: planKey } });
   if (!plan) {
     res.status(404).json({ error: 'Plano não encontrado' });
     return;
   }
 
-  // Com Asaas configurado: cria a assinatura real e devolve a URL de pagamento (sem ativar ainda).
-  // A ativação acontece no webhook PAYMENT_CONFIRMED.
+  // Com Asaas: cria a cobrança real e devolve a URL (ativação vem no webhook PAYMENT_CONFIRMED).
   if (asaasEnabled() && plan.priceCents > 0) {
     try {
-      const { url } = await createCheckout(req.consultancyId!, plan.key);
-      res.json({ status: 'redirect', url, message: `Finalize o pagamento do plano ${plan.name}.` });
+      const { url } = await createCheckout(req.consultancyId!, plan.key, mode);
+      res.json({ status: 'redirect', url, mode, message: `Finalize o pagamento do plano ${plan.name}.` });
     } catch (e: any) {
       res.status(400).json({ error: e.message || 'Falha ao iniciar o pagamento.' });
     }
     return;
   }
 
-  // Sem gateway (dev/demo): ativa direto.
+  // Sem gateway (dev/demo): ativa direto, respeitando o modo de renovação.
   const sub = await activateSubscription(req.consultancyId!, plan.key);
+  await prisma.subscription.update({ where: { consultancyId: req.consultancyId! }, data: { autoRenew: mode === 'auto' } });
   await prisma.invoice.create({
     data: { consultancyId: req.consultancyId!, subscriptionId: sub.id, amountCents: plan.priceCents, status: 'PAID', paidAt: new Date() },
   });
-  res.json({ status: 'ok', message: `Plano ${plan.name} ativado.`, subscription: sub });
+  res.json({ status: 'ok', message: `Plano ${plan.name} ativado (${mode === 'auto' ? 'cobrança automática' : 'pagamento avulso'}).` });
+});
+
+// Pagar uma fatura ABERTA agora (gera link Asaas; sem gateway, marca como paga no demo).
+router.post('/invoices/:id/pay', requireConsultancyAdmin, async (req: Request, res: Response) => {
+  const consultancyId = req.consultancyId!;
+  const invoice = await prisma.invoice.findFirst({ where: { id: req.params.id, consultancyId } });
+  if (!invoice) { res.status(404).json({ error: 'Fatura não encontrada' }); return; }
+  if (invoice.status === 'PAID') { res.status(409).json({ error: 'Fatura já paga' }); return; }
+
+  if (asaasEnabled()) {
+    try {
+      const { url } = await createInvoicePayment(consultancyId, invoice.id);
+      res.json({ status: 'redirect', url });
+    } catch (e: any) {
+      res.status(400).json({ error: e.message || 'Falha ao gerar o pagamento.' });
+    }
+    return;
+  }
+  // Demo: marca paga + ativa
+  await prisma.invoice.update({ where: { id: invoice.id }, data: { status: 'PAID', paidAt: new Date() } });
+  await activateSubscription(consultancyId);
+  res.json({ status: 'ok', message: 'Fatura paga (ambiente de teste).' });
+});
+
+// Liga/desliga a cobrança automática (renovação recorrente).
+const autoRenewSchema = z.object({ autoRenew: z.boolean() });
+router.post('/autorenew', requireConsultancyAdmin, async (req: Request, res: Response) => {
+  const parsed = autoRenewSchema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: 'autoRenew (boolean) é obrigatório' }); return; }
+  const sub = await prisma.subscription.findUnique({ where: { consultancyId: req.consultancyId! } });
+  if (!sub) { res.status(409).json({ error: 'Sem assinatura.' }); return; }
+  await prisma.subscription.update({ where: { consultancyId: req.consultancyId! }, data: { autoRenew: parsed.data.autoRenew } });
+  res.json({ status: 'ok', autoRenew: parsed.data.autoRenew });
 });
 
 router.post('/cancel', requireConsultancyAdmin, async (req: Request, res: Response) => {

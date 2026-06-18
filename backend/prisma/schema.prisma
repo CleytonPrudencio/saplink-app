@@ -147,6 +147,7 @@ model Subscription {
   currentPeriodEnd       DateTime?
   graceUntil             DateTime?
   cancelAtPeriodEnd      Boolean      @default(false)
+  autoRenew              Boolean      @default(true) // true = cobrança automática (recorrente); false = pagamento manual por fatura
   extraIntegrations      Int          @default(0) // add-on: integrações além do limite do plano
   extraUsers             Int          @default(0) // add-on: usuários além do limite do plano
   provider               String       @default("manual") // manual | stripe | asaas | iugu

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getBilling, getPlans, checkoutPlan, updateAddons } from "@/lib/api";
+import { getBilling, getPlans, checkoutPlan, updateAddons, payInvoice, setAutoRenew } from "@/lib/api";
 
 interface Plan {
   key: string;
@@ -37,6 +37,7 @@ interface Billing {
   effectiveLimits: { clients: number; integrations: number; users: number; aiDiagnostics: number } | null;
   addonPrices: { integrationCents: number; userCents: number } | null;
   monthlyCents: number;
+  autoRenew: boolean;
   currentPeriodEnd: string | null;
   trialEndsAt: string | null;
   usage: { clients: number; integrations: number; users: number; aiDiagnostics: number };
@@ -117,6 +118,7 @@ export default function BillingPage() {
   const [busy, setBusy] = useState("");
   const [xInt, setXInt] = useState(0);
   const [xUsr, setXUsr] = useState(0);
+  const [mode, setMode] = useState<"auto" | "now">("auto");
 
   async function load() {
     setLoading(true);
@@ -139,11 +141,34 @@ export default function BillingPage() {
     setBusy(planKey);
     setError("");
     try {
-      const r = await checkoutPlan(planKey);
+      const r = await checkoutPlan(planKey, mode);
       if (r?.status === "redirect" && r?.url) { window.location.href = r.url; return; }
       await load();
     } catch (e: any) {
       setError(e?.response?.data?.error || "Não foi possível iniciar o pagamento.");
+    } finally { setBusy(""); }
+  }
+
+  async function onPayInvoice(id: string) {
+    setBusy("inv-" + id);
+    setError("");
+    try {
+      const r = await payInvoice(id);
+      if (r?.status === "redirect" && r?.url) { window.location.href = r.url; return; }
+      await load();
+    } catch (e: any) {
+      setError(e?.response?.data?.error || "Não foi possível gerar o pagamento.");
+    } finally { setBusy(""); }
+  }
+
+  async function toggleAutoRenew(next: boolean) {
+    setBusy("autorenew");
+    setError("");
+    try {
+      await setAutoRenew(next);
+      await load();
+    } catch (e: any) {
+      setError(e?.response?.data?.error || "Não foi possível alterar a renovação.");
     } finally { setBusy(""); }
   }
 
@@ -192,6 +217,22 @@ export default function BillingPage() {
             <div><p className="text-xs text-[#9b95ad]">Próxima cobrança</p><p className="font-semibold mt-0.5">{b.currentPeriodEnd ? new Date(b.currentPeriodEnd).toLocaleDateString("pt-BR") : b.trialEndsAt ? `Teste até ${new Date(b.trialEndsAt).toLocaleDateString("pt-BR")}` : "—"}</p></div>
             <div><p className="text-xs text-[#9b95ad]">Add-ons</p><p className="font-semibold mt-0.5">{b.extras.integrations} int · {b.extras.users} user</p></div>
           </div>
+          {b.plan && (
+            <div className="flex items-center justify-between bg-[#0f0b1a] rounded-lg px-4 py-3 mb-4">
+              <div>
+                <p className="text-sm font-medium">Cobrança automática</p>
+                <p className="text-xs text-[#9b95ad]">{b.autoRenew ? "Renova e cobra sozinho todo mês." : "Você paga manualmente cada fatura."}</p>
+              </div>
+              <button
+                onClick={() => toggleAutoRenew(!b.autoRenew)}
+                disabled={busy === "autorenew"}
+                className={`relative w-12 h-6 rounded-full transition cursor-pointer disabled:opacity-50 ${b.autoRenew ? "bg-emerald-500" : "bg-white/[0.15]"}`}
+                title={b.autoRenew ? "Desligar cobrança automática" : "Ligar cobrança automática"}
+              >
+                <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${b.autoRenew ? "translate-x-6" : ""}`} />
+              </button>
+            </div>
+          )}
           {b.effectiveLimits && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <UsageBar label="Clientes" used={b.usage.clients} limit={b.effectiveLimits.clients} />
@@ -257,7 +298,28 @@ export default function BillingPage() {
 
       {/* Planos */}
       <div>
-        <h2 className="text-lg font-semibold mb-4">Planos</h2>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+          <h2 className="text-lg font-semibold">Planos</h2>
+          <div className="inline-flex rounded-lg bg-[#1a1527] border border-white/[0.08] p-1 text-sm">
+            <button
+              onClick={() => setMode("auto")}
+              className={`px-3 py-1.5 rounded-md transition cursor-pointer ${mode === "auto" ? "bg-gradient-to-r from-purple-600 to-cyan-500 text-white" : "text-[#9b95ad] hover:text-white"}`}
+            >
+              ⟳ Cobrança automática
+            </button>
+            <button
+              onClick={() => setMode("now")}
+              className={`px-3 py-1.5 rounded-md transition cursor-pointer ${mode === "now" ? "bg-gradient-to-r from-purple-600 to-cyan-500 text-white" : "text-[#9b95ad] hover:text-white"}`}
+            >
+              ⚡ Pagar agora
+            </button>
+          </div>
+        </div>
+        <p className="text-xs text-[#9b95ad] -mt-2 mb-4">
+          {mode === "auto"
+            ? "Assinatura recorrente — cobra automático todo mês (PIX/boleto/cartão via Asaas)."
+            : "Pagamento avulso da 1ª mensalidade — sem renovação automática; você paga cada mês manualmente."}
+        </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
           {plans.map((p) => {
             const current = b.plan?.key === p.key && b.allowed;
@@ -312,8 +374,17 @@ export default function BillingPage() {
                       {inv.status === "PAID" ? "Paga" : inv.status === "OPEN" ? "Em aberto" : "Falhou"}
                     </span>
                   </td>
-                  <td className="px-6 py-3 text-right">
-                    <button onClick={() => printInvoice(inv, b)} className="text-purple-400 hover:text-purple-300 text-xs font-medium cursor-pointer">Baixar PDF</button>
+                  <td className="px-6 py-3 text-right whitespace-nowrap">
+                    {inv.status !== "PAID" && (
+                      <button
+                        onClick={() => onPayInvoice(inv.id)}
+                        disabled={busy === "inv-" + inv.id}
+                        className="text-emerald-400 hover:text-emerald-300 text-xs font-semibold mr-4 cursor-pointer disabled:opacity-50"
+                      >
+                        {busy === "inv-" + inv.id ? "..." : "Pagar agora"}
+                      </button>
+                    )}
+                    <button onClick={() => printInvoice(inv, b)} className="text-purple-400 hover:text-purple-300 text-xs font-medium cursor-pointer">PDF</button>
                   </td>
                 </tr>
               ))}

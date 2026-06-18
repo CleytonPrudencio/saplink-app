@@ -52,48 +52,80 @@ async function ensureCustomer(consultancyId: string): Promise<string> {
 }
 
 /**
- * Cria a assinatura recorrente no Asaas e devolve a URL de pagamento (PIX/boleto/cartão).
+ * Inicia o checkout no Asaas e devolve a URL de pagamento (PIX/boleto/cartão).
+ * mode='auto'  → assinatura RECORRENTE (cobrança automática mensal).
+ * mode='now'   → cobrança AVULSA da primeira mensalidade (sem renovação automática).
  * A ativação local só acontece quando o webhook PAYMENT_CONFIRMED chegar.
  */
-export async function createCheckout(consultancyId: string, planKey: string): Promise<{ url: string; asaasSubscriptionId: string }> {
+export async function createCheckout(
+  consultancyId: string,
+  planKey: string,
+  mode: 'auto' | 'now' = 'auto'
+): Promise<{ url: string; mode: string }> {
   const plan = await prisma.plan.findUnique({ where: { key: planKey } });
   if (!plan) throw new Error('Plano não encontrado');
   if (plan.priceCents <= 0) throw new Error('Plano gratuito não requer pagamento');
 
   const customerId = await ensureCustomer(consultancyId);
   const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  const value = plan.priceCents / 100;
 
+  if (mode === 'now') {
+    // Cobrança única (paga agora, sem recorrência)
+    const payment = await asaas<{ id: string; invoiceUrl?: string; bankSlipUrl?: string }>('/payments', {
+      method: 'POST',
+      body: JSON.stringify({
+        customer: customerId, billingType: 'UNDEFINED', value, dueDate: today,
+        description: `SAPLINK — Plano ${plan.name} (pagamento avulso)`, externalReference: consultancyId,
+      }),
+    });
+    await prisma.subscription.upsert({
+      where: { consultancyId },
+      create: { consultancyId, planKey, status: 'PAST_DUE', provider: 'asaas', providerCustomerId: customerId, autoRenew: false },
+      update: { planKey, provider: 'asaas', providerCustomerId: customerId, autoRenew: false },
+    });
+    await prisma.invoice.create({
+      data: { consultancyId, amountCents: plan.priceCents, status: 'OPEN', providerInvoiceId: payment.id, dueDate: new Date() },
+    });
+    return { url: payment.invoiceUrl || payment.bankSlipUrl || `${API_URL.replace('/api/v3', '')}/`, mode };
+  }
+
+  // mode='auto': assinatura recorrente
   const subscription = await asaas<{ id: string }>('/subscriptions', {
     method: 'POST',
     body: JSON.stringify({
-      customer: customerId,
-      billingType: 'UNDEFINED', // página hospedada deixa o cliente escolher PIX/boleto/cartão
-      value: plan.priceCents / 100,
-      nextDueDate: today,
-      cycle: 'MONTHLY',
-      description: `SAPLINK — Plano ${plan.name}`,
-      externalReference: consultancyId,
+      customer: customerId, billingType: 'UNDEFINED', value, nextDueDate: today,
+      cycle: 'MONTHLY', description: `SAPLINK — Plano ${plan.name}`, externalReference: consultancyId,
     }),
   });
-
-  // Persiste vínculo com o provedor (sem ativar ainda)
   await prisma.subscription.upsert({
     where: { consultancyId },
-    create: {
-      consultancyId, planKey, status: 'PAST_DUE', provider: 'asaas',
-      providerCustomerId: customerId, providerSubscriptionId: subscription.id,
-    },
-    update: {
-      planKey, provider: 'asaas', providerCustomerId: customerId, providerSubscriptionId: subscription.id,
-    },
+    create: { consultancyId, planKey, status: 'PAST_DUE', provider: 'asaas', providerCustomerId: customerId, providerSubscriptionId: subscription.id, autoRenew: true },
+    update: { planKey, provider: 'asaas', providerCustomerId: customerId, providerSubscriptionId: subscription.id, autoRenew: true },
   });
-
-  // Pega a URL da 1ª cobrança gerada pela assinatura
   const payments = await asaas<{ data: Array<{ invoiceUrl?: string; bankSlipUrl?: string }> }>(
     `/payments?subscription=${subscription.id}`
   );
   const url = payments.data?.[0]?.invoiceUrl || payments.data?.[0]?.bankSlipUrl || `${API_URL.replace('/api/v3', '')}/`;
-  return { url, asaasSubscriptionId: subscription.id };
+  return { url, mode };
+}
+
+/** Gera um link de pagamento Asaas para uma fatura ABERTA existente (pagar agora). */
+export async function createInvoicePayment(consultancyId: string, invoiceId: string): Promise<{ url: string }> {
+  const invoice = await prisma.invoice.findFirst({ where: { id: invoiceId, consultancyId } });
+  if (!invoice) throw new Error('Fatura não encontrada');
+  if (invoice.status === 'PAID') throw new Error('Fatura já está paga');
+  const customerId = await ensureCustomer(consultancyId);
+  const today = new Date().toISOString().slice(0, 10);
+  const payment = await asaas<{ id: string; invoiceUrl?: string; bankSlipUrl?: string }>('/payments', {
+    method: 'POST',
+    body: JSON.stringify({
+      customer: customerId, billingType: 'UNDEFINED', value: invoice.amountCents / 100, dueDate: today,
+      description: 'SAPLINK — Fatura', externalReference: consultancyId,
+    }),
+  });
+  await prisma.invoice.update({ where: { id: invoice.id }, data: { providerInvoiceId: payment.id } });
+  return { url: payment.invoiceUrl || payment.bankSlipUrl || `${API_URL.replace('/api/v3', '')}/` };
 }
 
 interface AsaasWebhook {
