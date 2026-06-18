@@ -39,6 +39,7 @@ import { runDueDigests } from './services/digest';
 import { refreshAllCerts } from './services/validity';
 import { processAlerts } from './services/alertproc';
 import { snapshotMetrics } from './services/predict';
+import { syncAllCpi } from './services/cpi';
 import { stripeWebhookHandler } from './services/stripe';
 import prisma from './lib/prisma';
 
@@ -205,6 +206,13 @@ app.listen(PORT, () => {
   };
   setTimeout(runSnapshot, 45000);
   setInterval(runSnapshot, SAMPLE_MS);
+
+  // Conector CPI (Integration Suite): sincroniza os MPL reais das configs habilitadas. A cada 10 min.
+  const CPI_SYNC_MS = parseInt(process.env.CPI_SYNC_MS || '600000');
+  setInterval(async () => {
+    try { const n = await syncAllCpi(); if (n) logger.info({ synced: n }, 'CPI sync'); }
+    catch (error) { logger.error({ err: (error as Error).message }, 'cpi sync error'); }
+  }, CPI_SYNC_MS);
 });
 
 export default app;

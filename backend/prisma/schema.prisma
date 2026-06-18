@@ -82,6 +82,7 @@ model Client {
   commArrangements CommArrangement[]
   fiscalDocs      FiscalDoc[]
   cloudEvents     CloudEvent[]
+  cpiConfig       CpiConfig?
   integrations  Integration[]
   alerts        Alert[]
   diagnostics   Diagnostic[]
@@ -395,6 +396,22 @@ model CloudEvent {
   resolved      Boolean  @default(false)
   createdAt     DateTime @default(now())
   @@index([clientId, status])
+}
+
+// Conector REAL do SAP Integration Suite (CPI) via OAuth client-credentials + OData MPL.
+model CpiConfig {
+  id            String   @id @default(uuid())
+  clientId      String   @unique
+  client        Client   @relation(fields: [clientId], references: [id])
+  baseUrl       String                       // ex.: https://xxxx.it-cpitrial06.cfapps.../api/v1
+  tokenUrl      String                       // ex.: https://xxxx.authentication.../oauth/token
+  oauthClientId String
+  oauthSecret   String                       // cifrado
+  enabled       Boolean  @default(true)
+  lastSyncAt    DateTime?
+  lastResult    String?
+  lastCount     Int      @default(0)
+  createdAt     DateTime @default(now())
 }
 
 model Diagnostic {

@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { requireConsultancyAdmin } from '../middleware/roles';
 import * as s4 from '../services/s4';
+import { saveCpiConfig, getCpiConfigs, syncCpi } from '../services/cpi';
 
 // S/4HANA Cloud — Upgrade, Clean Core, APIs, Comm, Fiscal (DRC), Eventos. Sob o tenantGate.
 const router = Router();
@@ -41,6 +42,23 @@ router.put('/connections/:clientId', requireConsultancyAdmin, async (req: Reques
   if (!baseUrl) { res.status(400).json({ error: 'baseUrl é obrigatório.' }); return; }
   const r = await s4.saveConnection(req.consultancyId!, req.params.clientId, { baseUrl, authType, commUser, authToken, release });
   if ('error' in r) { res.status(404).json({ error: 'Cliente não encontrado.' }); return; }
+  res.json(r);
+});
+
+// ───── Conector REAL CPI (Integration Suite) ─────
+router.get('/cpi', requireConsultancyAdmin, async (req: Request, res: Response) => {
+  res.json({ configs: await getCpiConfigs(req.consultancyId!) });
+});
+router.put('/cpi/:clientId', requireConsultancyAdmin, async (req: Request, res: Response) => {
+  const { baseUrl, tokenUrl, oauthClientId, oauthSecret, enabled } = req.body || {};
+  if (!baseUrl || !tokenUrl || !oauthClientId) { res.status(400).json({ error: 'baseUrl, tokenUrl e oauthClientId são obrigatórios.' }); return; }
+  const r = await saveCpiConfig(req.consultancyId!, req.params.clientId, { baseUrl, tokenUrl, oauthClientId, oauthSecret, enabled });
+  if ('error' in r) { res.status(r.error === 'NO_SECRET' ? 400 : 404).json({ error: r.error === 'NO_SECRET' ? 'Informe o secret na primeira configuração.' : 'Cliente não encontrado.' }); return; }
+  res.json(r);
+});
+router.post('/cpi/:clientId/sync', requireConsultancyAdmin, async (req: Request, res: Response) => {
+  const r = await syncCpi(req.consultancyId!, req.params.clientId);
+  if ('error' in r) { res.status(404).json({ error: 'Configuração não encontrada.' }); return; }
   res.json(r);
 });
 

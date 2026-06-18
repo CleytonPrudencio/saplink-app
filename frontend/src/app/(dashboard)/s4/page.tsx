@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { getS4Overview, getS4Comm, getS4Apis } from "@/lib/api";
+import { getS4Overview, getS4Comm, getS4Apis, getMe, getClients, getCpiConfigs, saveCpiConfig, syncCpi } from "@/lib/api";
 
 function brl(c: number) { return (c / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }); }
 const SEV: Record<string, string> = { EXPIRED: "text-rose-400", CRITICAL: "text-orange-400", WARN: "text-amber-300", OK: "text-emerald-400" };
@@ -13,11 +13,38 @@ export default function S4Page() {
   const [apis, setApis] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
+  // conector CPI (admin)
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [clients, setClients] = useState<{ id: string; name: string }[]>([]);
+  const [cpi, setCpi] = useState<any[]>([]);
+  const [form, setForm] = useState({ clientId: "", baseUrl: "", tokenUrl: "", oauthClientId: "", oauthSecret: "" });
+  const [busy, setBusy] = useState("");
+  const [msg, setMsg] = useState("");
+
+  async function loadCpi() { try { setCpi((await getCpiConfigs()).configs); } catch { /* */ } }
+
   useEffect(() => {
     Promise.all([getS4Overview(), getS4Comm(), getS4Apis()])
       .then(([o, c, a]) => { setOv(o); setComm(c); setApis(a); })
       .catch(() => {}).finally(() => setLoading(false));
+    getMe().then((u) => {
+      const admin = u.role === "CONSULTANCY_ADMIN" || u.role === "PLATFORM_ADMIN";
+      setIsAdmin(admin);
+      if (admin) { getClients().then((cs: any[]) => setClients(cs.map((c) => ({ id: c.id, name: c.name })))).catch(() => {}); loadCpi(); }
+    }).catch(() => {});
   }, []);
+
+  async function onSaveCpi(e: React.FormEvent) {
+    e.preventDefault(); if (!form.clientId) return;
+    setBusy("save"); setMsg("");
+    try { await saveCpiConfig(form.clientId, form); setMsg("Conexão salva. Clique em Sincronizar."); await loadCpi(); }
+    catch (err: any) { setMsg(err?.response?.data?.error || "Erro ao salvar."); } finally { setBusy(""); }
+  }
+  async function onSyncCpi(clientId: string) {
+    setBusy(clientId); setMsg("");
+    try { const r = await syncCpi(clientId); setMsg(r.ok ? `Sincronizado: ${r.fetched} MPL.` : `Falhou: ${r.reason}`); await loadCpi(); }
+    catch (err: any) { setMsg(err?.response?.data?.error || "Erro ao sincronizar."); } finally { setBusy(""); }
+  }
 
   if (loading) return <div className="text-[#9b95ad]">Carregando...</div>;
 
@@ -89,7 +116,42 @@ export default function S4Page() {
         </div>
       </div>
 
-      <p className="text-xs text-[#6b6580]">No S/4HANA Cloud o SAPLINK conecta via Communication Arrangement (OAuth/cert) e puxa por OData — sem instalar nada no cliente. Configuração em Configurações › S/4HANA Cloud.</p>
+      {/* Conector REAL CPI (admin) */}
+      {isAdmin && (
+        <div className="bg-[#1a1527] rounded-xl p-5 border border-purple-500/20">
+          <h2 className="text-lg font-semibold">🔌 Conectar SAP Integration Suite (BTP) — dados reais</h2>
+          <p className="text-[#9b95ad] text-sm mt-1">Cole o service key (OAuth client-credentials) do Process Integration Runtime. O SAPLINK puxa os Message Processing Logs reais.</p>
+
+          {cpi.length > 0 && (
+            <div className="space-y-2 my-3">
+              {cpi.map((c) => (
+                <div key={c.clientId} className="flex items-center justify-between bg-[#0f0b1a] rounded-lg px-3 py-2 flex-wrap gap-2">
+                  <div className="min-w-0">
+                    <p className="text-sm text-[#e2e0ea]">{c.client} <span className="text-xs text-[#9b95ad]">· {c.baseUrl}</span></p>
+                    <p className="text-xs text-[#9b95ad]">último sync: {c.lastSyncAt ? new Date(c.lastSyncAt).toLocaleString("pt-BR") : "nunca"} · {c.lastResult || "—"}</p>
+                  </div>
+                  <button onClick={() => onSyncCpi(c.clientId)} disabled={busy === c.clientId} className="text-xs px-3 py-1.5 rounded-lg bg-purple-500/20 text-purple-200 hover:bg-purple-500/30 disabled:opacity-40 cursor-pointer">{busy === c.clientId ? "..." : "Sincronizar agora"}</button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <form onSubmit={onSaveCpi} className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
+            <select value={form.clientId} onChange={(e) => setForm({ ...form, clientId: e.target.value })} required className="bg-[#0f0b1a] border border-white/[0.1] rounded-lg px-3 py-2 text-sm">
+              <option value="">Cliente...</option>
+              {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+            <input value={form.oauthClientId} onChange={(e) => setForm({ ...form, oauthClientId: e.target.value })} required placeholder="clientid" className="bg-[#0f0b1a] border border-white/[0.1] rounded-lg px-3 py-2 text-sm" />
+            <input value={form.baseUrl} onChange={(e) => setForm({ ...form, baseUrl: e.target.value })} required placeholder="URL da API (…/api/v1)" className="bg-[#0f0b1a] border border-white/[0.1] rounded-lg px-3 py-2 text-sm sm:col-span-2" />
+            <input value={form.tokenUrl} onChange={(e) => setForm({ ...form, tokenUrl: e.target.value })} required placeholder="tokenurl (…/oauth/token)" className="bg-[#0f0b1a] border border-white/[0.1] rounded-lg px-3 py-2 text-sm sm:col-span-2" />
+            <input value={form.oauthSecret} onChange={(e) => setForm({ ...form, oauthSecret: e.target.value })} type="password" placeholder="clientsecret" className="bg-[#0f0b1a] border border-white/[0.1] rounded-lg px-3 py-2 text-sm sm:col-span-2" />
+            <button type="submit" disabled={busy === "save"} className="sm:col-span-2 px-4 py-2 rounded-lg bg-purple-500 text-white text-sm font-semibold disabled:opacity-40 cursor-pointer">{busy === "save" ? "Salvando..." : "Salvar conexão"}</button>
+          </form>
+          {msg && <p className="text-sm text-emerald-400 mt-2">{msg}</p>}
+        </div>
+      )}
+
+      <p className="text-xs text-[#6b6580]">No S/4HANA Cloud o SAPLINK conecta via Communication Arrangement (OAuth/cert) e puxa por OData — sem instalar nada no cliente.</p>
     </div>
   );
 }
