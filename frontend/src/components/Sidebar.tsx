@@ -22,32 +22,70 @@ interface SidebarProps {
   consultancy?: Consultancy | null;
 }
 
-// Menu da consultoria (empresa cliente do SAPLINK)
-const tenantMenu = [
-  { href: "/dashboard", label: "Dashboard", icon: "\uD83D\uDCCA" },
-  { href: "/clients", label: "Clientes", icon: "\uD83D\uDC65" },
-  { href: "/integrations", label: "Integra\u00E7\u00f5es", icon: "\uD83D\uDD17" },
-  { href: "/cockpit", label: "Cockpit", icon: "\uD83D\uDEF0\uFE0F" },
-  { href: "/alerts", label: "Alertas", icon: "\uD83D\uDD14" },
-  { href: "/notifications", label: "On-call & Tickets", icon: "\uD83D\uDCE3", adminOnly: true },
-  { href: "/validity", label: "Radar de validade", icon: "\uD83D\uDCE1" },
-  { href: "/diagnostics", label: "Diagnostico IA", icon: "\uD83E\uDD16" },
-  { href: "/catalog", label: "Catalogo", icon: "\uD83D\uDCDA" },
-  { href: "/sla", label: "SLA & Impacto", icon: "\uD83D\uDCCA" },
-  { href: "/transports", label: "Transports", icon: "\uD83D\uDE9A" },
-  { href: "/predict", label: "Previs\u00E3o & Benchmark", icon: "\uD83D\uDD2E" },
-  { href: "/cloud", label: "CPI & AIF", icon: "\u2601\uFE0F" },
-  { href: "/ask", label: "Pergunte \u00E0 IA", icon: "\uD83D\uDCAC" },
-  { href: "/dead-code", label: "Dead Code", icon: "\uD83D\uDD0D" },
-  { href: "/reports", label: "Relatorios", icon: "\uD83D\uDCC4" },
-  { href: "/billing", label: "Cobran\u00E7a", icon: "\uD83D\uDCB3", adminOnly: true },
-  { href: "/settings", label: "Configuracoes", icon: "\u2699\uFE0F", adminOnly: true },
+interface MenuItem { href: string; label: string; icon: string; adminOnly?: boolean }
+interface MenuGroup { title: string; items: MenuItem[] }
+
+// Menu da consultoria, agrupado por se\u00E7\u00E3o (com rolagem quando passa da altura)
+const tenantGroups: MenuGroup[] = [
+  {
+    title: "Opera\u00E7\u00E3o",
+    items: [
+      { href: "/dashboard", label: "Dashboard", icon: "\uD83D\uDCCA" },
+      { href: "/clients", label: "Clientes", icon: "\uD83D\uDC65" },
+      { href: "/integrations", label: "Integra\u00E7\u00f5es", icon: "\uD83D\uDD17" },
+      { href: "/cockpit", label: "Cockpit", icon: "\uD83D\uDEF0\uFE0F" },
+      { href: "/alerts", label: "Alertas", icon: "\uD83D\uDD14" },
+    ],
+  },
+  {
+    title: "Intelig\u00EAncia",
+    items: [
+      { href: "/diagnostics", label: "Diagnostico IA", icon: "\uD83E\uDD16" },
+      { href: "/ask", label: "Pergunte \u00E0 IA", icon: "\uD83D\uDCAC" },
+      { href: "/predict", label: "Previs\u00E3o & Benchmark", icon: "\uD83D\uDD2E" },
+    ],
+  },
+  {
+    title: "Cat\u00E1logo & qualidade",
+    items: [
+      { href: "/catalog", label: "Catalogo", icon: "\uD83D\uDCDA" },
+      { href: "/validity", label: "Radar de validade", icon: "\uD83D\uDCE1" },
+      { href: "/dead-code", label: "Dead Code", icon: "\uD83D\uDD0D" },
+    ],
+  },
+  {
+    title: "SAP Cloud & transportes",
+    items: [
+      { href: "/cloud", label: "CPI & AIF", icon: "\u2601\uFE0F" },
+      { href: "/transports", label: "Transports", icon: "\uD83D\uDE9A" },
+    ],
+  },
+  {
+    title: "Valor & relat\u00F3rios",
+    items: [
+      { href: "/sla", label: "SLA & Impacto", icon: "\uD83D\uDCC8" },
+      { href: "/reports", label: "Relatorios", icon: "\uD83D\uDCC4" },
+    ],
+  },
+  {
+    title: "Resposta & conta",
+    items: [
+      { href: "/notifications", label: "On-call & Tickets", icon: "\uD83D\uDCE3", adminOnly: true },
+      { href: "/billing", label: "Cobran\u00E7a", icon: "\uD83D\uDCB3", adminOnly: true },
+      { href: "/settings", label: "Configuracoes", icon: "\u2699\uFE0F", adminOnly: true },
+    ],
+  },
 ];
 
 // Menu do super-admin da plataforma (gerencia tenants; sem cobran\u00E7a pr\u00F3pria)
-const platformMenu = [
-  { href: "/platform", label: "Consultorias", icon: "\uD83C\uDFE2" },
-  { href: "/platform/revenue", label: "Receita", icon: "\uD83D\uDCB0" },
+const platformGroups: MenuGroup[] = [
+  {
+    title: "Plataforma",
+    items: [
+      { href: "/platform", label: "Consultorias", icon: "\uD83C\uDFE2" },
+      { href: "/platform/revenue", label: "Receita", icon: "\uD83D\uDCB0" },
+    ],
+  },
 ];
 
 export default function Sidebar({ user, consultancy }: SidebarProps) {
@@ -55,10 +93,9 @@ export default function Sidebar({ user, consultancy }: SidebarProps) {
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
   const isAdmin = user?.role === "CONSULTANCY_ADMIN";
-  const menuItems =
-    user?.role === "PLATFORM_ADMIN"
-      ? platformMenu
-      : tenantMenu.filter((m) => isAdmin || !(m as { adminOnly?: boolean }).adminOnly);
+  const groups: MenuGroup[] = (user?.role === "PLATFORM_ADMIN" ? platformGroups : tenantGroups)
+    .map((g) => ({ ...g, items: g.items.filter((m) => isAdmin || !m.adminOnly) }))
+    .filter((g) => g.items.length > 0);
 
   function isActive(href: string) {
     if (href === "/dashboard") return pathname === "/dashboard";
@@ -72,7 +109,7 @@ export default function Sidebar({ user, consultancy }: SidebarProps) {
 
   const nav = (
     <div className="flex flex-col h-full">
-      <div className="p-6">
+      <div className="p-6 shrink-0">
         <Link href="/dashboard" className="block" onClick={() => setMobileOpen(false)}>
           {consultancy?.logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -89,25 +126,34 @@ export default function Sidebar({ user, consultancy }: SidebarProps) {
         </Link>
       </div>
 
-      <nav className="flex-1 px-3 space-y-1">
-        {menuItems.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            onClick={() => setMobileOpen(false)}
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-              isActive(item.href)
-                ? "bg-purple-500/10 text-purple-400"
-                : "text-[#9b95ad] hover:text-white hover:bg-white/[0.04]"
-            }`}
-          >
-            <span className="text-lg">{item.icon}</span>
-            {item.label}
-          </Link>
+      <nav className="flex-1 overflow-y-auto px-3 pb-2 space-y-3 sidebar-scroll">
+        {groups.map((group) => (
+          <div key={group.title}>
+            <p className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-[#6b6580]">
+              {group.title}
+            </p>
+            <div className="space-y-0.5">
+              {group.items.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setMobileOpen(false)}
+                  className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    isActive(item.href)
+                      ? "bg-purple-500/10 text-purple-400"
+                      : "text-[#9b95ad] hover:text-white hover:bg-white/[0.04]"
+                  }`}
+                >
+                  <span className="text-lg">{item.icon}</span>
+                  {item.label}
+                </Link>
+              ))}
+            </div>
+          </div>
         ))}
       </nav>
 
-      <div className="p-4 border-t border-white/[0.08]">
+      <div className="p-4 border-t border-white/[0.08] shrink-0">
         {user && (
           <div className="mb-3 px-2">
             <p className="text-sm font-medium text-[#e2e0ea] truncate">

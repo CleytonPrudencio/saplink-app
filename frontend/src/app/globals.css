@@ -21,3 +21,10 @@ body {
   }
   a { color: #000 !important; text-decoration: none; }
 }
+
+/* Scrollbar fino do menu lateral */
+.sidebar-scroll::-webkit-scrollbar { width: 6px; }
+.sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
+.sidebar-scroll::-webkit-scrollbar-thumb { background: rgba(167,139,250,0.25); border-radius: 3px; }
+.sidebar-scroll::-webkit-scrollbar-thumb:hover { background: rgba(167,139,250,0.45); }
+.sidebar-scroll { scrollbar-width: thin; scrollbar-color: rgba(167,139,250,0.3) transparent; }
