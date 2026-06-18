@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "pdfkit": "^0.15.1",
-    "pptxgenjs": "^3.12.0"
+    "pptxgenjs": "^3.12.0",
+    "sharp": "^0.35.1"
   }
 }
