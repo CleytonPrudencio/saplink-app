@@ -156,6 +156,12 @@ function DiagnosticsContent() {
       return;
     }
 
+    if (!id) {
+      setError("Não foi possível iniciar o diagnóstico (resposta inválida do servidor).");
+      setAnalyzing(false);
+      return;
+    }
+
     // Polling resiliente: um poll que falhe (restart/erro transitório) NÃO derruba tudo —
     // só desistimos após várias falhas seguidas. A IA continua rodando no servidor.
     let done = false;

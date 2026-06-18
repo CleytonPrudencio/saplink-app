@@ -3,8 +3,45 @@ import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
+// Catálogo de planos — roda SEMPRE (produção precisa do catálogo). Idempotente (upsert).
+async function seedPlans() {
+  const plans = [
+    {
+      key: 'STARTER', name: 'Starter', sortOrder: 1, priceCents: 29700,
+      description: 'Para consultorias começando — monitoramento essencial de poucos clientes.',
+      maxClients: 3, maxIntegrations: 10, maxUsers: 3, maxAiDiagnosticsPerMonth: 50,
+      addonIntegrationCents: 2500, addonUserCents: 4500, highlight: false,
+    },
+    {
+      key: 'PRO', name: 'Pro', sortOrder: 2, priceCents: 69700,
+      description: 'O mais popular — operação completa para consultorias em crescimento.',
+      maxClients: 10, maxIntegrations: 40, maxUsers: 10, maxAiDiagnosticsPerMonth: 250,
+      addonIntegrationCents: 1900, addonUserCents: 3900, highlight: true,
+    },
+    {
+      key: 'BUSINESS', name: 'Business', sortOrder: 3, priceCents: 149700,
+      description: 'Alto volume — muitos clientes e integrações, IA à vontade.',
+      maxClients: 30, maxIntegrations: 150, maxUsers: 30, maxAiDiagnosticsPerMonth: 1000,
+      addonIntegrationCents: 1500, addonUserCents: 2900, highlight: false,
+    },
+    {
+      key: 'ENTERPRISE', name: 'Enterprise', sortOrder: 4, priceCents: 399700,
+      description: 'Sem limites práticos — volume máximo, SLA e add-ons mais baratos.',
+      maxClients: 999, maxIntegrations: 999, maxUsers: 100, maxAiDiagnosticsPerMonth: 5000,
+      addonIntegrationCents: 1200, addonUserCents: 2500, highlight: false,
+    },
+  ];
+  for (const p of plans) {
+    await prisma.plan.upsert({ where: { key: p.key }, create: p, update: p });
+  }
+  console.log(`Planos sincronizados: ${plans.map((p) => p.key).join(', ')}`);
+}
+
 async function main() {
-  // Idempotente: NUNCA apaga dados. Só popula se o banco estiver vazio.
+  // Planos: sempre (catálogo é necessário em produção também)
+  await seedPlans();
+
+  // Idempotente: NUNCA apaga dados. Só popula DEMO se o banco estiver vazio.
   const existing = await prisma.consultancy.count();
   if (existing > 0) {
     console.log('Seed pulado: banco já populado (nada foi apagado).');
@@ -42,6 +79,28 @@ async function main() {
     },
   });
   console.log('Admin user created:', admin.email);
+
+  // Assinatura ativa (plano PRO) para a consultoria demo funcionar de cara
+  await prisma.subscription.create({
+    data: {
+      consultancyId: consultancy.id,
+      planKey: 'PRO',
+      status: 'ACTIVE',
+      currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      provider: 'manual',
+    },
+  });
+  // Algumas faturas pagas para histórico/dashboard de gastos
+  for (let i = 3; i >= 1; i--) {
+    await prisma.invoice.create({
+      data: {
+        consultancyId: consultancy.id, amountCents: 69700, status: 'PAID',
+        paidAt: new Date(Date.now() - i * 30 * 24 * 60 * 60 * 1000),
+        createdAt: new Date(Date.now() - i * 30 * 24 * 60 * 60 * 1000),
+      },
+    });
+  }
+  console.log('Subscription PRO ativa + 3 faturas pagas (demo)');
 
   // 3. Create clients
   const client1 = await prisma.client.create({

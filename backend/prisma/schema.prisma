@@ -118,14 +118,20 @@ model DeadCode {
 // ===== Billing / Assinatura =====
 
 model Plan {
-  key                      String         @id // STARTER | PRO | ENTERPRISE
+  key                      String         @id // STARTER | PRO | BUSINESS | ENTERPRISE
   name                     String
+  description              String?
   priceCents               Int
   interval                 String         @default("MONTH")
   maxClients               Int
   maxIntegrations          Int
   maxAiDiagnosticsPerMonth Int
   maxUsers                 Int
+  highlight                Boolean        @default(false) // plano em destaque na UI
+  sortOrder                Int            @default(0)
+  // Preço dos add-ons (por unidade/mês) quando o limite do plano estoura
+  addonIntegrationCents    Int            @default(0)
+  addonUserCents           Int            @default(0)
   active                   Boolean        @default(true)
   subscriptions            Subscription[]
 }
@@ -141,6 +147,8 @@ model Subscription {
   currentPeriodEnd       DateTime?
   graceUntil             DateTime?
   cancelAtPeriodEnd      Boolean      @default(false)
+  extraIntegrations      Int          @default(0) // add-on: integrações além do limite do plano
+  extraUsers             Int          @default(0) // add-on: usuários além do limite do plano
   provider               String       @default("manual") // manual | stripe | asaas | iugu
   providerCustomerId     String?
   providerSubscriptionId String?

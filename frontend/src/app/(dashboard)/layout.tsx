@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { getMe } from "@/lib/api";
+import { getMe, getBilling } from "@/lib/api";
 import Sidebar from "@/components/Sidebar";
 
 interface Consultancy {
@@ -19,14 +19,17 @@ interface User {
   consultancy?: Consultancy;
 }
 
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+interface BillingStatus {
+  allowed: boolean;
+  status: string;
+  reason?: string | null;
+}
+
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [user, setUser] = useState<User | null>(null);
+  const [billing, setBilling] = useState<BillingStatus | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -37,13 +40,21 @@ export default function DashboardLayout({
     }
 
     getMe()
-      .then((data) => {
+      .then(async (data) => {
         setUser(data);
-        setLoading(false);
-        // Super-admin não gerencia uma consultoria: vai pro painel da plataforma
-        if (data.role === "PLATFORM_ADMIN" && pathname === "/") {
-          router.replace("/platform");
+        if (data.role === "PLATFORM_ADMIN") {
+          setLoading(false);
+          if (pathname === "/") router.replace("/platform");
+          return;
         }
+        // Consultoria: checa assinatura (rota de billing não exige assinatura ativa)
+        try {
+          const b = await getBilling();
+          setBilling({ allowed: b.allowed, status: b.status, reason: b.reason });
+        } catch {
+          setBilling({ allowed: false, status: "ERROR", reason: "Não foi possível verificar a assinatura." });
+        }
+        setLoading(false);
       })
       .catch(() => {
         localStorage.removeItem("token");
@@ -64,11 +75,37 @@ export default function DashboardLayout({
     );
   }
 
+  const blocked = !!user && user.role !== "PLATFORM_ADMIN" && billing !== null && !billing.allowed;
+
+  // CONSULTANCY_USER: assinatura inativa → nem abre o sistema
+  if (blocked && user?.role === "CONSULTANCY_USER") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#0f0b1a] p-6">
+        <div className="max-w-md text-center bg-[#1a1527] border border-amber-500/30 rounded-2xl p-8">
+          <div className="text-4xl mb-3">⚠️</div>
+          <h1 className="text-xl font-bold text-amber-300 mb-2">Acesso temporariamente indisponível</h1>
+          <p className="text-[#c9c5d6] leading-relaxed mb-1">
+            Há uma pendência administrativa na conta da sua empresa.
+          </p>
+          <p className="text-[#9b95ad] text-sm mb-6">
+            Entre em contato com o <b>administrador da conta</b> para regularizar o acesso.
+          </p>
+          <button onClick={handleLogout} className="px-4 py-2 rounded-lg text-sm bg-white/[0.06] text-[#e2e0ea] hover:bg-white/[0.12] transition cursor-pointer">
+            Sair
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // CONSULTANCY_ADMIN bloqueado: deixa navegar para billing/settings; nas demais, mostra CTA de pagamento
+  const onAllowedPage = pathname.startsWith("/billing") || pathname.startsWith("/settings");
+  const showPaymentCta = blocked && !onAllowedPage;
+
   return (
     <div className="min-h-screen flex">
       <Sidebar user={user} consultancy={user?.consultancy} />
       <main className="flex-1 ml-0 md:ml-64 min-h-screen overflow-auto">
-        {/* Barra superior com usuário + sair (sempre visível) */}
         <div className="sticky top-0 z-20 flex items-center justify-end gap-3 px-6 md:px-8 py-3 bg-[#0f0b1a]/80 backdrop-blur border-b border-white/[0.06] no-print">
           <span className="text-sm text-[#9b95ad]">
             {user?.name}
@@ -84,6 +121,21 @@ export default function DashboardLayout({
         <div className="p-6 md:p-8">
           {user?.role === "PLATFORM_ADMIN" && !pathname.startsWith("/platform") ? (
             <div className="text-[#9b95ad]">Redirecionando para o painel da plataforma...</div>
+          ) : showPaymentCta ? (
+            <div className="max-w-xl mx-auto mt-10 bg-[#1a1527] border border-rose-500/30 rounded-2xl p-8 text-center">
+              <div className="text-4xl mb-3">🔒</div>
+              <h1 className="text-xl font-bold text-rose-300 mb-2">Assinatura inativa</h1>
+              <p className="text-[#c9c5d6] leading-relaxed mb-1">
+                {billing?.reason || "Sua assinatura não está ativa."} O acesso às telas fica bloqueado até a regularização.
+              </p>
+              <p className="text-[#9b95ad] text-sm mb-6">Resolva o pagamento para reativar o SAPLINK na hora.</p>
+              <button
+                onClick={() => router.push("/billing")}
+                className="px-6 py-2.5 bg-gradient-to-r from-purple-600 to-cyan-500 text-white font-semibold rounded-lg hover:opacity-90 transition cursor-pointer"
+              >
+                Resolver pagamento →
+              </button>
+            </div>
           ) : (
             children
           )}

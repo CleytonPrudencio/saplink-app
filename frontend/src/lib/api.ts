@@ -22,12 +22,9 @@ api.interceptors.response.use(
       if (status === 401) {
         localStorage.removeItem('token');
         window.location.href = '/login';
-      } else if (status === 403 && error.response?.data?.error === 'subscription_inactive') {
-        // Assinatura suspensa/inadimplente: leva para a tela de pagamento
-        if (!window.location.pathname.startsWith('/billing')) {
-          window.location.href = '/billing';
-        }
       }
+      // 403 (assinatura inativa / sem tenant): o gate no layout do dashboard cuida da UX
+      // por papel (admin vê CTA de pagamento; usuário vê 'contate o admin'). Sem redirect aqui.
     }
     return Promise.reject(error);
   }
@@ -98,6 +95,11 @@ export async function checkoutPlan(planKey: string) {
 
 export async function cancelSubscription() {
   const { data } = await api.post('/billing/cancel');
+  return data;
+}
+
+export async function updateAddons(payload: { extraIntegrations?: number; extraUsers?: number }) {
+  const { data } = await api.post('/billing/addons', payload);
   return data;
 }
 

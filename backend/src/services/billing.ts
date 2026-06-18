@@ -147,11 +147,13 @@ export async function assertWithinLimit(
     const count = await prisma.client.count({ where: { consultancyId } });
     if (count >= plan.maxClients) throw new LimitError(`Limite do plano atingido: ${plan.maxClients} clientes. Faça upgrade.`);
   } else if (resource === 'integrations') {
+    const limit = plan.maxIntegrations + ((sub as any).extraIntegrations || 0);
     const count = await prisma.integration.count({ where: { client: { consultancyId } } });
-    if (count >= plan.maxIntegrations) throw new LimitError(`Limite do plano atingido: ${plan.maxIntegrations} integrações. Faça upgrade.`);
+    if (count >= limit) throw new LimitError(`Limite atingido: ${limit} integrações. Contrate um add-on de integração ou faça upgrade.`);
   } else if (resource === 'users') {
+    const limit = plan.maxUsers + ((sub as any).extraUsers || 0);
     const count = await prisma.user.count({ where: { consultancyId } });
-    if (count >= plan.maxUsers) throw new LimitError(`Limite do plano atingido: ${plan.maxUsers} usuários. Faça upgrade.`);
+    if (count >= limit) throw new LimitError(`Limite atingido: ${limit} usuários. Contrate um add-on de usuário ou faça upgrade.`);
   } else if (resource === 'aiDiagnostics') {
     const period = periodKey();
     const counter = await prisma.usageCounter.findUnique({

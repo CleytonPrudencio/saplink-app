@@ -91,34 +91,98 @@ router.post('/webhook', async (req: Request, res: Response) => {
 // para o inadimplente conseguir regularizar).
 router.use(authMiddleware, tenancyMiddleware);
 
-// Status atual: assinatura, plano, uso do mês e faturas
+// Status atual: assinatura, plano, uso, faturas, gastos e add-ons
 router.get('/', async (req: Request, res: Response) => {
   const consultancyId = req.consultancyId!;
   const eff = await getEffectiveStatus(consultancyId);
+  const sub: any = eff.subscription;
+  const plan = sub?.plan ?? null;
   const now = new Date();
   const period = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
-  const usage = await prisma.usageCounter.findUnique({
-    where: { consultancyId_period: { consultancyId, period } },
-  });
-  const invoices = await prisma.invoice.findMany({
-    where: { consultancyId },
-    orderBy: { createdAt: 'desc' },
-    take: 12,
-  });
+
+  const [usage, invoices, clientsCount, integrationsCount, usersCount, consultancy] = await Promise.all([
+    prisma.usageCounter.findUnique({ where: { consultancyId_period: { consultancyId, period } } }),
+    prisma.invoice.findMany({ where: { consultancyId }, orderBy: { createdAt: 'desc' }, take: 36 }),
+    prisma.client.count({ where: { consultancyId } }),
+    prisma.integration.count({ where: { client: { consultancyId } } }),
+    prisma.user.count({ where: { consultancyId } }),
+    prisma.consultancy.findUnique({ where: { id: consultancyId }, select: { name: true, cnpj: true } }),
+  ]);
+
+  const extraIntegrations = sub?.extraIntegrations ?? 0;
+  const extraUsers = sub?.extraUsers ?? 0;
+
+  // Total mensal = plano + add-ons
+  const monthlyCents = plan
+    ? plan.priceCents + extraIntegrations * plan.addonIntegrationCents + extraUsers * plan.addonUserCents
+    : 0;
+
+  // Gastos: total pago e série por mês (últimos 12)
+  const paid = invoices.filter((i) => i.status === 'PAID');
+  const totalPaidCents = paid.reduce((s, i) => s + i.amountCents, 0);
+  const byMonth: Record<string, number> = {};
+  for (const i of paid) {
+    const d = new Date(i.paidAt || i.createdAt);
+    const k = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+    byMonth[k] = (byMonth[k] || 0) + i.amountCents;
+  }
+  const spendingSeries = Object.entries(byMonth).sort().slice(-12).map(([month, cents]) => ({ month, cents }));
+
   res.json({
     status: eff.status,
     allowed: eff.allowed,
     reason: eff.reason ?? null,
-    plan: eff.subscription?.plan ?? null,
-    currentPeriodEnd: eff.subscription?.currentPeriodEnd ?? null,
-    trialEndsAt: eff.subscription?.trialEndsAt ?? null,
-    usage: { aiDiagnostics: usage?.aiDiagnostics ?? 0 },
+    consultancyName: consultancy?.name ?? null,
+    consultancyCnpj: consultancy?.cnpj ?? null,
+    plan,
+    extras: { integrations: extraIntegrations, users: extraUsers },
+    effectiveLimits: plan ? {
+      clients: plan.maxClients,
+      integrations: plan.maxIntegrations + extraIntegrations,
+      users: plan.maxUsers + extraUsers,
+      aiDiagnostics: plan.maxAiDiagnosticsPerMonth,
+    } : null,
+    addonPrices: plan ? { integrationCents: plan.addonIntegrationCents, userCents: plan.addonUserCents } : null,
+    monthlyCents,
+    currentPeriodEnd: sub?.currentPeriodEnd ?? null,
+    trialEndsAt: sub?.trialEndsAt ?? null,
+    cancelAtPeriodEnd: sub?.cancelAtPeriodEnd ?? false,
+    usage: {
+      clients: clientsCount,
+      integrations: integrationsCount,
+      users: usersCount,
+      aiDiagnostics: usage?.aiDiagnostics ?? 0,
+    },
+    spending: { totalPaidCents, series: spendingSeries },
     invoices,
   });
 });
 
+// Add-ons: ajusta integrações/usuários extras (só admin). No provider manual, gera fatura do delta.
+const addonSchema = z.object({
+  extraIntegrations: z.number().int().min(0).max(999).optional(),
+  extraUsers: z.number().int().min(0).max(999).optional(),
+});
+router.post('/addons', requireConsultancyAdmin, async (req: Request, res: Response) => {
+  const parsed = addonSchema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: 'Valores inválidos' }); return; }
+  const consultancyId = req.consultancyId!;
+  const sub = await prisma.subscription.findUnique({ where: { consultancyId }, include: { plan: true } });
+  if (!sub || !sub.plan) { res.status(409).json({ error: 'Sem assinatura ativa. Escolha um plano primeiro.' }); return; }
+
+  const data: any = {};
+  if (parsed.data.extraIntegrations !== undefined) data.extraIntegrations = parsed.data.extraIntegrations;
+  if (parsed.data.extraUsers !== undefined) data.extraUsers = parsed.data.extraUsers;
+  const updated = await prisma.subscription.update({ where: { consultancyId }, data, include: { plan: true } });
+
+  const monthlyCents = updated.plan.priceCents
+    + updated.extraIntegrations * updated.plan.addonIntegrationCents
+    + updated.extraUsers * updated.plan.addonUserCents;
+  res.json({ status: 'ok', extras: { integrations: updated.extraIntegrations, users: updated.extraUsers }, monthlyCents });
+});
+
 router.get('/plans', async (_req: Request, res: Response) => {
-  const plans = await prisma.plan.findMany({ where: { active: true }, orderBy: { priceCents: 'asc' } });
+  const plans = await prisma.plan.findMany({ where: { active: true }, orderBy: { sortOrder: 'asc' } });
   res.json(plans);
 });
 
