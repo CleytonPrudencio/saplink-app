@@ -2,6 +2,9 @@ import { Router, Request, Response } from 'express';
 import prisma from '../lib/prisma';
 import { hashAgentToken } from '../lib/crypto';
 import { ingestAgentReport, AgentReport } from '../services/agent';
+import { ingestSapItems, SapItemInput } from '../services/cockpit';
+import { claimCommands, recordResult } from '../services/remediation';
+import { ingestCatalog, CatalogItemInput } from '../services/catalog';
 
 // Rotas do Agente on-premise. SEM JWT/tenancy: o agente autentica por token próprio
 // (header x-agent-token), que mapeia direto para a integração.
@@ -37,6 +40,68 @@ router.post('/report', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Agent report error:', error);
     res.status(500).json({ error: 'Erro ao processar relatório do agente' });
+  }
+});
+
+// POST /api/agent/sap-items — o agente empurra o snapshot de IDocs/filas (B1)
+router.post('/sap-items', async (req: Request, res: Response) => {
+  const integration = await resolveIntegration(req);
+  if (!integration) {
+    res.status(401).json({ error: 'Token do agente inválido' });
+    return;
+  }
+  try {
+    const items = (req.body?.items || []) as SapItemInput[];
+    const result = await ingestSapItems(integration.id, integration.clientId, items);
+    res.json({ ok: true, ...result });
+  } catch (error) {
+    console.error('Agent sap-items error:', error);
+    res.status(500).json({ error: 'Erro ao processar itens do agente' });
+  }
+});
+
+// GET /api/agent/commands — o agente busca remediações aprovadas (vira EXECUTING) (B2)
+router.get('/commands', async (req: Request, res: Response) => {
+  const integration = await resolveIntegration(req);
+  if (!integration) { res.status(401).json({ error: 'Token do agente inválido' }); return; }
+  try {
+    const commands = await claimCommands(integration.id);
+    res.json({ commands });
+  } catch (error) {
+    console.error('Agent commands error:', error);
+    res.status(500).json({ error: 'Erro ao buscar comandos' });
+  }
+});
+
+// POST /api/agent/commands/:id/result — o agente reporta o resultado da execução (B2)
+router.post('/commands/:id/result', async (req: Request, res: Response) => {
+  const integration = await resolveIntegration(req);
+  if (!integration) { res.status(401).json({ error: 'Token do agente inválido' }); return; }
+  try {
+    const r = await recordResult(integration.id, req.params.id, {
+      ok: !!req.body?.ok,
+      resultText: req.body?.resultText,
+      afterText: req.body?.afterText,
+    });
+    if (r.error) { res.status(404).json({ error: 'Comando não encontrado' }); return; }
+    res.json({ ok: true, status: r.action.status });
+  } catch (error) {
+    console.error('Agent command result error:', error);
+    res.status(500).json({ error: 'Erro ao registrar resultado' });
+  }
+});
+
+// POST /api/agent/catalog — o agente empurra o catálogo de interfaces descoberto (B3)
+router.post('/catalog', async (req: Request, res: Response) => {
+  const integration = await resolveIntegration(req);
+  if (!integration) { res.status(401).json({ error: 'Token do agente inválido' }); return; }
+  try {
+    const items = (req.body?.items || []) as CatalogItemInput[];
+    const result = await ingestCatalog(integration.id, integration.clientId, items);
+    res.json({ ok: true, ...result });
+  } catch (error) {
+    console.error('Agent catalog error:', error);
+    res.status(500).json({ error: 'Erro ao processar catálogo' });
   }
 });
 

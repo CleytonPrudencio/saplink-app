@@ -71,6 +71,9 @@ model Client {
   alerts        Alert[]
   diagnostics   Diagnostic[]
   deadCode      DeadCode[]
+  sapItems      SapItem[]
+  remediations  RemediationAction[]
+  catalogItems  InterfaceCatalogItem[]
   createdAt     DateTime      @default(now())
 }
 
@@ -87,6 +90,7 @@ model Integration {
   clientId    String
   client      Client   @relation(fields: [clientId], references: [id])
   alerts      Alert[]
+  sapItems    SapItem[]
   // Agente on-premise (RFC/IDoc): token de ingestão e frescor da última leitura
   agentTokenHash    String?   @unique
   agentTokenHint    String?
@@ -113,6 +117,72 @@ model Alert {
   integration   Integration? @relation(fields: [integrationId], references: [id])
   createdAt     DateTime     @default(now())
   resolvedAt    DateTime?
+}
+
+// B1 — itens operacionais do SAP reportados pelo agente: IDocs em erro, filas qRFC/tRFC.
+model SapItem {
+  id            String       @id @default(uuid())
+  clientId      String
+  client        Client       @relation(fields: [clientId], references: [id])
+  integrationId String?
+  integration   Integration? @relation(fields: [integrationId], references: [id])
+  kind          String       // IDOC | QRFC | TRFC
+  direction     String?      // INBOUND | OUTBOUND
+  ref           String       // número do IDoc / nome da fila / TID
+  messageType   String?      // ORDERS05, MATMAS05, DESADV...
+  partner       String?      // parceiro (LS/KU) ou destino RFC
+  statusCode    String?      // 51,56,64 / SYSFAIL / CPICERR / RETRY
+  statusText    String?
+  depth         Int          @default(1)  // profundidade da fila (qRFC) ou nº de LUWs
+  remediable    Boolean      @default(false)
+  resolved      Boolean      @default(false)
+  lastSeenAt    DateTime     @default(now())
+  createdAt     DateTime     @default(now())
+  remediations  RemediationAction[]
+  @@unique([integrationId, kind, ref])
+  @@index([clientId, kind, resolved])
+}
+
+// B2 — ação de remediação autônoma: criada na plataforma, aprovada por admin,
+// executada pelo agente (pull) com log de antes/depois.
+model RemediationAction {
+  id            String       @id @default(uuid())
+  clientId      String
+  client        Client       @relation(fields: [clientId], references: [id])
+  integrationId String?
+  sapItemId     String?
+  sapItem       SapItem?     @relation(fields: [sapItemId], references: [id])
+  actionType    String       // REPROCESS_IDOC | UNLOCK_QUEUE | RETRY_TRFC | REACTIVATE_RFC
+  target        String       // ref do objeto (IDoc nº, fila, TID)
+  params        Json?
+  status        String       @default("PENDING_APPROVAL") // PENDING_APPROVAL|APPROVED|EXECUTING|DONE|FAILED|REJECTED
+  requestedById String?
+  approvedById  String?
+  resultText    String?
+  beforeText    String?
+  afterText     String?
+  requestedAt   DateTime     @default(now())
+  approvedAt    DateTime?
+  executedAt    DateTime?
+  @@index([clientId, status])
+  @@index([integrationId, status])
+}
+
+// B3 — catálogo vivo de interfaces, auto-descoberto pelo agente.
+model InterfaceCatalogItem {
+  id            String       @id @default(uuid())
+  clientId      String
+  client        Client       @relation(fields: [clientId], references: [id])
+  integrationId String?
+  kind          String       // PARTNER_PROFILE | RFC_DEST | MESSAGE_TYPE | ODATA_SERVICE | IDOC_PORT
+  name          String       // nome do objeto (parceiro, destino, msg type, serviço)
+  detail        String?      // descrição / host / tipo de conexão
+  attributes    Json?        // metadados extras (porta, processcode, etc.)
+  active        Boolean      @default(true)
+  lastSeenAt    DateTime     @default(now())
+  createdAt     DateTime     @default(now())
+  @@unique([integrationId, kind, name])
+  @@index([clientId, kind])
 }
 
 model Diagnostic {

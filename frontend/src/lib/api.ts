@@ -141,6 +141,69 @@ export async function updateAddons(payload: { extraIntegrations?: number; extraU
   return data;
 }
 
+// B1 — Cockpit de IDoc/filas
+export interface SapItemView {
+  id: string; kind: string; direction?: string | null; ref: string; messageType?: string | null;
+  partner?: string | null; statusCode?: string | null; statusText?: string | null; depth: number;
+  remediable: boolean; lastSeenAt: string; client?: string; clientId: string; integration?: string; integrationId?: string;
+}
+export interface CockpitData {
+  items: SapItemView[];
+  summary: { total: number; byKind: Record<string, number>; byStatus: Record<string, number>; byClient: Record<string, number>; queueDepth: number; remediable: number };
+}
+
+export async function getCockpit(filters: { clientId?: string; kind?: string; status?: string; q?: string } = {}) {
+  const params: Record<string, string> = {};
+  if (filters.clientId) params.clientId = filters.clientId;
+  if (filters.kind) params.kind = filters.kind;
+  if (filters.status) params.status = filters.status;
+  if (filters.q) params.q = filters.q;
+  const { data } = await api.get('/cockpit', { params });
+  return data as CockpitData;
+}
+
+// B2 — Remediação autônoma
+export interface RemediationAction {
+  id: string; clientId: string; integrationId?: string | null; sapItemId?: string | null;
+  actionType: string; target: string; status: string; resultText?: string | null;
+  beforeText?: string | null; afterText?: string | null; requestedAt: string; executedAt?: string | null;
+  sapItem?: { kind: string; ref: string } | null;
+}
+
+export async function requestRemediation(sapItemId: string, actionType?: string) {
+  const { data } = await api.post('/remediation', { sapItemId, actionType });
+  return data as { action: RemediationAction; duplicate: boolean };
+}
+
+export async function listRemediations(status?: string) {
+  const { data } = await api.get('/remediation', { params: status ? { status } : {} });
+  return data as { actions: RemediationAction[]; labels: Record<string, string> };
+}
+
+export async function approveRemediation(id: string) {
+  const { data } = await api.post(`/remediation/${id}/approve`);
+  return data;
+}
+
+export async function rejectRemediation(id: string) {
+  const { data } = await api.post(`/remediation/${id}/reject`);
+  return data;
+}
+
+// B3 — Catálogo vivo de interfaces
+export interface CatalogItem {
+  id: string; kind: string; name: string; detail?: string | null; attributes?: Record<string, unknown> | null;
+  active: boolean; lastSeenAt: string; client?: string; clientId: string; integration?: string;
+}
+export async function getCatalog(filters: { clientId?: string; kind?: string; q?: string } = {}) {
+  const params: Record<string, string> = {};
+  if (filters.clientId) params.clientId = filters.clientId;
+  if (filters.kind) params.kind = filters.kind;
+  if (filters.q) params.q = filters.q;
+  const { data } = await api.get('/catalog', { params });
+  return data as { items: CatalogItem[]; summary: { total: number; active: number; byKind: Record<string, number> } };
+}
+
 // A4 — Radar de validade
 export interface ValidityItem {
   integrationId: string; integration: string; client: string; type: string;

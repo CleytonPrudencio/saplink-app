@@ -14,9 +14,9 @@ Ordem por valor × esforço × dependência. Marcar `[x]` ao concluir.
 **Fase A concluída.** Próximo: Fase B.
 
 ## Fase B — Operação SAP (cockpit + remediação) — o salto "monitor → resolve"
-- [ ] B1. **Cockpit de IDoc/filas multi-cliente** — BD87 + SMQ1/2 + SM58 num painel, reprocesso em massa.
-- [ ] B2. **Remediação autônoma** — o agente AGE (reprocessa IDoc, destrava fila, reativa RFC) com aprovação + log.
-- [ ] B3. **Catálogo vivo de interfaces** — auto-descoberta e documentação do landscape.
+- [x] B1. **Cockpit de IDoc/filas multi-cliente** — SapItem + ingest do agente, página /cockpit com filtros e contadores (IDoc 51/56/64, qRFC/tRFC).
+- [x] B2. **Remediação autônoma** — RemediationAction (PENDING→APPROVED→DONE), agente pull de comandos + execução + log; aprovação no cockpit.
+- [x] B3. **Catálogo vivo de interfaces** — InterfaceCatalogItem, auto-descoberta pelo agente (WE20/SM59/msg types/OData), página /catalog buscável.
 
 ## Fase C — Alerta & integração de operação
 - [ ] C1. **On-call multicanal + escalonamento** — WhatsApp/Teams/Slack, plantão, política de escalonamento.

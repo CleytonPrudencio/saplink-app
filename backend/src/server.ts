@@ -18,6 +18,9 @@ import agentRoutes from './routes/agent';
 import askRoutes from './routes/ask';
 import digestRoutes from './routes/digest';
 import validityRoutes from './routes/validity';
+import cockpitRoutes from './routes/cockpit';
+import remediationRoutes from './routes/remediation';
+import catalogRoutes from './routes/catalog';
 import { authMiddleware } from './middleware/auth';
 import { tenancyMiddleware } from './middleware/tenancy';
 import { requireActiveSubscription } from './middleware/subscription';
@@ -82,6 +85,9 @@ app.use('/api/dead-code', ...tenantGate, deadCodeRoutes);
 app.use('/api/ask', ...tenantGate, askRoutes);
 app.use('/api/digest', ...tenantGate, digestRoutes);
 app.use('/api/validity', ...tenantGate, validityRoutes);
+app.use('/api/cockpit', ...tenantGate, cockpitRoutes);
+app.use('/api/remediation', ...tenantGate, remediationRoutes);
+app.use('/api/catalog', ...tenantGate, catalogRoutes);
 
 // Error handler global (último middleware)
 app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {

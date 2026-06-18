@@ -2,7 +2,7 @@
 // Roda na rede do cliente, lê a saúde do SAP localmente e empurra via HTTPS (só saída)
 // para a plataforma. Autentica por token próprio da integração (X-Agent-Token).
 
-import { collectHealth } from './sap.js';
+import { collectHealth, collectSapItems, executeCommand, discoverCatalog } from './sap.js';
 
 const cfg = {
   url: (process.env.SAPLINK_URL || '').replace(/\/$/, ''),
@@ -68,15 +68,55 @@ async function tick() {
   } catch (e) {
     log('falha ao enviar report (rede):', e.message);
   }
+
+  // B1 — empurra o snapshot de IDocs/filas (vazio quando saudável)
+  try {
+    const items = collectSapItems(report);
+    const { status, body } = await api('/api/agent/sap-items', { method: 'POST', body: JSON.stringify({ items }) });
+    if (status === 200) log(`itens: ${items.length} enviado(s) (resolvidos: ${body.resolved ?? 0})`);
+  } catch (e) {
+    log('falha ao enviar itens (rede):', e.message);
+  }
+
+  // B2 — busca remediações aprovadas, executa e reporta o resultado
+  try {
+    const { status, body } = await api('/api/agent/commands');
+    if (status === 200 && Array.isArray(body.commands) && body.commands.length) {
+      for (const cmd of body.commands) {
+        const result = executeCommand(cmd);
+        await api(`/api/agent/commands/${cmd.id}/result`, { method: 'POST', body: JSON.stringify(result) });
+        log(`remediação executada: ${cmd.actionType} em ${cmd.target} → ${result.ok ? 'OK' : 'FALHOU'}`);
+      }
+    }
+  } catch (e) {
+    log('falha no ciclo de comandos:', e.message);
+  }
+}
+
+let catalogPushed = false;
+async function pushCatalogOnce() {
+  // B3 — descoberta do catálogo: empurra no início e a cada ~1h
+  try {
+    const items = discoverCatalog();
+    const { status, body } = await api('/api/agent/catalog', { method: 'POST', body: JSON.stringify({ items }) });
+    if (status === 200) { catalogPushed = true; log(`catálogo: ${items.length} interface(s) (inativadas: ${body.deactivated ?? 0})`); }
+  } catch (e) {
+    log('falha ao enviar catálogo (rede):', e.message);
+  }
 }
 
 async function main() {
   log(`iniciando — modo=${cfg.mode} alvo=${cfg.url} intervalo=${cfg.pollSeconds}s`);
   await verifyToken();
+  await pushCatalogOnce();
+  let ticks = 0;
   // loop principal
   // eslint-disable-next-line no-constant-condition
   while (true) {
     await tick();
+    ticks++;
+    // re-descobre o catálogo a cada ~1h (3600s / pollSeconds)
+    if (!catalogPushed || ticks % Math.max(1, Math.round(3600 / cfg.pollSeconds)) === 0) await pushCatalogOnce();
     await sleep(cfg.pollSeconds * 1000);
   }
 }
