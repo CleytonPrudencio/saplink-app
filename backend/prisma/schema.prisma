@@ -75,6 +75,13 @@ model Client {
   slaUptimeTarget Float       @default(99.0)   // D1: meta de uptime (%)
   slaMaxLatencyMs Int         @default(2000)   // D1: meta de latência (ms)
   transports    Transport[]
+  s4Connection    S4Connection?
+  upgradeFindings UpgradeFinding[]
+  cleanCoreItems  CleanCoreItem[]
+  apiUsages       ApiUsage[]
+  commArrangements CommArrangement[]
+  fiscalDocs      FiscalDoc[]
+  cloudEvents     CloudEvent[]
   integrations  Integration[]
   alerts        Alert[]
   diagnostics   Diagnostic[]
@@ -276,6 +283,118 @@ model CloudItem {
   resolved      Boolean  @default(false)
   @@unique([integrationId, source, messageId])
   @@index([clientId, source, resolved])
+}
+
+// ====================== S/4HANA Cloud (carro-chefe) ======================
+// S0 — Conector cloud por cliente (Communication Arrangement / OData).
+model S4Connection {
+  id            String   @id @default(uuid())
+  clientId      String   @unique
+  client        Client   @relation(fields: [clientId], references: [id])
+  baseUrl       String                       // ex.: https://my300000.s4hana.cloud.sap
+  authType      String   @default("OAUTH")   // OAUTH | BASIC | CERT
+  commUser      String?
+  authToken     String?                      // cifrado
+  release       String?                      // ex.: 2502
+  status        String   @default("PENDING") // PENDING | CONNECTED | ERROR
+  lastSyncAt    DateTime?
+  createdAt     DateTime @default(now())
+}
+
+// S1.1 — Achados de impacto de upgrade/release.
+model UpgradeFinding {
+  id            String   @id @default(uuid())
+  clientId      String
+  client        Client   @relation(fields: [clientId], references: [id])
+  release       String                       // release alvo (ex.: 2508)
+  area          String                       // API | CDS | EXTENSION | FIELD | JOB
+  object        String                       // nome do objeto afetado
+  impact        String   @default("CHANGED") // BREAKING | DEPRECATED | CHANGED | OK
+  detail        String?
+  recommendation String?
+  resolved      Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  @@index([clientId, impact])
+}
+
+// S1.2 — Itens que afetam o Clean Core Score.
+model CleanCoreItem {
+  id            String   @id @default(uuid())
+  clientId      String
+  client        Client   @relation(fields: [clientId], references: [id])
+  category      String                       // DEPRECATED_API | CUSTOM_CDS | SIDE_BY_SIDE | IN_APP | MODIFICATION
+  object        String
+  severity      String   @default("MEDIUM")  // LOW | MEDIUM | HIGH
+  points        Int      @default(5)         // desconto no score
+  recommendation String?
+  resolved      Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  @@index([clientId, resolved])
+}
+
+// S1.3 — Inventário de APIs liberadas consumidas.
+model ApiUsage {
+  id            String   @id @default(uuid())
+  clientId      String
+  client        Client   @relation(fields: [clientId], references: [id])
+  apiName       String
+  version       String?                      // v2 | v4
+  scenario      String?                      // SAP_COM_xxxx
+  calls30d      Int      @default(0)
+  deprecated    Boolean  @default(false)
+  deprecationRelease String?
+  replacement   String?
+  lastSeenAt    DateTime @default(now())
+  @@unique([clientId, apiName, version])
+}
+
+// S2.1 — Communication Arrangements + certificados.
+model CommArrangement {
+  id            String   @id @default(uuid())
+  clientId      String
+  client        Client   @relation(fields: [clientId], references: [id])
+  scenario      String                       // SAP_COM_xxxx
+  name          String
+  direction     String?                      // INBOUND | OUTBOUND
+  commUser      String?
+  status        String   @default("ACTIVE")  // ACTIVE | ERROR | INACTIVE
+  certExpiresAt DateTime?
+  lastSeenAt    DateTime @default(now())
+  @@unique([clientId, scenario, name])
+}
+
+// S3.1 — Documentos fiscais (DRC / eDocument).
+model FiscalDoc {
+  id            String   @id @default(uuid())
+  clientId      String
+  client        Client   @relation(fields: [clientId], references: [id])
+  docType       String                       // NFE | NFSE | CTE
+  number        String
+  status        String   @default("PENDING") // AUTHORIZED | REJECTED | CONTINGENCY | PENDING | CANCELLED
+  sefazCode     String?
+  message       String?
+  amountCents   Int      @default(0)
+  remediable    Boolean  @default(false)
+  resolved      Boolean  @default(false)
+  issuedAt      DateTime?
+  createdAt     DateTime @default(now())
+  @@unique([clientId, docType, number])
+  @@index([clientId, status])
+}
+
+// S4.1 — Observabilidade de Event Mesh / eventos de negócio.
+model CloudEvent {
+  id            String   @id @default(uuid())
+  clientId      String
+  client        Client   @relation(fields: [clientId], references: [id])
+  topic         String
+  status        String   @default("DELIVERED") // DELIVERED | DEAD_LETTER | RETRY | PENDING
+  subscriber    String?
+  lagMs         Int      @default(0)
+  occurredAt    DateTime?
+  resolved      Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  @@index([clientId, status])
 }
 
 model Diagnostic {

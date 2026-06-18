@@ -28,6 +28,7 @@ import slaRoutes from './routes/sla';
 import transportRoutes from './routes/transports';
 import predictRoutes from './routes/predict';
 import cloudRoutes from './routes/cloud';
+import s4Routes from './routes/s4';
 import { authMiddleware } from './middleware/auth';
 import { tenancyMiddleware } from './middleware/tenancy';
 import { requireActiveSubscription } from './middleware/subscription';
@@ -104,6 +105,7 @@ app.use('/api/sla', ...tenantGate, slaRoutes);
 app.use('/api/transports', ...tenantGate, transportRoutes);
 app.use('/api/predict', ...tenantGate, predictRoutes);
 app.use('/api/cloud', ...tenantGate, cloudRoutes);
+app.use('/api/s4', ...tenantGate, s4Routes);
 
 // Error handler global (último middleware)
 app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {

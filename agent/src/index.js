@@ -2,7 +2,7 @@
 // Roda na rede do cliente, lê a saúde do SAP localmente e empurra via HTTPS (só saída)
 // para a plataforma. Autentica por token próprio da integração (X-Agent-Token).
 
-import { collectHealth, collectSapItems, executeCommand, discoverCatalog, discoverTransports, discoverCloud } from './sap.js';
+import { collectHealth, collectSapItems, executeCommand, discoverCatalog, discoverTransports, discoverCloud, discoverS4 } from './sap.js';
 
 const cfg = {
   url: (process.env.SAPLINK_URL || '').replace(/\/$/, ''),
@@ -118,6 +118,14 @@ async function pushCatalogOnce() {
     if (status === 200) log(`cloud (CPI/AIF): ${body.upserted ?? items.length} mensagem(ns)`);
   } catch (e) {
     log('falha ao enviar cloud-items (rede):', e.message);
+  }
+  // S/4HANA Cloud — bundle (upgrade, clean core, APIs, comm, fiscal, eventos)
+  try {
+    const bundle = discoverS4();
+    const { status, body } = await api('/api/agent/s4', { method: 'POST', body: JSON.stringify(bundle) });
+    if (status === 200) log(`s4: upgrade=${body.upgrade ?? 0} cleancore=${body.cleanCore ?? 0} fiscal=${body.fiscal ?? 0} eventos=${body.events ?? 0}`);
+  } catch (e) {
+    log('falha ao enviar s4 (rede):', e.message);
   }
 }
 

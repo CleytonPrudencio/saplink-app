@@ -220,6 +220,18 @@ export async function getTransports(clientId?: string) {
   };
 }
 
+// S/4HANA Cloud
+export async function getS4Overview() { const { data } = await api.get('/s4/overview'); return data as Record<string, number>; }
+export async function getS4Upgrade(clientId?: string) { const { data } = await api.get('/s4/upgrade', { params: clientId ? { clientId } : {} }); return data as { release: string; findings: any[]; summary: { total: number; byImpact: Record<string, number> } }; }
+export async function getS4CleanCore() { const { data } = await api.get('/s4/cleancore'); return data as { overall: number; perClient: any[]; byCategory: Record<string, number>; items: any[] }; }
+export async function getS4Apis() { const { data } = await api.get('/s4/apis'); return data as { items: any[]; summary: { total: number; deprecated: number } }; }
+export async function getS4Comm() { const { data } = await api.get('/s4/comm'); return data as { items: any[]; summary: { total: number; errors: number; expiring: number } }; }
+export async function getS4Events() { const { data } = await api.get('/s4/events'); return data as { items: any[]; summary: { total: number; byStatus: Record<string, number>; deadLetter: number } }; }
+export async function getS4Fiscal(clientId?: string) { const { data } = await api.get('/s4/fiscal', { params: clientId ? { clientId } : {} }); return data as { items: any[]; summary: { total: number; byStatus: Record<string, number>; atRiskCents: number; blocked: number } }; }
+export async function reprocessFiscal(id: string) { const { data } = await api.post(`/s4/fiscal/${id}/reprocess`); return data; }
+export async function getS4Connections() { const { data } = await api.get('/s4/connections'); return data as { connections: any[] }; }
+export async function saveS4Connection(clientId: string, payload: Record<string, unknown>) { const { data } = await api.put(`/s4/connections/${clientId}`, payload); return data; }
+
 // C1 — Canais de notificação / on-call
 export interface NotificationChannel {
   id: string; type: string; name: string; target: string; minSeverity: string; level: number; enabled: boolean;

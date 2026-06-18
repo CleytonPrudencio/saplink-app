@@ -7,6 +7,7 @@ import { claimCommands, recordResult } from '../services/remediation';
 import { ingestCatalog, CatalogItemInput } from '../services/catalog';
 import { ingestTransports, TransportInput } from '../services/transports';
 import { ingestCloud, CloudItemInput } from '../services/cloud';
+import { ingestS4 } from '../services/s4';
 
 // Rotas do Agente on-premise. SEM JWT/tenancy: o agente autentica por token próprio
 // (header x-agent-token), que mapeia direto para a integração.
@@ -118,6 +119,19 @@ router.post('/transports', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Agent transports error:', error);
     res.status(500).json({ error: 'Erro ao processar transports' });
+  }
+});
+
+// POST /api/agent/s4 — bundle do conector S/4HANA Cloud (upgrade, clean core, APIs, comm, fiscal, eventos)
+router.post('/s4', async (req: Request, res: Response) => {
+  const integration = await resolveIntegration(req);
+  if (!integration) { res.status(401).json({ error: 'Token do agente inválido' }); return; }
+  try {
+    const result = await ingestS4(integration.clientId, (req.body || {}) as Record<string, unknown>);
+    res.json({ ok: true, ...result });
+  } catch (error) {
+    console.error('Agent s4 error:', error);
+    res.status(500).json({ error: 'Erro ao processar dados S/4HANA Cloud' });
   }
 });
 

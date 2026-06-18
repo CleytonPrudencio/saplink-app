@@ -192,6 +192,53 @@ export function discoverCloud() {
   ];
 }
 
+/** Descoberta S/4HANA Cloud (mock): upgrade, clean core, APIs, comm arrangements, fiscal, eventos. */
+export function discoverS4() {
+  const now = Date.now();
+  const d = (h) => new Date(now - h * 3600000).toISOString();
+  const cert = (days) => new Date(now + days * 864e5).toISOString();
+  return {
+    upgradeFindings: [
+      { release: '2508', area: 'API', object: 'API_SALES_ORDER_SRV (v2)', impact: 'DEPRECATED', detail: 'OData v2 será descontinuada; migrar para v4.', recommendation: 'Migrar consumo para API_SALES_ORDER_SRV;v4.' },
+      { release: '2508', area: 'CDS', object: 'ZCDS_PEDIDOS_CUSTOM', impact: 'BREAKING', detail: 'Campo de origem renomeado no release.', recommendation: 'Ajustar a CDS custom antes do upgrade.' },
+      { release: '2508', area: 'EXTENSION', object: 'BTP ext: ext-faturamento (CAP)', impact: 'CHANGED', detail: 'Destino consome API que muda payload.', recommendation: 'Revisar o mapeamento da extensão.' },
+      { release: '2508', area: 'FIELD', object: 'Custom field YY1_DESC_ROTA', impact: 'OK', detail: 'Compatível.', recommendation: '' },
+      { release: '2508', area: 'JOB', object: 'Job: Reprocesso de saídas', impact: 'CHANGED', detail: 'Template de job atualizado.', recommendation: 'Recriar agendamento.' },
+    ],
+    cleanCore: [
+      { category: 'DEPRECATED_API', object: 'API_SALES_ORDER_SRV v2', severity: 'HIGH', points: 12, recommendation: 'Migrar para v4.' },
+      { category: 'CUSTOM_CDS', object: 'ZCDS_PEDIDOS_CUSTOM', severity: 'MEDIUM', points: 8, recommendation: 'Avaliar substituir por view liberada.' },
+      { category: 'MODIFICATION', object: 'Lógica in-app não-cloud-ready', severity: 'HIGH', points: 15, recommendation: 'Migrar para extensibilidade liberada.' },
+      { category: 'SIDE_BY_SIDE', object: 'ext-faturamento (BTP)', severity: 'LOW', points: 3, recommendation: 'OK — manter padrão side-by-side.' },
+      { category: 'IN_APP', object: '6 custom fields em VBAK', severity: 'MEDIUM', points: 6, recommendation: 'Consolidar custom fields.' },
+    ],
+    apiUsage: [
+      { apiName: 'API_SALES_ORDER_SRV', version: 'v2', scenario: 'SAP_COM_0109', calls30d: 18420, deprecated: true, deprecationRelease: '2508', replacement: 'API_SALES_ORDER_SRV;v4' },
+      { apiName: 'API_BUSINESS_PARTNER', version: 'v2', scenario: 'SAP_COM_0008', calls30d: 9610, deprecated: false },
+      { apiName: 'API_PRODUCT_SRV', version: 'v2', scenario: 'SAP_COM_0009', calls30d: 4300, deprecated: false },
+      { apiName: 'API_BILLING_DOCUMENT_SRV', version: 'v2', scenario: 'SAP_COM_0157', calls30d: 2750, deprecated: false },
+    ],
+    commArrangements: [
+      { scenario: 'SAP_COM_0109', name: 'Salesforce → S/4 (Pedidos)', direction: 'INBOUND', commUser: 'COMM_SF_IN', status: 'ACTIVE', certExpiresAt: cert(6) },
+      { scenario: 'SAP_COM_0008', name: 'MDI Business Partner', direction: 'OUTBOUND', commUser: 'COMM_MDI', status: 'ACTIVE', certExpiresAt: cert(24) },
+      { scenario: 'SAP_COM_0157', name: 'Faturamento → Banco', direction: 'OUTBOUND', commUser: 'COMM_BANK', status: 'ERROR', certExpiresAt: cert(120) },
+    ],
+    fiscalDocs: [
+      { docType: 'NFE', number: '000123456', status: 'REJECTED', sefazCode: '539', message: 'Duplicidade de NF-e (chave já autorizada).', amountCents: 1875000, remediable: true, issuedAt: d(3) },
+      { docType: 'NFE', number: '000123457', status: 'CONTINGENCY', sefazCode: '108', message: 'SEFAZ indisponível — emitido em contingência.', amountCents: 940000, remediable: true, issuedAt: d(2) },
+      { docType: 'NFSE', number: 'NFSE-7781', status: 'PENDING', message: 'Aguardando retorno da prefeitura.', amountCents: 320000, remediable: false, issuedAt: d(1) },
+      { docType: 'NFE', number: '000123455', status: 'AUTHORIZED', amountCents: 560000, remediable: false, issuedAt: d(5) },
+      { docType: 'CTE', number: 'CTE-5521', status: 'AUTHORIZED', amountCents: 120000, remediable: false, issuedAt: d(6) },
+    ],
+    cloudEvents: [
+      { topic: 'sap.s4.beh.salesorder.v1.SalesOrder.Created.v1', status: 'DELIVERED', subscriber: 'ext-faturamento', lagMs: 220, occurredAt: d(1) },
+      { topic: 'sap.s4.beh.businesspartner.v1.Changed.v1', status: 'DEAD_LETTER', subscriber: 'mdi-sync', lagMs: 0, occurredAt: d(2) },
+      { topic: 'sap.s4.beh.billingdocument.v1.Created.v1', status: 'RETRY', subscriber: 'bank-connector', lagMs: 5400, occurredAt: d(1) },
+      { topic: 'sap.s4.beh.outbounddelivery.v1.Created.v1', status: 'DELIVERED', subscriber: 'wms-bridge', lagMs: 180, occurredAt: d(3) },
+    ],
+  };
+}
+
 async function collectViaRfc(cfg) {
   // node-rfc é opcional: só funciona com o SAP NW RFC SDK instalado no host/imagem.
   let rfc;

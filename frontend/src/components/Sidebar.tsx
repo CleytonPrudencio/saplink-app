@@ -54,6 +54,16 @@ const tenantGroups: MenuGroup[] = [
     ],
   },
   {
+    title: "S/4HANA Cloud",
+    items: [
+      { href: "/s4", label: "S/4HANA Cloud", icon: "\u2601\uFE0F" },
+      { href: "/upgrade", label: "Radar de Upgrade", icon: "\uD83D\uDE80" },
+      { href: "/cleancore", label: "Clean Core", icon: "\uD83E\uDDFC" },
+      { href: "/fiscal", label: "Fiscal (DRC)", icon: "\uD83E\uDDFE" },
+      { href: "/events", label: "Event Mesh", icon: "\uD83D\uDCE8" },
+    ],
+  },
+  {
     title: "SAP Cloud & transportes",
     items: [
       { href: "/cloud", label: "CPI & AIF", icon: "\u2601\uFE0F" },
