@@ -31,8 +31,8 @@ const tenantMenu = [
   { href: "/diagnostics", label: "Diagnostico IA", icon: "\uD83E\uDD16" },
   { href: "/dead-code", label: "Dead Code", icon: "\uD83D\uDD0D" },
   { href: "/reports", label: "Relatorios", icon: "\uD83D\uDCC4" },
-  { href: "/billing", label: "Cobran\u00E7a", icon: "\uD83D\uDCB3" },
-  { href: "/settings", label: "Configuracoes", icon: "\u2699\uFE0F" },
+  { href: "/billing", label: "Cobran\u00E7a", icon: "\uD83D\uDCB3", adminOnly: true },
+  { href: "/settings", label: "Configuracoes", icon: "\u2699\uFE0F", adminOnly: true },
 ];
 
 // Menu do super-admin da plataforma (gerencia tenants; sem cobran\u00E7a pr\u00F3pria)
@@ -45,7 +45,11 @@ export default function Sidebar({ user, consultancy }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const menuItems = user?.role === "PLATFORM_ADMIN" ? platformMenu : tenantMenu;
+  const isAdmin = user?.role === "CONSULTANCY_ADMIN";
+  const menuItems =
+    user?.role === "PLATFORM_ADMIN"
+      ? platformMenu
+      : tenantMenu.filter((m) => isAdmin || !(m as { adminOnly?: boolean }).adminOnly);
 
   function isActive(href: string) {
     if (href === "/dashboard") return pathname === "/dashboard";

@@ -101,6 +101,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // CONSULTANCY_ADMIN bloqueado: deixa navegar para billing/settings; nas demais, mostra CTA de pagamento
   const onAllowedPage = pathname.startsWith("/billing") || pathname.startsWith("/settings");
   const showPaymentCta = blocked && !onAllowedPage;
+  // Cobrança e Configurações são exclusivas do admin da consultoria
+  const restrictedForUser =
+    user?.role === "CONSULTANCY_USER" && onAllowedPage;
 
   return (
     <div className="min-h-screen flex">
@@ -121,6 +124,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="p-6 md:p-8">
           {user?.role === "PLATFORM_ADMIN" && !pathname.startsWith("/platform") ? (
             <div className="text-[#9b95ad]">Redirecionando para o painel da plataforma...</div>
+          ) : restrictedForUser ? (
+            <div className="max-w-xl mx-auto mt-10 bg-[#1a1527] border border-white/[0.08] rounded-2xl p-8 text-center">
+              <div className="text-4xl mb-3">🔒</div>
+              <h1 className="text-xl font-bold text-[#e2e0ea] mb-2">Acesso restrito</h1>
+              <p className="text-[#9b95ad] leading-relaxed mb-6">
+                Cobrança e Configurações são exclusivas do <b className="text-[#c9c5d6]">administrador</b> da conta. Fale com o admin da sua consultoria.
+              </p>
+              <button
+                onClick={() => router.push("/dashboard")}
+                className="px-6 py-2.5 bg-white/[0.08] text-[#e2e0ea] font-semibold rounded-lg hover:bg-white/[0.14] transition cursor-pointer"
+              >
+                Voltar ao painel
+              </button>
+            </div>
           ) : showPaymentCta ? (
             <div className="max-w-xl mx-auto mt-10 bg-[#1a1527] border border-rose-500/30 rounded-2xl p-8 text-center">
               <div className="text-4xl mb-3">🔒</div>
