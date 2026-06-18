@@ -13,6 +13,9 @@ import {
 } from "@/lib/api";
 
 interface FixChange { field: string; label: string; from: string; to: string }
+interface SapNoteHint {
+  area: string; component: string; why: string; transactions: string[]; searchTerms: string; searchUrl: string;
+}
 interface IntegrationDiagnosis {
   integration: { id: string; name: string; type: string; status: string };
   problem: string;
@@ -23,6 +26,7 @@ interface IntegrationDiagnosis {
   autoFix:
     | { available: false; reason: string }
     | { available: true; kind: string; summary: string; changes: FixChange[]; alternatives?: string[] };
+  sapNotes?: SapNoteHint[];
 }
 interface FixResult {
   applied: boolean;
@@ -267,6 +271,40 @@ function DiagnosticsContent() {
                     <ol className="list-decimal list-inside text-sm text-[#e2e0ea] space-y-1">
                       {intDiag.steps.map((s, i) => <li key={i}>{s}</li>)}
                     </ol>
+                  </div>
+                )}
+
+                {/* A3 — SAP Notes / KBAs sugeridas */}
+                {intDiag.sapNotes && intDiag.sapNotes.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-amber-400 uppercase tracking-wider mb-2">
+                      SAP Notes sugeridas
+                    </p>
+                    <div className="space-y-2">
+                      {intDiag.sapNotes.map((n, i) => (
+                        <div key={i} className="bg-amber-500/[0.06] border border-amber-500/20 rounded-lg p-3">
+                          <div className="flex items-center justify-between gap-2 mb-1">
+                            <p className="text-sm font-medium text-[#e2e0ea]">{n.area}</p>
+                            <span className="text-[11px] font-mono px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 shrink-0">{n.component}</span>
+                          </div>
+                          <p className="text-xs text-[#c9c5d6] leading-relaxed mb-2">{n.why}</p>
+                          {n.transactions.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 mb-2">
+                              {n.transactions.map((t) => (
+                                <span key={t} className="text-[11px] font-mono px-1.5 py-0.5 rounded bg-[#0f0b1a] border border-white/[0.08] text-[#9b95ad]">{t}</span>
+                              ))}
+                            </div>
+                          )}
+                          <a href={n.searchUrl} target="_blank" rel="noopener noreferrer"
+                            className="text-xs font-semibold text-amber-300 hover:text-amber-200 inline-flex items-center gap-1">
+                            Buscar a Note no suporte SAP ↗
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-[11px] text-[#9b95ad] mt-2">
+                      Sugestões por área/sintoma — confirme a Note/KBA aplicável no SAP ONE Support Launchpad.
+                    </p>
                   </div>
                 )}
 

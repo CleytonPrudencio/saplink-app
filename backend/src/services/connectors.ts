@@ -1,5 +1,6 @@
 import prisma from '../lib/prisma';
 import { decryptConfig } from '../lib/crypto';
+import { suggestSapNotes, type SapNoteHint } from './sapnotes';
 
 type Cfg = Record<string, string>;
 
@@ -76,6 +77,7 @@ export interface FixProposal {
   autoFix:
     | { available: false; reason: string }
     | { available: true; kind: string; summary: string; changes: FixChange[]; alternatives?: string[] };
+  sapNotes?: SapNoteHint[];
 }
 
 function levenshtein(a: string, b: string): number {
@@ -118,7 +120,23 @@ export async function listODataEntitySets(serviceUrl: string, config: Cfg): Prom
  * Analisa uma integração em erro e, quando possível, propõe uma correção aplicável
  * dentro da plataforma (determinístico — baseado no probe real + $metadata).
  */
-export async function analyzeFix(integration: { type: string | null; name: string; config: unknown; status?: string; errorRate?: number; uptime?: number; latency?: number; agentTokenHash?: string | null; lastAgentReportAt?: Date | null }): Promise<FixProposal> {
+type AnalyzeInput = { type: string | null; name: string; config: unknown; status?: string; errorRate?: number; uptime?: number; latency?: number; agentTokenHash?: string | null; lastAgentReportAt?: Date | null };
+
+/** Analisa e propõe correção, e anexa SAP Notes sugeridas (A3) quando há problema. */
+export async function analyzeFix(integration: AnalyzeInput): Promise<FixProposal> {
+  const core = await analyzeFixCore(integration);
+  core.sapNotes = suggestSapNotes({
+    type: integration.type,
+    status: integration.status,
+    httpStatus: core.probe?.httpStatus ?? null,
+    isAgent: !!integration.agentTokenHash,
+    problem: core.problem,
+    highLatency: (core.probe?.latencyMs ?? 0) > 1000,
+  });
+  return core;
+}
+
+async function analyzeFixCore(integration: AnalyzeInput): Promise<FixProposal> {
   const config = (decryptConfig(integration.config) || {}) as Cfg;
   const url = probeUrl(integration.type, config);
 
