@@ -1,0 +1,14 @@
+{
+  "name": "saplink-report",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Gerador de apresentação (PPTX) e relatório (PDF) do SAPLINK a partir dos dados reais da API.",
+  "scripts": {
+    "build": "node generate.mjs"
+  },
+  "dependencies": {
+    "pdfkit": "^0.15.1",
+    "pptxgenjs": "^3.12.0"
+  }
+}
