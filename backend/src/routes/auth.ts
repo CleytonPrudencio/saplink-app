@@ -7,6 +7,7 @@ import { authMiddleware } from '../middleware/auth';
 import { JWT_SECRET, JWT_EXPIRES_IN } from '../config';
 import { startTrial } from '../services/billing';
 import { sendPasswordReset } from '../services/email';
+import { isValidCnpj, formatCnpj, onlyDigits } from '../lib/cnpj';
 import rateLimit from 'express-rate-limit';
 
 const router = Router();
@@ -23,16 +24,40 @@ const loginLimiter = rateLimit({
 // POST /register
 router.post('/register', async (req: Request, res: Response) => {
   try {
-    const { email, password, name, consultancyName, cnpj } = req.body;
+    const {
+      email, password, name,
+      razaoSocial, nomeFantasia, cnpj, ie, phone, billingEmail,
+      cep, logradouro, numero, complemento, bairro, cidade, uf,
+      acceptedTerms,
+    } = req.body || {};
 
-    if (!email || !password || !name || !consultancyName) {
-      res.status(400).json({ error: 'Campos obrigatórios: email, password, name, consultancyName' });
+    // Obrigatórios (só PJ — sem CPF)
+    if (!email || !password || !name || !razaoSocial || !cnpj) {
+      res.status(400).json({ error: 'Campos obrigatórios: nome, e-mail, senha, razão social e CNPJ.' });
+      return;
+    }
+    if (String(password).length < 8) {
+      res.status(400).json({ error: 'A senha deve ter ao menos 8 caracteres.' });
+      return;
+    }
+    if (!acceptedTerms) {
+      res.status(400).json({ error: 'É necessário aceitar os Termos de Uso para se cadastrar.' });
+      return;
+    }
+    if (!isValidCnpj(cnpj)) {
+      res.status(400).json({ error: 'CNPJ inválido. Só aceitamos empresas (pessoa jurídica).' });
       return;
     }
 
+    const cnpjFmt = formatCnpj(cnpj);
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
       res.status(409).json({ error: 'Email já cadastrado' });
+      return;
+    }
+    const cnpjExists = await prisma.consultancy.findUnique({ where: { cnpj: cnpjFmt } });
+    if (cnpjExists) {
+      res.status(409).json({ error: 'Já existe uma conta para este CNPJ.' });
       return;
     }
 
@@ -40,8 +65,16 @@ router.post('/register', async (req: Request, res: Response) => {
 
     const consultancy = await prisma.consultancy.create({
       data: {
-        name: consultancyName,
-        cnpj: cnpj || null,
+        name: nomeFantasia || razaoSocial,
+        razaoSocial, nomeFantasia: nomeFantasia || null,
+        cnpj: cnpjFmt,
+        ie: ie || null,
+        phone: phone || null,
+        billingEmail: billingEmail || email,
+        cep: cep ? onlyDigits(cep) : null,
+        logradouro: logradouro || null, numero: numero || null, complemento: complemento || null,
+        bairro: bairro || null, cidade: cidade || null, uf: uf || null,
+        acceptedTermsAt: new Date(),
         plan: 'STARTER',
       },
     });

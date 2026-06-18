@@ -20,7 +20,7 @@ export default function LoginPage() {
     try {
       const data = await login(email, password);
       localStorage.setItem("token", data.token);
-      router.push("/");
+      router.push("/dashboard");
     } catch (err: unknown) {
       const msg =
         err && typeof err === "object" && "response" in err

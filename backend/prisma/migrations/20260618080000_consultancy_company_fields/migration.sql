@@ -1,0 +1,13 @@
+ALTER TABLE "Consultancy" ADD COLUMN "razaoSocial" TEXT;
+ALTER TABLE "Consultancy" ADD COLUMN "nomeFantasia" TEXT;
+ALTER TABLE "Consultancy" ADD COLUMN "ie" TEXT;
+ALTER TABLE "Consultancy" ADD COLUMN "phone" TEXT;
+ALTER TABLE "Consultancy" ADD COLUMN "billingEmail" TEXT;
+ALTER TABLE "Consultancy" ADD COLUMN "cep" TEXT;
+ALTER TABLE "Consultancy" ADD COLUMN "logradouro" TEXT;
+ALTER TABLE "Consultancy" ADD COLUMN "numero" TEXT;
+ALTER TABLE "Consultancy" ADD COLUMN "complemento" TEXT;
+ALTER TABLE "Consultancy" ADD COLUMN "bairro" TEXT;
+ALTER TABLE "Consultancy" ADD COLUMN "cidade" TEXT;
+ALTER TABLE "Consultancy" ADD COLUMN "uf" TEXT;
+ALTER TABLE "Consultancy" ADD COLUMN "acceptedTermsAt" TIMESTAMP(3);

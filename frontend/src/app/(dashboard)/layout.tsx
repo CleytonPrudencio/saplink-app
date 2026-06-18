@@ -44,7 +44,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         setUser(data);
         if (data.role === "PLATFORM_ADMIN") {
           setLoading(false);
-          if (pathname === "/") router.replace("/platform");
+          if (pathname === "/" || pathname === "/dashboard") router.replace("/platform");
           return;
         }
         // Consultoria: checa assinatura (rota de billing não exige assinatura ativa)

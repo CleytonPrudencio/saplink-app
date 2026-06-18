@@ -36,12 +36,7 @@ export async function login(email: string, password: string) {
   return data;
 }
 
-export async function register(payload: {
-  name: string;
-  email: string;
-  password: string;
-  consultancyName: string;
-}) {
+export async function register(payload: Record<string, unknown>) {
   const { data } = await api.post('/auth/register', payload);
   return data;
 }
@@ -85,6 +80,12 @@ export async function getBilling() {
 
 export async function getPlans() {
   const { data } = await api.get('/billing/plans');
+  return data;
+}
+
+// Catálogo público (landing page, sem auth)
+export async function getPublicPlans() {
+  const { data } = await api.get('/plans');
   return data;
 }
 

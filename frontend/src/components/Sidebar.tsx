@@ -24,7 +24,7 @@ interface SidebarProps {
 
 // Menu da consultoria (empresa cliente do SAPLINK)
 const tenantMenu = [
-  { href: "/", label: "Dashboard", icon: "\uD83D\uDCCA" },
+  { href: "/dashboard", label: "Dashboard", icon: "\uD83D\uDCCA" },
   { href: "/clients", label: "Clientes", icon: "\uD83D\uDC65" },
   { href: "/integrations", label: "Integra\u00E7\u00f5es", icon: "\uD83D\uDD17" },
   { href: "/alerts", label: "Alertas", icon: "\uD83D\uDD14" },
@@ -48,7 +48,7 @@ export default function Sidebar({ user, consultancy }: SidebarProps) {
   const menuItems = user?.role === "PLATFORM_ADMIN" ? platformMenu : tenantMenu;
 
   function isActive(href: string) {
-    if (href === "/") return pathname === "/";
+    if (href === "/dashboard") return pathname === "/dashboard";
     return pathname.startsWith(href);
   }
 
@@ -60,7 +60,7 @@ export default function Sidebar({ user, consultancy }: SidebarProps) {
   const nav = (
     <div className="flex flex-col h-full">
       <div className="p-6">
-        <Link href="/" className="block" onClick={() => setMobileOpen(false)}>
+        <Link href="/dashboard" className="block" onClick={() => setMobileOpen(false)}>
           {consultancy?.logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={consultancy.logoUrl} alt={consultancy.name || "Logo"} className="max-h-10 max-w-[180px] object-contain" />

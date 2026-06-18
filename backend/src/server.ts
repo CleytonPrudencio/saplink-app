@@ -49,6 +49,16 @@ app.get('/health', async (_req, res) => {
   }
 });
 
+// Público: catálogo de planos para a landing page (sem auth)
+app.get('/api/plans', async (_req: Request, res: Response) => {
+  try {
+    const plans = await prisma.plan.findMany({ where: { active: true }, orderBy: { sortOrder: 'asc' } });
+    res.json(plans);
+  } catch {
+    res.status(500).json({ error: 'Erro ao listar planos' });
+  }
+});
+
 // Auth e billing: acessíveis sem assinatura ativa (login, regularizar pagamento)
 app.use('/api/auth', authRoutes);
 app.use('/api/billing', billingRoutes);

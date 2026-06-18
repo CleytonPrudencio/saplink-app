@@ -9,8 +9,22 @@ datasource db {
 
 model Consultancy {
   id            String         @id @default(uuid())
-  name          String
+  name          String         // nome de exibição (= nome fantasia)
   cnpj          String?        @unique
+  razaoSocial   String?        // razão social (para a nota)
+  nomeFantasia  String?
+  ie            String?        // inscrição estadual
+  phone         String?
+  billingEmail  String?        // e-mail financeiro/nota
+  // Endereço (nota fiscal)
+  cep           String?
+  logradouro    String?
+  numero        String?
+  complemento   String?
+  bairro        String?
+  cidade        String?
+  uf            String?
+  acceptedTermsAt DateTime?    // aceite dos termos no cadastro
   plan          String         @default("STARTER") // legado; fonte da verdade = Subscription
   logoUrl       String?
   primaryColor  String?        // white-label (hex)
