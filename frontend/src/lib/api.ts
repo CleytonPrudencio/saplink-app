@@ -141,6 +141,33 @@ export async function updateAddons(payload: { extraIntegrations?: number; extraU
   return data;
 }
 
+// A4 — Radar de validade
+export interface ValidityItem {
+  integrationId: string; integration: string; client: string; type: string;
+  kind: "CERT" | "SECRET"; label: string; expiresAt: string; daysLeft: number;
+  severity: "EXPIRED" | "CRITICAL" | "WARN" | "OK"; host?: string | null; checkedAt?: string | null;
+}
+
+export async function getValidityRadar() {
+  const { data } = await api.get('/validity');
+  return data as { items: ValidityItem[] };
+}
+
+export async function refreshCert(integrationId: string) {
+  const { data } = await api.post(`/validity/${integrationId}/refresh`);
+  return data;
+}
+
+export async function refreshAllCerts() {
+  const { data } = await api.post('/validity/refresh-all');
+  return data as { checked: number; expiring: number; items: ValidityItem[] };
+}
+
+export async function setSecretExpiry(integrationId: string, payload: { secretExpiresAt: string | null; secretLabel?: string }) {
+  const { data } = await api.put(`/validity/${integrationId}/secret`, payload);
+  return data;
+}
+
 // Plataforma (super-admin) — gerencia tenants
 export async function getConsultancies() {
   const { data } = await api.get('/platform/consultancies');

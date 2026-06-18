@@ -131,7 +131,7 @@ export async function analyzeFix(integration: AnalyzeInput): Promise<FixProposal
     httpStatus: core.probe?.httpStatus ?? null,
     isAgent: !!integration.agentTokenHash,
     problem: core.problem,
-    highLatency: (core.probe?.latencyMs ?? 0) > 1000,
+    highLatency: !!core.probe?.ok && (core.probe?.latencyMs ?? 0) > 1000,
   });
   return core;
 }

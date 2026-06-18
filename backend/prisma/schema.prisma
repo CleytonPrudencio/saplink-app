@@ -91,6 +91,12 @@ model Integration {
   agentTokenHash    String?   @unique
   agentTokenHint    String?
   lastAgentReportAt DateTime?
+  // A4 — Radar de validade: expiração de certificado TLS (auto-detectada) e de segredo (manual)
+  certExpiresAt   DateTime?  // notAfter do certificado TLS do endpoint HTTPS
+  certCheckedAt   DateTime?  // quando o cert foi verificado pela última vez
+  certHost        String?    // host cujo cert foi lido
+  secretExpiresAt DateTime?  // expiração manual: senha RFC, client secret OAuth, cert SNC...
+  secretLabel     String?    // descrição do segredo (ex.: "Senha do usuário RFC")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }

@@ -17,6 +17,7 @@ import userRoutes from './routes/users';
 import agentRoutes from './routes/agent';
 import askRoutes from './routes/ask';
 import digestRoutes from './routes/digest';
+import validityRoutes from './routes/validity';
 import { authMiddleware } from './middleware/auth';
 import { tenancyMiddleware } from './middleware/tenancy';
 import { requireActiveSubscription } from './middleware/subscription';
@@ -24,6 +25,7 @@ import { simulateIntegrationData } from './services/simulator';
 import { syncIntegration, isMonitorable } from './services/connectors';
 import { markStaleAgents } from './services/agent';
 import { runDueDigests } from './services/digest';
+import { refreshAllCerts } from './services/validity';
 import { stripeWebhookHandler } from './services/stripe';
 import prisma from './lib/prisma';
 
@@ -79,6 +81,7 @@ app.use('/api/diagnostics', ...tenantGate, diagnosticRoutes);
 app.use('/api/dead-code', ...tenantGate, deadCodeRoutes);
 app.use('/api/ask', ...tenantGate, askRoutes);
 app.use('/api/digest', ...tenantGate, digestRoutes);
+app.use('/api/validity', ...tenantGate, validityRoutes);
 
 // Error handler global (último middleware)
 app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
@@ -139,6 +142,20 @@ app.listen(PORT, () => {
       logger.error({ err: (error as Error).message }, 'digest scheduler error');
     }
   }, DIGEST_CHECK_MS);
+
+  // A4 — Radar de validade: reavalia certificados TLS dos endpoints HTTPS e abre alertas
+  // de expiração. Roda no boot (após 30s) e depois a cada 12h.
+  const CERT_CHECK_MS = parseInt(process.env.CERT_CHECK_MS || '43200000'); // 12h
+  const runCertScan = async () => {
+    try {
+      const r = await refreshAllCerts();
+      if (r.checked) logger.info(r, 'radar de validade — certs verificados');
+    } catch (error) {
+      logger.error({ err: (error as Error).message }, 'cert scan error');
+    }
+  };
+  setTimeout(runCertScan, 30000);
+  setInterval(runCertScan, CERT_CHECK_MS);
 });
 
 export default app;

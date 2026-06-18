@@ -9,7 +9,9 @@ Ordem por valor × esforço × dependência. Marcar `[x]` ao concluir.
 - [x] A1. **Pergunte ao SAPLINK** — chat em linguagem natural sobre toda a carteira (`/ask` + POST /api/ask).
 - [x] A2. **Digest semanal por IA** — relatório de saúde white-label, agendado por e-mail (Resend). Scheduler 6h + janela 7d; preview/send-now/toggle em Configurações. Falta RESEND_API_KEY na VM para envio real.
 - [x] A3. **SAP Notes sugeridas** — diagnóstico mapeia o sintoma → área/componente SAP, transações e busca oficial da Note/KBA (determinístico, sem fabricar número).
-- [ ] A4. **Radar de validade** — certificados SSL/SNC, senha de usuário RFC, token OAuth expirando.
+- [x] A4. **Radar de validade** — cert TLS auto-detectado (handshake), + expiração manual de segredos (senha RFC/OAuth/SNC); alertas automáticos e scheduler 12h. Página /validity.
+
+**Fase A concluída.** Próximo: Fase B.
 
 ## Fase B — Operação SAP (cockpit + remediação) — o salto "monitor → resolve"
 - [ ] B1. **Cockpit de IDoc/filas multi-cliente** — BD87 + SMQ1/2 + SM58 num painel, reprocesso em massa.
