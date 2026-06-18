@@ -25,6 +25,8 @@ model Consultancy {
   cidade        String?
   uf            String?
   acceptedTermsAt DateTime?    // aceite dos termos no cadastro
+  weeklyDigest  Boolean        @default(true)  // recebe o digest semanal por e-mail
+  lastDigestAt  DateTime?      // último envio do digest semanal
   plan          String         @default("STARTER") // legado; fonte da verdade = Subscription
   logoUrl       String?
   primaryColor  String?        // white-label (hex)

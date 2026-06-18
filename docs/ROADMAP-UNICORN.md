@@ -6,7 +6,7 @@ para consultorias — que **prevê, corrige e prova valor em R$**, com moat de d
 Ordem por valor × esforço × dependência. Marcar `[x]` ao concluir.
 
 ## Fase A — Quick wins de IA & proatividade (reaproveita IA/Resend)
-- [ ] A1. **Pergunte ao SAPLINK** — chat em linguagem natural sobre toda a carteira ("quais clientes têm IDoc travado agora?").
+- [x] A1. **Pergunte ao SAPLINK** — chat em linguagem natural sobre toda a carteira (`/ask` + POST /api/ask).
 - [ ] A2. **Digest semanal por IA** — relatório de saúde white-label, agendado por e-mail (Resend).
 - [ ] A3. **SAP Notes sugeridas** — diagnóstico mapeia o erro → Nota SAP/KBA provável.
 - [ ] A4. **Radar de validade** — certificados SSL/SNC, senha de usuário RFC, token OAuth expirando.

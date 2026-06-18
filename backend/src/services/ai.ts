@@ -27,6 +27,14 @@ Responda em português brasileiro, de forma OBJETIVA e acionável, citando clien
 específicos pelo nome quando relevante. Se a pergunta pedir uma ação, sugira a transação SAP ou o
 passo no SAPLINK. Não invente dados que não estão no contexto.`;
 
+const DIGEST_PROMPT = `Você é o analista de operações SAP do SAPLINK, escrevendo o resumo SEMANAL
+de saúde da carteira para o gestor de uma consultoria. Escreva em português brasileiro, tom executivo,
+direto e profissional. Estruture em 3 blocos curtos, sem markdown pesado:
+1) Panorama — uma frase sobre o estado geral da carteira na semana.
+2) Pontos de atenção — bullets curtos com os clientes/integrações que pioraram ou seguem críticos (cite nomes).
+3) Recomendações — 2 a 3 ações priorizadas para a próxima semana (transação SAP ou passo no SAPLINK quando couber).
+Seja conciso (máx ~180 palavras). NÃO invente dados fora do contexto. Se a carteira está saudável, diga isso com clareza.`;
+
 /** Chamada genérica de IA (Ollama → Claude → fallback). Retorna texto. */
 async function runAI(systemPrompt: string, userMessage: string, numPredict = 450): Promise<string> {
   const ollamaUrl = process.env.OLLAMA_URL;
@@ -84,4 +92,15 @@ export async function diagnose(query: string, context: object): Promise<string> 
 export async function ask(question: string, context: object): Promise<string> {
   const userMessage = `Dados da carteira (resumo):\n${JSON.stringify(context, null, 2)}\n\nPergunta: ${question}`;
   return runAI(ASK_PROMPT, userMessage, 500);
+}
+
+/** Digest semanal: narra o resumo de saúde da carteira para o gestor. */
+export async function narrateDigest(context: object): Promise<string> {
+  const userMessage = `Dados da carteira nesta semana:\n${JSON.stringify(context, null, 2)}\n\nEscreva o resumo semanal.`;
+  return runAI(DIGEST_PROMPT, userMessage, 450);
+}
+
+/** Indica se algum provedor de IA está configurado (Ollama ou Claude). */
+export function aiEnabled(): boolean {
+  return !!(process.env.OLLAMA_URL || process.env.ANTHROPIC_API_KEY);
 }

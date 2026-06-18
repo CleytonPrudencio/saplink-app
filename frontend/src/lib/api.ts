@@ -95,6 +95,27 @@ export async function askPortfolio(question: string) {
   return data as { answer: string };
 }
 
+// Digest semanal por IA
+export async function getDigestStatus() {
+  const { data } = await api.get('/digest');
+  return data as { weeklyDigest: boolean; lastDigestAt: string | null; emailEnabled: boolean; aiEnabled: boolean };
+}
+
+export async function toggleDigest(enabled: boolean) {
+  const { data } = await api.post('/digest/toggle', { enabled });
+  return data as { weeklyDigest: boolean };
+}
+
+export async function getDigestPreview() {
+  const { data } = await api.get('/digest/preview');
+  return data as { data: Record<string, unknown>; narrative: string };
+}
+
+export async function sendDigestNow() {
+  const { data } = await api.post('/digest/send-now');
+  return data as { sent: boolean; to: string[]; reason?: string };
+}
+
 export async function checkoutPlan(planKey: string, mode: 'auto' | 'now' = 'auto') {
   const { data } = await api.post('/billing/checkout', { planKey, mode });
   return data;

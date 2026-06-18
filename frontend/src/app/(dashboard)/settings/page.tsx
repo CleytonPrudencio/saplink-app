@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getMe, updateBranding, getUsers, createUser, deleteUser } from "@/lib/api";
+import { getMe, updateBranding, getUsers, createUser, deleteUser, getDigestStatus, toggleDigest, getDigestPreview, sendDigestNow } from "@/lib/api";
 
 interface TeamUser {
   id: string;
@@ -42,6 +42,13 @@ export default function SettingsPage() {
   const [addingUser, setAddingUser] = useState(false);
   const [userMsg, setUserMsg] = useState("");
 
+  // Digest semanal
+  const [digest, setDigest] = useState<{ weeklyDigest: boolean; lastDigestAt: string | null; emailEnabled: boolean; aiEnabled: boolean } | null>(null);
+  const [digestMsg, setDigestMsg] = useState("");
+  const [digestBusy, setDigestBusy] = useState(false);
+  const [preview, setPreview] = useState<string>("");
+  const [previewBusy, setPreviewBusy] = useState(false);
+
   async function loadTeam() {
     try {
       setTeam(await getUsers());
@@ -57,7 +64,10 @@ export default function SettingsPage() {
         setName(data.consultancy?.name || "");
         setLogoUrl(data.consultancy?.logoUrl || "");
         setPrimaryColor(data.consultancy?.primaryColor || "#a855f7");
-        if (data.role === "CONSULTANCY_ADMIN" || data.role === "PLATFORM_ADMIN") loadTeam();
+        if (data.role === "CONSULTANCY_ADMIN" || data.role === "PLATFORM_ADMIN") {
+          loadTeam();
+          getDigestStatus().then(setDigest).catch(() => {});
+        }
       })
       .catch(() => setError("Erro ao carregar dados do usuario."))
       .finally(() => setLoading(false));
@@ -86,6 +96,48 @@ export default function SettingsPage() {
       await loadTeam();
     } catch (err: any) {
       alert(err?.response?.data?.error || "Não foi possível remover.");
+    }
+  }
+
+  async function onToggleDigest() {
+    if (!digest) return;
+    const next = !digest.weeklyDigest;
+    setDigest({ ...digest, weeklyDigest: next });
+    try {
+      await toggleDigest(next);
+    } catch {
+      setDigest({ ...digest, weeklyDigest: !next });
+    }
+  }
+
+  async function onPreviewDigest() {
+    setPreviewBusy(true);
+    setPreview("");
+    try {
+      const r = await getDigestPreview();
+      setPreview(r.narrative || "(IA indisponível — o e-mail traz os números mesmo assim.)");
+    } catch {
+      setPreview("Erro ao gerar prévia.");
+    } finally {
+      setPreviewBusy(false);
+    }
+  }
+
+  async function onSendDigest() {
+    setDigestBusy(true);
+    setDigestMsg("");
+    try {
+      const r = await sendDigestNow();
+      setDigestMsg(
+        r.sent
+          ? `Enviado para: ${r.to.join(", ")}`
+          : r.reason || "Não enviado."
+      );
+      getDigestStatus().then(setDigest).catch(() => {});
+    } catch {
+      setDigestMsg("Erro ao enviar o digest.");
+    } finally {
+      setDigestBusy(false);
     }
   }
 
@@ -152,6 +204,47 @@ export default function SettingsPage() {
             {saving ? "Salvando..." : "Salvar marca"}
           </button>
         </form>
+      )}
+
+      {isAdmin && digest && (
+        <div className="bg-[#1a1527] rounded-xl p-6 border border-white/[0.08] max-w-2xl space-y-4">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-semibold">📬 Digest semanal por IA</h2>
+              <p className="text-sm text-[#9b95ad] mt-1">
+                Toda semana, um resumo de saúde da carteira narrado pela IA é enviado por e-mail aos admins.
+              </p>
+            </div>
+            <button onClick={onToggleDigest} role="switch" aria-checked={digest.weeklyDigest}
+              className={`relative shrink-0 w-12 h-7 rounded-full transition-colors cursor-pointer ${digest.weeklyDigest ? "bg-purple-500" : "bg-white/[0.15]"}`}>
+              <span className={`absolute top-1 left-1 w-5 h-5 bg-white rounded-full transition-transform ${digest.weeklyDigest ? "translate-x-5" : ""}`} />
+            </button>
+          </div>
+
+          <div className="text-xs text-[#9b95ad] space-y-1">
+            <p>Último envio: {digest.lastDigestAt ? new Date(digest.lastDigestAt).toLocaleString("pt-BR") : "nunca"}</p>
+            {!digest.emailEnabled && <p className="text-amber-300">⚠️ E-mail não configurado (RESEND_API_KEY ausente) — o envio fica em modo log.</p>}
+            {!digest.aiEnabled && <p className="text-amber-300">⚠️ IA indisponível — o digest sai só com os números.</p>}
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <button onClick={onPreviewDigest} disabled={previewBusy}
+              className="px-4 py-2 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-sm font-semibold disabled:opacity-40 cursor-pointer">
+              {previewBusy ? "Gerando..." : "Ver prévia da IA"}
+            </button>
+            <button onClick={onSendDigest} disabled={digestBusy}
+              className="px-4 py-2 rounded-lg bg-purple-500 text-white text-sm font-semibold disabled:opacity-40 cursor-pointer">
+              {digestBusy ? "Enviando..." : "Enviar agora"}
+            </button>
+          </div>
+
+          {preview && (
+            <div className="bg-[#0f0b1a] border border-white/[0.08] rounded-lg p-4 text-sm text-[#c9c5d6] whitespace-pre-wrap leading-relaxed">
+              {preview}
+            </div>
+          )}
+          {digestMsg && <p className="text-sm text-emerald-400 break-all">{digestMsg}</p>}
+        </div>
       )}
 
       {isAdmin && (

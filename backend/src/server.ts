@@ -16,12 +16,14 @@ import consultancyRoutes from './routes/consultancy';
 import userRoutes from './routes/users';
 import agentRoutes from './routes/agent';
 import askRoutes from './routes/ask';
+import digestRoutes from './routes/digest';
 import { authMiddleware } from './middleware/auth';
 import { tenancyMiddleware } from './middleware/tenancy';
 import { requireActiveSubscription } from './middleware/subscription';
 import { simulateIntegrationData } from './services/simulator';
 import { syncIntegration, isMonitorable } from './services/connectors';
 import { markStaleAgents } from './services/agent';
+import { runDueDigests } from './services/digest';
 import { stripeWebhookHandler } from './services/stripe';
 import prisma from './lib/prisma';
 
@@ -76,6 +78,7 @@ app.use('/api/alerts', ...tenantGate, alertRoutes);
 app.use('/api/diagnostics', ...tenantGate, diagnosticRoutes);
 app.use('/api/dead-code', ...tenantGate, deadCodeRoutes);
 app.use('/api/ask', ...tenantGate, askRoutes);
+app.use('/api/digest', ...tenantGate, digestRoutes);
 
 // Error handler global (último middleware)
 app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
@@ -124,6 +127,18 @@ app.listen(PORT, () => {
       logger.error({ err: (error as Error).message }, 'agent heartbeat error');
     }
   }, 60000);
+
+  // Digest semanal por IA: verifica periodicamente quem está com a janela de 7 dias vencida.
+  // O envio em si só ocorre quando há RESEND_API_KEY; o check é leve e idempotente.
+  const DIGEST_CHECK_MS = parseInt(process.env.DIGEST_CHECK_MS || '21600000'); // 6h
+  setInterval(async () => {
+    try {
+      const n = await runDueDigests();
+      if (n) logger.info({ sent: n }, 'digest semanal enviado');
+    } catch (error) {
+      logger.error({ err: (error as Error).message }, 'digest scheduler error');
+    }
+  }, DIGEST_CHECK_MS);
 });
 
 export default app;
