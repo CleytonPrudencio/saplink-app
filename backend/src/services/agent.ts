@@ -50,22 +50,29 @@ export async function ingestAgentReport(integrationId: string, report: AgentRepo
     data: { status, latency, errorRate: newErrorRate, uptime: newUptime, lastAgentReportAt: new Date() },
   });
 
-  // Alertas (mesma política do probe HTTP): dispara ao entrar em estado ruim, resolve ao voltar
-  if (status !== 'ACTIVE' && integration.status !== status) {
-    const detalhe = report.message
-      || (m.dumps ? `${m.dumps} dump(s) ABAP detectado(s) (ST22).`
-        : m.idocErrorCount ? `${m.idocErrorCount} IDoc(s) com erro.`
-        : m.rfcPing === false ? 'Ping RFC falhou.'
-        : 'Falha reportada pelo agente.');
-    await prisma.alert.create({
-      data: {
-        type: status === 'OFFLINE' ? 'INTEGRATION_OFFLINE' : 'INTEGRATION_ERROR',
-        severity: status === 'OFFLINE' ? 'CRITICAL' : 'HIGH',
-        message: `Integração ${integration.name} (agente): ${detalhe}`,
-        clientId: integration.clientId,
-        integrationId: integration.id,
-      },
+  // Alertas: dispara ao entrar em estado ruim, resolve ao voltar.
+  // Dedup: 1 alerta aberto de indisponibilidade por integração (evita flood na oscilação ERROR↔OFFLINE).
+  if (status !== 'ACTIVE') {
+    const open = await prisma.alert.findFirst({
+      where: { integrationId: integration.id, resolved: false, type: { in: ['INTEGRATION_OFFLINE', 'INTEGRATION_ERROR'] } },
+      select: { id: true },
     });
+    if (!open) {
+      const detalhe = report.message
+        || (m.dumps ? `${m.dumps} dump(s) ABAP detectado(s) (ST22).`
+          : m.idocErrorCount ? `${m.idocErrorCount} IDoc(s) com erro.`
+          : m.rfcPing === false ? 'Ping RFC falhou.'
+          : 'Falha reportada pelo agente.');
+      await prisma.alert.create({
+        data: {
+          type: status === 'OFFLINE' ? 'INTEGRATION_OFFLINE' : 'INTEGRATION_ERROR',
+          severity: status === 'OFFLINE' ? 'CRITICAL' : 'HIGH',
+          message: `Integração ${integration.name} (agente): ${detalhe}`,
+          clientId: integration.clientId,
+          integrationId: integration.id,
+        },
+      });
+    }
   } else if (status === 'ACTIVE' && integration.status !== 'ACTIVE') {
     await prisma.alert.updateMany({
       where: { integrationId: integration.id, resolved: false },
@@ -91,7 +98,11 @@ export async function markStaleAgents(staleMs: number): Promise<number> {
   });
   for (const i of stale) {
     await prisma.integration.update({ where: { id: i.id }, data: { status: 'OFFLINE' } });
-    if (i.status !== 'OFFLINE') {
+    const open = await prisma.alert.findFirst({
+      where: { integrationId: i.id, resolved: false, type: { in: ['INTEGRATION_OFFLINE', 'INTEGRATION_ERROR'] } },
+      select: { id: true },
+    });
+    if (!open) {
       await prisma.alert.create({
         data: {
           type: 'INTEGRATION_OFFLINE',
