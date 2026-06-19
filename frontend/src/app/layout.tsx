@@ -8,11 +8,35 @@ const inter = Inter({
   subsets: ["latin"],
 });
 
+const DESC = "Monitore, preveja, corrija e prove valor em R$ nas integrações SAP — do IDoc clássico ao S/4HANA Cloud. Plataforma multi-cliente e white-label, com IA de ponta a ponta.";
+
 export const metadata: Metadata = {
-  title: "SAPLINK - Integration Health Monitor",
-  description: "Monitore a saude das integracoes SAP dos seus clientes",
+  metadataBase: new URL("https://saplink.com.br"),
+  title: {
+    default: "SAPLINK — Operação de integrações SAP",
+    template: "%s · SAPLINK",
+  },
+  description: DESC,
+  applicationName: "SAPLINK",
+  keywords: ["SAP", "integração", "monitoramento", "S/4HANA Cloud", "CPI", "IDoc", "AMS", "consultoria SAP"],
   icons: {
-    icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>◆</text></svg>",
+    icon: [{ url: "/icon.png", type: "image/png" }],
+    apple: [{ url: "/apple-icon.png" }],
+  },
+  openGraph: {
+    type: "website",
+    locale: "pt_BR",
+    url: "https://saplink.com.br",
+    siteName: "SAPLINK",
+    title: "SAPLINK — Operação de integrações SAP",
+    description: DESC,
+    images: [{ url: "/og.png", width: 1200, height: 630, alt: "SAPLINK — operação de integrações SAP" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "SAPLINK — Operação de integrações SAP",
+    description: DESC,
+    images: ["/og.png"],
   },
 };
 
