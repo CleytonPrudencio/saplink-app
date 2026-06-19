@@ -23,6 +23,55 @@ export async function getConnections(consultancyId: string) {
   return conns.map((c) => ({ clientId: c.clientId, client: c.client?.name, baseUrl: c.baseUrl, release: c.release, status: c.status, lastSyncAt: c.lastSyncAt, hasToken: !!c.authToken }));
 }
 
+// ───────── Sync ao vivo via SAP Business Accelerator Hub (sandbox, APIKey) ─────────
+// Não precisa de S-user nem tenant: usa a API Key do api.sap.com contra o S/4 de demonstração.
+const SANDBOX_BASE = 'https://sandbox.api.sap.com/s4hanacloud';
+const S4_API_PROBES = [
+  { apiName: 'API_BUSINESS_PARTNER', entity: 'A_BusinessPartner', scenario: 'SAP_COM_0008', version: 'v2', deprecated: false },
+  { apiName: 'API_SALES_ORDER_SRV', entity: 'A_SalesOrder', scenario: 'SAP_COM_0109', version: 'v2', deprecated: true, replacement: 'API_SALES_ORDER_SRV;v4' },
+  { apiName: 'API_PRODUCT_SRV', entity: 'A_Product', scenario: 'SAP_COM_0009', version: 'v2', deprecated: false },
+  { apiName: 'API_BILLING_DOCUMENT_SRV', entity: 'A_BillingDocument', scenario: 'SAP_COM_0157', version: 'v2', deprecated: false },
+];
+
+/** Conecta de verdade ao S/4 sandbox da SAP e inventaria as APIs OData reais (contagem real de registros). */
+export async function syncS4Sandbox(consultancyId: string, clientId: string) {
+  const conn = await prisma.s4Connection.findUnique({ where: { clientId }, include: { client: true } });
+  if (!conn || conn.client.consultancyId !== consultancyId) return { error: 'NOT_FOUND' as const };
+  const apiKey = conn.authToken ? String(decryptValue(conn.authToken) ?? '') : '';
+  if (!apiKey) return { error: 'NO_KEY' as const };
+  const base = (conn.baseUrl || SANDBOX_BASE).replace(/\/$/, '');
+
+  let reachable = 0, deprecated = 0;
+  const results: { apiName: string; ok: boolean; count: number | null; deprecated: boolean }[] = [];
+  for (const p of S4_API_PROBES) {
+    const url = `${base}/sap/opu/odata/sap/${p.apiName}/${p.entity}?$top=1&${encodeURIComponent('$inlinecount')}=allpages&${encodeURIComponent('$format')}=json`;
+    let ok = false, count: number | null = null;
+    try {
+      const res = await fetch(url, { headers: { APIKey: apiKey, Accept: 'application/json' }, signal: AbortSignal.timeout(15000) });
+      if (res.ok) {
+        ok = true; reachable++;
+        const j = (await res.json()) as { d?: { __count?: string; results?: any[] } };
+        const c = j?.d?.__count;
+        count = c != null && !isNaN(Number(c)) ? Number(c) : (j?.d?.results?.length ?? 0);
+      }
+    } catch { /* inalcançável — registra como não-ok */ }
+    if (p.deprecated) deprecated++;
+    results.push({ apiName: p.apiName, ok, count, deprecated: p.deprecated });
+    // grava o uso REAL (apenas as alcançadas viram inventário)
+    if (ok) {
+      await prisma.apiUsage.upsert({
+        where: { clientId_apiName_version: { clientId, apiName: p.apiName, version: p.version } },
+        update: { scenario: p.scenario, calls30d: count ?? 0, deprecated: p.deprecated, replacement: (p as any).replacement ?? null, lastSeenAt: new Date() },
+        create: { clientId, apiName: p.apiName, version: p.version, scenario: p.scenario, calls30d: count ?? 0, deprecated: p.deprecated, replacement: (p as any).replacement ?? null },
+      });
+    }
+  }
+
+  const status = reachable > 0 ? 'CONNECTED' : 'ERROR';
+  await prisma.s4Connection.update({ where: { clientId }, data: { lastSyncAt: new Date(), status, release: conn.release ?? 'sandbox' } });
+  return { ok: reachable > 0, probed: S4_API_PROBES.length, reachable, deprecated, results };
+}
+
 // ───────── Ingestão pelo agente (token → integration → clientId) ─────────
 export async function ingestS4(clientId: string, p: Record<string, unknown>) {
   const out: Record<string, number> = {};

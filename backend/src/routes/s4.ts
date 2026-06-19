@@ -44,6 +44,12 @@ router.put('/connections/:clientId', requireConsultancyAdmin, async (req: Reques
   if ('error' in r) { res.status(404).json({ error: 'Cliente não encontrado.' }); return; }
   res.json(r);
 });
+// Sync ao vivo via sandbox do SAP Business Accelerator Hub (APIKey) — dados reais sem S-user.
+router.post('/connections/:clientId/sync', requireConsultancyAdmin, async (req: Request, res: Response) => {
+  const r = await s4.syncS4Sandbox(req.consultancyId!, req.params.clientId);
+  if ('error' in r) { res.status(r.error === 'NO_KEY' ? 400 : 404).json({ error: r.error === 'NO_KEY' ? 'Salve a conexão com a API Key antes de sincronizar.' : 'Conexão não encontrada.' }); return; }
+  res.json(r);
+});
 
 // ───── Conector REAL CPI (Integration Suite) ─────
 router.get('/cpi', requireConsultancyAdmin, async (req: Request, res: Response) => {

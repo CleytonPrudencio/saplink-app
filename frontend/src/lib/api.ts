@@ -250,6 +250,7 @@ export async function getS4Fiscal(clientId?: string) { const { data } = await ap
 export async function reprocessFiscal(id: string) { const { data } = await api.post(`/s4/fiscal/${id}/reprocess`); return data; }
 export async function getS4Connections() { const { data } = await api.get('/s4/connections'); return data as { connections: any[] }; }
 export async function saveS4Connection(clientId: string, payload: Record<string, unknown>) { const { data } = await api.put(`/s4/connections/${clientId}`, payload); return data; }
+export async function syncS4Connection(clientId: string) { const { data } = await api.post(`/s4/connections/${clientId}/sync`); return data as { ok: boolean; probed: number; reachable: number; deprecated: number; results: { apiName: string; ok: boolean; count: number | null; deprecated: boolean }[] }; }
 // Conector real CPI (Integration Suite)
 export async function getCpiConfigs() { const { data } = await api.get('/s4/cpi'); return data as { configs: any[] }; }
 export async function saveCpiConfig(clientId: string, payload: Record<string, unknown>) { const { data } = await api.put(`/s4/cpi/${clientId}`, payload); return data; }

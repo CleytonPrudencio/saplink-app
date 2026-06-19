@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { getS4Overview, getS4Comm, getS4Apis, getMe, getClients, getCpiConfigs, saveCpiConfig, syncCpi } from "@/lib/api";
+import { getS4Overview, getS4Comm, getS4Apis, getMe, getClients, getCpiConfigs, saveCpiConfig, syncCpi, getS4Connections, saveS4Connection, syncS4Connection } from "@/lib/api";
 
 function brl(c: number) { return (c / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }); }
 const SEV: Record<string, string> = { EXPIRED: "text-rose-400", CRITICAL: "text-orange-400", WARN: "text-amber-300", OK: "text-emerald-400" };
@@ -21,7 +21,14 @@ export default function S4Page() {
   const [busy, setBusy] = useState("");
   const [msg, setMsg] = useState("");
 
+  // conector S/4 sandbox (APIKey) — dados reais sem S-user
+  const [s4conns, setS4conns] = useState<any[]>([]);
+  const [s4form, setS4form] = useState({ clientId: "", apiKey: "" });
+  const [s4busy, setS4busy] = useState("");
+  const [s4msg, setS4msg] = useState("");
+
   async function loadCpi() { try { setCpi((await getCpiConfigs()).configs); } catch { /* */ } }
+  async function loadS4() { try { setS4conns((await getS4Connections()).connections); } catch { /* */ } }
 
   useEffect(() => {
     Promise.all([getS4Overview(), getS4Comm(), getS4Apis()])
@@ -30,7 +37,7 @@ export default function S4Page() {
     getMe().then((u) => {
       const admin = u.role === "CONSULTANCY_ADMIN" || u.role === "PLATFORM_ADMIN";
       setIsAdmin(admin);
-      if (admin) { getClients().then((cs: any[]) => setClients(cs.map((c) => ({ id: c.id, name: c.name })))).catch(() => {}); loadCpi(); }
+      if (admin) { getClients().then((cs: any[]) => setClients(cs.map((c) => ({ id: c.id, name: c.name })))).catch(() => {}); loadCpi(); loadS4(); }
     }).catch(() => {});
   }, []);
 
@@ -44,6 +51,23 @@ export default function S4Page() {
     setBusy(clientId); setMsg("");
     try { const r = await syncCpi(clientId); setMsg(r.ok ? `Sincronizado: ${r.fetched} MPL.` : `Falhou: ${r.reason}`); await loadCpi(); }
     catch (err: any) { setMsg(err?.response?.data?.error || "Erro ao sincronizar."); } finally { setBusy(""); }
+  }
+
+  async function onSaveS4(e: React.FormEvent) {
+    e.preventDefault(); if (!s4form.clientId || !s4form.apiKey) return;
+    setS4busy("save"); setS4msg("");
+    try {
+      await saveS4Connection(s4form.clientId, { baseUrl: "https://sandbox.api.sap.com/s4hanacloud", authType: "APIKEY", authToken: s4form.apiKey, release: "sandbox" });
+      const r = await syncS4Connection(s4form.clientId);
+      setS4msg(r.ok ? `Conectado ao S/4 sandbox: ${r.reachable}/${r.probed} APIs reais, ${r.deprecated} depreciada(s).` : "Salvo, mas nenhuma API respondeu — confira a API Key.");
+      setS4form({ clientId: "", apiKey: "" });
+      await loadS4(); Promise.all([getS4Overview(), getS4Apis()]).then(([o, a]) => { setOv(o); setApis(a); }).catch(() => {});
+    } catch (err: any) { setS4msg(err?.response?.data?.error || "Erro ao conectar."); } finally { setS4busy(""); }
+  }
+  async function onSyncS4(clientId: string) {
+    setS4busy(clientId); setS4msg("");
+    try { const r = await syncS4Connection(clientId); setS4msg(r.ok ? `Sincronizado: ${r.reachable}/${r.probed} APIs reais.` : "Nenhuma API respondeu — confira a API Key."); await loadS4(); Promise.all([getS4Overview(), getS4Apis()]).then(([o, a]) => { setOv(o); setApis(a); }).catch(() => {}); }
+    catch (err: any) { setS4msg(err?.response?.data?.error || "Erro ao sincronizar."); } finally { setS4busy(""); }
   }
 
   if (loading) return <div className="text-[#9b95ad]">Carregando...</div>;
@@ -115,6 +139,38 @@ export default function S4Page() {
           </div>
         </div>
       </div>
+
+      {/* Conector REAL S/4 sandbox (admin) — dados reais sem S-user */}
+      {isAdmin && (
+        <div className="bg-[#1a1527] rounded-xl p-5 border border-cyan-500/20">
+          <h2 className="text-lg font-semibold">🛰️ Conectar S/4HANA Cloud (sandbox SAP) — dados reais sem S-user</h2>
+          <p className="text-[#9b95ad] text-sm mt-1">Cole a <b>API Key</b> do <a href="https://api.sap.com" target="_blank" rel="noreferrer" className="text-cyan-300 underline">SAP Business Accelerator Hub</a> (api.sap.com → qualquer API S/4HANA Cloud → &quot;Show API Key&quot;). O SAPLINK chama as APIs OData reais do S/4 de demonstração e inventaria o uso.</p>
+
+          {s4conns.length > 0 && (
+            <div className="space-y-2 my-3">
+              {s4conns.map((c) => (
+                <div key={c.clientId} className="flex items-center justify-between bg-[#0f0b1a] rounded-lg px-3 py-2 flex-wrap gap-2">
+                  <div className="min-w-0">
+                    <p className="text-sm text-[#e2e0ea]">{c.client} <span className="text-xs text-[#9b95ad]">· {c.release || "—"} · {c.status}</span></p>
+                    <p className="text-xs text-[#9b95ad]">último sync: {c.lastSyncAt ? new Date(c.lastSyncAt).toLocaleString("pt-BR") : "nunca"} {c.hasToken ? "· chave salva" : "· sem chave"}</p>
+                  </div>
+                  <button onClick={() => onSyncS4(c.clientId)} disabled={s4busy === c.clientId || !c.hasToken} className="text-xs px-3 py-1.5 rounded-lg bg-cyan-500/20 text-cyan-200 hover:bg-cyan-500/30 disabled:opacity-40 cursor-pointer">{s4busy === c.clientId ? "..." : "Sincronizar agora"}</button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <form onSubmit={onSaveS4} className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
+            <select value={s4form.clientId} onChange={(e) => setS4form({ ...s4form, clientId: e.target.value })} required className="bg-[#0f0b1a] border border-white/[0.1] rounded-lg px-3 py-2 text-sm">
+              <option value="">Cliente...</option>
+              {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+            <input value={s4form.apiKey} onChange={(e) => setS4form({ ...s4form, apiKey: e.target.value })} type="password" required placeholder="API Key do api.sap.com" className="bg-[#0f0b1a] border border-white/[0.1] rounded-lg px-3 py-2 text-sm" />
+            <button type="submit" disabled={s4busy === "save"} className="sm:col-span-2 px-4 py-2 rounded-lg bg-cyan-500 text-white text-sm font-semibold disabled:opacity-40 cursor-pointer">{s4busy === "save" ? "Conectando..." : "Conectar e sincronizar"}</button>
+          </form>
+          {s4msg && <p className="text-sm text-cyan-300 mt-2">{s4msg}</p>}
+        </div>
+      )}
 
       {/* Conector REAL CPI (admin) */}
       {isAdmin && (
