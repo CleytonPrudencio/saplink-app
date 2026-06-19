@@ -110,39 +110,44 @@ function SimLiveOps({ accent, steps, demo }: { accent: string; steps: string[]; 
 export interface Trend { label: string; points: number[]; threshold: number; mode: "rise" | "drop"; verdict: string }
 
 function SimTrend({ trend, accent }: { trend: Trend; accent: string }) {
-  const [n, setN] = useState(0);
+  const [n, setN] = useState(trend.points.length); // já abre desenhado
   const [running, setRunning] = useState(false);
   useEffect(() => {
     if (!running) return;
     if (n >= trend.points.length) { setRunning(false); return; }
-    const t = setTimeout(() => setN((x) => x + 1), 280);
+    const t = setTimeout(() => setN((x) => x + 1), 300);
     return () => clearTimeout(t);
   }, [running, n, trend.points.length]);
   const start = () => { setN(0); setRunning(true); };
-  const W = 320, H = 120, max = Math.max(...trend.points, trend.threshold) * 1.1;
-  const pts = trend.points.slice(0, n);
-  const x = (i: number) => (i / (trend.points.length - 1)) * W;
-  const y = (v: number) => H - (v / max) * H;
-  const path = pts.map((v, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
+  const W = 320, H = 130, PAD = 8;
+  const max = Math.max(...trend.points, trend.threshold) * 1.15;
+  const pts = trend.points.slice(0, Math.max(1, n));
+  const x = (i: number) => PAD + (i / (trend.points.length - 1)) * (W - PAD * 2);
+  const y = (v: number) => H - PAD - (v / max) * (H - PAD * 2);
+  const line = pts.map((v, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
+  const area = pts.length > 1 ? `${line} L${x(pts.length - 1).toFixed(1)},${H - PAD} L${x(0).toFixed(1)},${H - PAD} Z` : "";
   const last = pts[pts.length - 1] ?? 0;
   const breached = trend.mode === "rise" ? last >= trend.threshold : last <= trend.threshold;
   const done = n >= trend.points.length;
   return (
     <div className="space-y-3">
-      <p className="text-xs text-[#9b95ad]">{trend.label}</p>
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-[#9b95ad]">{trend.label}</p>
+        <span className="text-lg font-bold" style={{ color: breached ? "#f87171" : accent }}>{last}</span>
+      </div>
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full bg-[#0f0b1a] rounded-lg border border-white/[0.06]">
+        <defs><linearGradient id="tg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={accent} stopOpacity="0.35" /><stop offset="1" stopColor={accent} stopOpacity="0" /></linearGradient></defs>
         <line x1="0" y1={y(trend.threshold)} x2={W} y2={y(trend.threshold)} stroke="#f87171" strokeDasharray="4 4" strokeWidth="1" />
-        <text x="4" y={y(trend.threshold) - 4} fill="#f87171" fontSize="9">limite</text>
-        {path && <path d={path} fill="none" stroke={accent} strokeWidth="2.5" />}
-        {pts.map((v, i) => <circle key={i} cx={x(i)} cy={y(v)} r="2.5" fill={accent} />)}
+        <text x={W - 4} y={y(trend.threshold) - 4} fill="#f87171" fontSize="9" textAnchor="end">limite ({trend.threshold})</text>
+        {area && <path d={area} fill="url(#tg)" />}
+        {line && <path d={line} fill="none" stroke={accent} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />}
+        {pts.map((v, i) => <circle key={i} cx={x(i)} cy={y(v)} r={i === pts.length - 1 ? 4 : 2.5} fill={i === pts.length - 1 && breached ? "#f87171" : accent} />)}
       </svg>
-      {done && (
-        <div className="rounded-lg px-4 py-3 text-sm" style={{ background: breached ? "#f8717114" : "#34d39914", border: `1px solid ${breached ? "#f8717140" : "#34d39940"}` }}>
-          <span className={breached ? "text-rose-300 font-semibold" : "text-emerald-300 font-semibold"}>{trend.verdict}</span>
-        </div>
-      )}
+      <div className="rounded-lg px-4 py-3 text-sm" style={{ background: breached ? "#f8717114" : "#34d39914", border: `1px solid ${breached ? "#f8717140" : "#34d39940"}` }}>
+        <span className={breached ? "text-rose-300 font-semibold" : "text-emerald-300 font-semibold"}>{done ? trend.verdict : "Reproduzindo a evolução…"}</span>
+      </div>
       <button onClick={start} disabled={running} className="w-full px-4 py-2.5 rounded-lg text-white text-sm font-semibold disabled:opacity-50 cursor-pointer" style={{ background: accent }}>
-        {running ? "Analisando tendência…" : done ? "▶ Rodar de novo" : "▶ Simular tendência"}
+        {running ? "Analisando tendência…" : "▶ Reproduzir do início"}
       </button>
     </div>
   );
