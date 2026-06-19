@@ -48,6 +48,11 @@ const INNOVATIONS = [
   ["⚙️", "Remediação generativa", "A IA escreve a correção", "Não só descreve o problema — entrega o artefato pronto (Groovy, mapeamento, filtro OData) para colar e aplicar.", "De \"explica\" para \"resolve\" em segundos."],
   ["💬", "ChatOps por WhatsApp", "Opere o SAP por mensagem", "\"Reprocessa os IDocs do cliente X\" pelo WhatsApp/Telegram — a IA entende, age e pede aprovação para o que mexe no SAP.", "Operação na palma da mão, sem abrir o painel."],
   ["📉", "Perda silenciosa de negócio", "Radar de receita", "Alerta quando o volume cai muito abaixo do normal — mesmo com tudo verde tecnicamente. Captura a receita parando antes de virar reclamação.", "Vê o prejuízo que o monitor técnico não vê."],
+  ["🧨", "Pré-voo de mudança", "Blast radius antes do deploy", "Antes do transport ir pra PRD, mostra o raio de impacto (interfaces, processos, R$) e o score de risco — com plano de teste.", "Acaba com a surpresa pós-upgrade."],
+  ["⏪", "Time machine de incidente", "Replay + 'e se?'", "Reconstrói a linha do tempo do incidente e mostra quanto seria economizado com detecção mais rápida.", "Prova de ROI irrefutável."],
+  ["🛡️", "Auditoria & Compliance", "SoD automático", "Trilha de mudanças e remediações + checagem de segregação de função, com evidências prontas pro auditor.", "Compliance sem montar planilha."],
+  ["🤝", "Parceiros EDI", "Quem manda dado ruim", "Ranqueia parceiros por frequência de erro — pra cobrar o fornecedor certo, não a sua TI.", "Munição pra cobrar o parceiro."],
+  ["💵", "FinOps de BTP", "Custo de nuvem por IFlow", "Liga volume ao consumo do BTP e flagra o IFlow desgovernado queimando crédito.", "Fim da surpresa na fatura do BTP."],
 ];
 
 const FAQ = [
@@ -251,7 +256,7 @@ export default function LandingPage() {
         <section id="inovacao" className="py-14 sm:py-16 border-t border-white/[0.06]">
           <span className="inline-block px-3 py-1 rounded-full bg-purple-500/15 text-purple-300 text-xs font-bold mb-4">🦄 EXCLUSIVO · NO AR</span>
           <h2 className="text-2xl sm:text-4xl font-bold mb-2">O que não existe em nenhum outro sistema</h2>
-          <p className="text-[#9b95ad] mb-8 max-w-3xl">Oito diferenciais que viram moat: efeito de rede, dado cross-camada que só nós temos, autonomia, reconciliação que ninguém faz, IA que escreve a correção, operação por WhatsApp e a linguagem do CFO.</p>
+          <p className="text-[#9b95ad] mb-8 max-w-3xl">Treze diferenciais que viram moat: efeito de rede, dado cross-camada que só nós temos, autonomia, reconciliação, IA que escreve a correção, operação por WhatsApp, pré-voo de mudança, time machine, auditoria, FinOps e a linguagem do CFO. Clique pra explorar com simulador.</p>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {INNOVATIONS.map((g) => (
               <button key={g[1]} onClick={() => setFeature({ icon: g[0], name: g[1], tagline: g[2], accent: "#a78bfa" })} className="text-left bg-gradient-to-br from-purple-600/10 to-cyan-500/[0.06] border border-purple-500/25 rounded-2xl p-6 hover:border-purple-500/60 transition group cursor-pointer">
