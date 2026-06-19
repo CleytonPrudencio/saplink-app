@@ -77,6 +77,9 @@ const tenantGroups: MenuGroup[] = [
       { href: "/causal", label: "Causa cross-camada", icon: "\uD83D\uDD17" },
       { href: "/autoheal", label: "AMS Aut\u00F4nomo", icon: "\uD83E\uDD16" },
       { href: "/money", label: "Dinheiro em risco", icon: "\uD83D\uDCB8" },
+      { href: "/recon", label: "Reconcilia\u00E7\u00E3o E2E", icon: "\uD83D\uDD01" },
+      { href: "/anomaly", label: "Perda silenciosa", icon: "\uD83D\uDCC9" },
+      { href: "/chatops", label: "ChatOps", icon: "\uD83D\uDCAC" },
     ],
   },
   {

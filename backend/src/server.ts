@@ -31,6 +31,7 @@ import cloudRoutes from './routes/cloud';
 import s4Routes from './routes/s4';
 import leadRoutes from './routes/leads';
 import innovateRoutes from './routes/innovate';
+import chatopsInRoutes from './routes/chatops-in';
 import { authMiddleware } from './middleware/auth';
 import { tenancyMiddleware } from './middleware/tenancy';
 import { requireActiveSubscription } from './middleware/subscription';
@@ -89,6 +90,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/agent', agentRoutes); // agente on-premise: auth por token próprio, sem JWT
 app.use('/api/portal', portalRoutes); // portal público do cliente final: auth por token na URL
 app.use('/api/leads', leadRoutes); // POST público (interesse); GET/PATCH só platform admin
+app.use('/api/chatops', chatopsInRoutes); // webhook público do ChatOps (auth por token)
 
 // Rotas de negócio: exigem assinatura ATIVA (corte do inadimplente)
 const tenantGate = [authMiddleware, tenancyMiddleware, requireActiveSubscription];

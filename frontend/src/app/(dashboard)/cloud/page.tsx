@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, Fragment } from "react";
-import { getCloud, diagnoseCloud, type CloudItem } from "@/lib/api";
+import { getCloud, diagnoseCloud, fixCloud, type CloudItem } from "@/lib/api";
 import { AiReport } from "@/components/AiReport";
 
 function statusCls(s?: string | null) {
@@ -19,6 +19,7 @@ export default function CloudPage() {
   const [filters, setFilters] = useState({ source: "", status: "", q: "" });
   const [loading, setLoading] = useState(true);
   const [diag, setDiag] = useState<Record<string, { loading: boolean; text?: string; at?: string | null; err?: boolean }>>({});
+  const [fix, setFix] = useState<Record<string, { loading: boolean; text?: string; err?: boolean }>>({});
   const [open, setOpen] = useState<Record<string, boolean>>({});
 
   const load = useCallback(async () => { setData(await getCloud(filters)); }, [filters]);
@@ -34,6 +35,13 @@ export default function CloudPage() {
     } catch {
       setDiag((d) => ({ ...d, [it.id]: { loading: false, err: true } }));
     }
+  }, []);
+
+  const runFix = useCallback(async (it: CloudItem, force = false) => {
+    if (!force && it.aiFix) { setFix((f) => ({ ...f, [it.id]: { loading: false, text: it.aiFix! } })); return; }
+    setFix((f) => ({ ...f, [it.id]: { loading: true } }));
+    try { const r = await fixCloud(it.id, force); setFix((f) => ({ ...f, [it.id]: { loading: false, text: r.fix } })); }
+    catch { setFix((f) => ({ ...f, [it.id]: { loading: false, err: true } })); }
   }, []);
 
   const s = data?.summary;
@@ -109,17 +117,30 @@ export default function CloudPage() {
                       ) : d?.err ? (
                         <div className="text-sm text-rose-300">Não foi possível gerar o diagnóstico agora. Tente novamente.</div>
                       ) : (
-                        <AiReport
-                          text={(d?.text || i.aiDiagnosis) as string}
-                          title="Diagnóstico de falha — CPI/AIF"
-                          subtitle={`${i.source} · ${i.artifact} · ${i.status || "FAILED"}`}
-                          meta={[
-                            { label: "Artefato", value: i.artifact },
-                            ...((d?.at || i.aiDiagnosedAt) ? [{ label: "Gerado em", value: new Date((d?.at || i.aiDiagnosedAt)!).toLocaleString("pt-BR") }] : []),
-                          ]}
-                          onRefresh={() => runDiagnose(i, true)}
-                          refreshing={d?.loading}
-                        />
+                        <div className="space-y-3">
+                          <AiReport
+                            text={(d?.text || i.aiDiagnosis) as string}
+                            title="Diagnóstico de falha — CPI/AIF"
+                            subtitle={`${i.source} · ${i.artifact} · ${i.status || "FAILED"}`}
+                            meta={[
+                              { label: "Artefato", value: i.artifact },
+                              ...((d?.at || i.aiDiagnosedAt) ? [{ label: "Gerado em", value: new Date((d?.at || i.aiDiagnosedAt)!).toLocaleString("pt-BR") }] : []),
+                            ]}
+                            onRefresh={() => runDiagnose(i, true)}
+                            refreshing={d?.loading}
+                          />
+                          {(() => { const fx = fix[i.id]; const hasFix = fx?.text || i.aiFix; return (
+                            !fx && !i.aiFix ? (
+                              <button onClick={() => runFix(i)} className="text-xs px-3 py-1.5 rounded-lg bg-cyan-500/15 text-cyan-200 hover:bg-cyan-500/25 cursor-pointer">⚙️ Gerar correção pronta (IA)</button>
+                            ) : fx?.loading ? (
+                              <div className="text-sm text-cyan-300">A IA está escrevendo a correção pronta…</div>
+                            ) : fx?.err ? (
+                              <div className="text-sm text-rose-300">Não foi possível gerar a correção. Tente novamente.</div>
+                            ) : hasFix ? (
+                              <AiReport text={(fx?.text || i.aiFix) as string} title="Correção pronta (generativa)" subtitle="Artefato pronto para aplicar" onRefresh={() => runFix(i, true)} refreshing={fx?.loading} />
+                            ) : null
+                          ); })()}
+                        </div>
                       )}
                     </td>
                   </tr>

@@ -111,6 +111,41 @@ export async function narrateSla(context: object): Promise<string> {
   return runAI(SLA_PROMPT, userMessage, 420);
 }
 
+const FIX_PROMPT = `Você é um engenheiro SAP de integração sênior. Dada uma falha, gere a CORREÇÃO PRONTA
+para aplicar — não explique demais, entregue o artefato. Responda em português brasileiro, neste formato:
+
+### Resumo
+(1 linha: o que a correção faz)
+
+### Correção
+\`\`\`
+(o trecho pronto: Groovy do CPI, mapeamento, filtro OData, ou comando/transação SAP — o que resolver o caso)
+\`\`\`
+
+### Onde aplicar
+(passos curtos e objetivos de onde colar/configurar)
+
+### Validação
+(como confirmar que resolveu)
+
+Seja concreto e seguro. Se faltar dado, assuma o caso mais comum e diga a premissa.`;
+
+/** Remediação generativa: a IA escreve a correção pronta (snippet/config), não só descreve. */
+export async function generateFix(query: string, context: object): Promise<string> {
+  const userMessage = `Contexto da falha:\n${JSON.stringify(context, null, 2)}\n\nGere a correção pronta para: ${query}`;
+  return runAI(FIX_PROMPT, userMessage, 600);
+}
+
+/** Interpreta um comando em linguagem natural (ChatOps) e retorna a intenção em JSON. */
+export async function parseIntent(text: string, context: object): Promise<string> {
+  const sys = `Você converte um comando em português sobre operação SAP em JSON de intenção. Responda APENAS JSON válido,
+sem texto extra, no formato {"action":"...","clientName":"...","filter":"..."}. Ações válidas:
+"list_failures" (o que está falhando), "client_health" (saúde de um cliente), "request_remediation" (pedir correção de itens de um cliente),
+"portfolio_summary" (resumo da carteira), "unknown". Use clientName quando o comando citar um cliente.`;
+  const userMessage = `Clientes disponíveis: ${JSON.stringify(context)}\n\nComando: ${text}`;
+  return runAI(sys, userMessage, 150);
+}
+
 /** Indica se algum provedor de IA está configurado (Ollama ou Claude). */
 export function aiEnabled(): boolean {
   return !!(process.env.OLLAMA_URL || process.env.ANTHROPIC_API_KEY);

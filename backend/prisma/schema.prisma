@@ -286,6 +286,7 @@ model CloudItem {
   resolved      Boolean  @default(false)
   aiDiagnosis   String?  // causa raiz + passos de correção gerados pela IA
   aiDiagnosedAt DateTime?
+  aiFix         String?  // correção generativa (snippet/config pronto) gerada pela IA
   @@unique([integrationId, source, messageId])
   @@index([clientId, source, resolved])
 }
@@ -562,4 +563,23 @@ model AutoHealPolicy {
   minConfidence  Int      @default(85) // só auto-executa acima desta confiança
   allowedActions Json?    // ["REPROCESS_IDOC","RETRY_TRFC","UNLOCK_QUEUE"]
   updatedAt      DateTime @updatedAt
+}
+
+// Reconciliação ponta-a-ponta — define a jornada esperada de um processo de negócio.
+model ReconProcess {
+  id        String   @id @default(uuid())
+  clientId  String
+  name      String   // ex.: "Pedido → Faturamento"
+  stages    Json     // [{label, source, artifact}] na ordem esperada
+  createdAt DateTime @default(now())
+  @@index([clientId])
+}
+
+// ChatOps — token de canal (WhatsApp/Telegram) por consultoria.
+model ChatOpsConfig {
+  consultancyId String   @id
+  token         String   @unique
+  enabled       Boolean  @default(true)
+  channel       String?  // whatsapp | telegram | generic
+  updatedAt     DateTime @updatedAt
 }

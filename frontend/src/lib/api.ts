@@ -179,7 +179,7 @@ export async function getBenchmark() {
 export interface CloudItem {
   id: string; source: string; artifact: string; messageId: string; direction?: string | null;
   status?: string | null; error?: string | null; occurredAt?: string | null; resolved: boolean;
-  aiDiagnosis?: string | null; aiDiagnosedAt?: string | null;
+  aiDiagnosis?: string | null; aiDiagnosedAt?: string | null; aiFix?: string | null;
 }
 export async function getCloud(filters: { source?: string; status?: string; q?: string; clientId?: string } = {}) {
   const params: Record<string, string> = {};
@@ -263,6 +263,16 @@ export async function getCausal(clientId?: string) { const { data } = await api.
 export async function getAutoheal() { const { data } = await api.get('/innovate/autoheal'); return data as { policy: { enabled: boolean; minConfidence: number; allowedActions: string[] }; scoreboard: any }; }
 export async function saveAutohealPolicy(payload: { enabled?: boolean; minConfidence?: number; allowedActions?: string[] }) { const { data } = await api.put('/innovate/autoheal/policy', payload); return data as { policy: any }; }
 export async function getMoneyGraph() { const { data } = await api.get('/innovate/money'); return data as { summary: { totalAtRiskCents: number; downtimeAtRiskCents: number; fiscalAtRiskCents: number; integrationsDown: number }; byProcess: any[]; nodes: any[] }; }
+// Inovações v2
+export async function fixCloud(id: string, force = false) { const { data } = await api.post(`/cloud/${id}/fix`, null, { params: force ? { force: "1" } : {} }); return data as { ok: boolean; fix: string; cached?: boolean }; }
+export async function getReconProcesses() { const { data } = await api.get('/innovate/recon'); return data as { processes: any[] }; }
+export async function saveReconProcess(payload: { clientId: string; name: string; stages: { label: string; source: string; artifact: string }[] }) { const { data } = await api.post('/innovate/recon', payload); return data; }
+export async function deleteReconProcess(id: string) { const { data } = await api.delete(`/innovate/recon/${id}`); return data; }
+export async function reconcile(id: string, h = 24) { const { data } = await api.get(`/innovate/recon/${id}`, { params: { h } }); return data as { ok: boolean; process: string; windowHours: number; stages: any[]; links: any[]; completion: number; biggestGap: any }; }
+export async function getAnomalies() { const { data } = await api.get('/innovate/anomaly'); return data as { summary: { tracked: number; anomalies: number }; items: any[] }; }
+export async function getChatops() { const { data } = await api.get('/innovate/chatops'); return data as { enabled: boolean; hasToken: boolean; token?: string; channel?: string }; }
+export async function rotateChatopsToken(channel?: string) { const { data } = await api.post('/innovate/chatops/token', { channel }); return data as { token: string }; }
+export async function runChatops(text: string) { const { data } = await api.post('/innovate/chatops/run', { text }); return data as { reply: string; action: string }; }
 
 // C1 — Canais de notificação / on-call
 export interface NotificationChannel {

@@ -1,5 +1,5 @@
 import prisma from '../lib/prisma';
-import { diagnose } from './ai';
+import { diagnose, generateFix } from './ai';
 import { recordFailure } from './federated';
 
 export interface CloudItemInput {
@@ -129,6 +129,23 @@ export async function diagnoseCloudItem(consultancyId: string, id: string, force
   return { ok: true, diagnosis, diagnosedAt: new Date(), cached: false };
 }
 
+/** Remediação generativa: a IA escreve a correção pronta (snippet/config) para a falha. */
+export async function fixCloudItem(consultancyId: string, id: string, force = false) {
+  const item = await prisma.cloudItem.findUnique({ where: { id } });
+  if (!item) return { error: 'NOT_FOUND' as const };
+  const client = await prisma.client.findFirst({ where: { id: item.clientId, consultancyId }, select: { name: true } });
+  if (!client) return { error: 'NOT_FOUND' as const };
+  if (item.aiFix && !force) return { ok: true, fix: item.aiFix, cached: true };
+  const context = {
+    cliente: client.name,
+    plataforma: item.source === 'CPI' ? 'SAP Cloud Integration (BTP/CPI)' : 'SAP AIF',
+    artefato_ou_iflow: item.artifact, status: item.status, erro: item.error || '(sem detalhe)',
+  };
+  const fix = await generateFix(`falha em ${item.source} no artefato "${item.artifact}"`, context);
+  await prisma.cloudItem.update({ where: { id: item.id }, data: { aiFix: fix } });
+  return { ok: true, fix, cached: false };
+}
+
 export interface CloudFilters { source?: string; status?: string; q?: string; clientId?: string }
 
 export async function getCloud(consultancyId: string, f: CloudFilters = {}) {
@@ -157,7 +174,7 @@ export async function getCloud(consultancyId: string, f: CloudFilters = {}) {
     items: items.map((i) => ({
       id: i.id, source: i.source, artifact: i.artifact, messageId: i.messageId,
       direction: i.direction, status: i.status, error: i.error, occurredAt: i.occurredAt, resolved: i.resolved,
-      aiDiagnosis: i.aiDiagnosis, aiDiagnosedAt: i.aiDiagnosedAt,
+      aiDiagnosis: i.aiDiagnosis, aiDiagnosedAt: i.aiDiagnosedAt, aiFix: i.aiFix,
     })),
     summary: { total: all.length, failed, bySource },
   };

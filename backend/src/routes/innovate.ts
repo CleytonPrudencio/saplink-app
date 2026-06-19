@@ -5,6 +5,9 @@ import { topSignatures, lookup, recordFailure, recordFix } from '../services/fed
 import { causalOverview } from '../services/causal';
 import { getPolicy, savePolicy, scoreboard } from '../services/autoheal';
 import { moneyGraph } from '../services/moneygraph';
+import { getProcesses, saveProcess, deleteProcess, reconcile } from '../services/recon';
+import { detectAnomalies } from '../services/bizanomaly';
+import { getConfig as getChatops, rotateToken, run as runChatops } from '../services/chatops';
 
 // Inovações unicórnio. Montado sob o tenantGate (auth + tenancy já aplicados).
 const router = Router();
@@ -57,6 +60,44 @@ router.put('/autoheal/policy', requireConsultancyAdmin, async (req: Request, res
 // ── Grafo dinheiro↔técnico ──
 router.get('/money', async (req: Request, res: Response) => {
   try { res.json(await moneyGraph(req.consultancyId!)); } catch (e) { console.error('money', e); res.status(500).json({ error: 'Erro no grafo de dinheiro.' }); }
+});
+
+// ── Reconciliação ponta-a-ponta ──
+router.get('/recon', async (req: Request, res: Response) => {
+  try { res.json({ processes: await getProcesses(req.consultancyId!) }); } catch (e) { console.error('recon', e); res.status(500).json({ error: 'Erro na reconciliação.' }); }
+});
+router.post('/recon', requireConsultancyAdmin, async (req: Request, res: Response) => {
+  const { clientId, name, stages } = req.body || {};
+  const r = await saveProcess(req.consultancyId!, { clientId, name, stages });
+  if ('error' in r) { res.status(r.error === 'INVALID' ? 400 : 404).json({ error: r.error === 'INVALID' ? 'Informe nome e ao menos 2 estágios.' : 'Cliente não encontrado.' }); return; }
+  res.json(r);
+});
+router.delete('/recon/:id', requireConsultancyAdmin, async (req: Request, res: Response) => {
+  const r = await deleteProcess(req.consultancyId!, req.params.id);
+  if ('error' in r) { res.status(404).json({ error: 'Não encontrado.' }); return; }
+  res.json(r);
+});
+router.get('/recon/:id', async (req: Request, res: Response) => {
+  const r = await reconcile(req.consultancyId!, req.params.id, Number(req.query.h) || 24);
+  if ('error' in r) { res.status(404).json({ error: 'Processo não encontrado.' }); return; }
+  res.json(r);
+});
+
+// ── Perda silenciosa de negócio ──
+router.get('/anomaly', async (req: Request, res: Response) => {
+  try { res.json(await detectAnomalies(req.consultancyId!, req.query.clientId as string | undefined)); } catch (e) { console.error('anomaly', e); res.status(500).json({ error: 'Erro na detecção de anomalia.' }); }
+});
+
+// ── ChatOps ──
+router.get('/chatops', requireConsultancyAdmin, async (req: Request, res: Response) => {
+  try { res.json(await getChatops(req.consultancyId!)); } catch (e) { console.error('chatops cfg', e); res.status(500).json({ error: 'Erro no ChatOps.' }); }
+});
+router.post('/chatops/token', requireConsultancyAdmin, async (req: Request, res: Response) => {
+  try { res.json(await rotateToken(req.consultancyId!, req.body?.channel)); } catch (e) { console.error('chatops token', e); res.status(500).json({ error: 'Erro ao gerar token.' }); }
+});
+router.post('/chatops/run', async (req: Request, res: Response) => {
+  try { res.json(await runChatops(req.consultancyId!, String(req.body?.text || ''), req.user?.userId)); }
+  catch (e) { console.error('chatops run', e); res.status(500).json({ error: 'Erro ao processar comando.' }); }
 });
 
 export default router;
