@@ -9,6 +9,9 @@ const cfg = {
   token: process.env.AGENT_TOKEN || '',
   mode: (process.env.SAP_MODE || 'mock').toLowerCase(),
   pollSeconds: parseInt(process.env.POLL_SECONDS || '60'),
+  // Cloud (CPI/AIF) e S/4 vêm de conectores REAIS — o agente só empurra esses quando explicitamente habilitado.
+  pushCloud: process.env.PUSH_CLOUD === 'true',
+  pushS4: process.env.PUSH_S4 === 'true',
   sap: {
     ashost: process.env.SAP_ASHOST, sysnr: process.env.SAP_SYSNR, client: process.env.SAP_CLIENT,
     user: process.env.SAP_USER, passwd: process.env.SAP_PASSWD, lang: process.env.SAP_LANG,
@@ -111,21 +114,25 @@ async function pushCatalogOnce() {
   } catch (e) {
     log('falha ao enviar transports (rede):', e.message);
   }
-  // F1/F2 — mensagens CPI/AIF
-  try {
-    const items = discoverCloud();
-    const { status, body } = await api('/api/agent/cloud-items', { method: 'POST', body: JSON.stringify({ items }) });
-    if (status === 200) log(`cloud (CPI/AIF): ${body.upserted ?? items.length} mensagem(ns)`);
-  } catch (e) {
-    log('falha ao enviar cloud-items (rede):', e.message);
+  // F1/F2 — mensagens CPI/AIF (só quando habilitado; por padrão vem do conector CPI real)
+  if (cfg.pushCloud) {
+    try {
+      const items = discoverCloud();
+      const { status, body } = await api('/api/agent/cloud-items', { method: 'POST', body: JSON.stringify({ items }) });
+      if (status === 200) log(`cloud (CPI/AIF): ${body.upserted ?? items.length} mensagem(ns)`);
+    } catch (e) {
+      log('falha ao enviar cloud-items (rede):', e.message);
+    }
   }
-  // S/4HANA Cloud — bundle (upgrade, clean core, APIs, comm, fiscal, eventos)
-  try {
-    const bundle = discoverS4();
-    const { status, body } = await api('/api/agent/s4', { method: 'POST', body: JSON.stringify(bundle) });
-    if (status === 200) log(`s4: upgrade=${body.upgrade ?? 0} cleancore=${body.cleanCore ?? 0} fiscal=${body.fiscal ?? 0} eventos=${body.events ?? 0}`);
-  } catch (e) {
-    log('falha ao enviar s4 (rede):', e.message);
+  // S/4HANA Cloud — bundle (só quando habilitado; por padrão vem do conector S/4 real)
+  if (cfg.pushS4) {
+    try {
+      const bundle = discoverS4();
+      const { status, body } = await api('/api/agent/s4', { method: 'POST', body: JSON.stringify(bundle) });
+      if (status === 200) log(`s4: upgrade=${body.upgrade ?? 0} cleancore=${body.cleanCore ?? 0} fiscal=${body.fiscal ?? 0} eventos=${body.events ?? 0}`);
+    } catch (e) {
+      log('falha ao enviar s4 (rede):', e.message);
+    }
   }
 }
 

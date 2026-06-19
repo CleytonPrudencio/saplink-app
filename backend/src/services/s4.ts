@@ -67,9 +67,60 @@ export async function syncS4Sandbox(consultancyId: string, clientId: string) {
     }
   }
 
+  // ── deriva achados REAIS de Upgrade + Clean Core a partir das APIs depreciadas em uso ──
+  const deprecatedHit = S4_API_PROBES.filter((p) => p.deprecated && results.find((r) => r.apiName === p.apiName && r.ok));
+  await prisma.upgradeFinding.deleteMany({ where: { clientId, resolved: false } });
+  if (deprecatedHit.length) {
+    await prisma.upgradeFinding.createMany({
+      data: deprecatedHit.map((p) => ({
+        clientId, release: 'OData v2→v4', area: 'API', object: `${p.apiName} (${p.version})`, impact: 'DEPRECATED',
+        detail: `OData v2 em uso real no S/4 — será descontinuada.`, recommendation: `Migrar o consumo para ${(p as any).replacement || p.apiName + ';v4'}.`,
+      })),
+    });
+  }
+  await prisma.cleanCoreItem.deleteMany({ where: { clientId, resolved: false } });
+  if (deprecatedHit.length) {
+    await prisma.cleanCoreItem.createMany({
+      data: deprecatedHit.map((p) => ({
+        clientId, category: 'DEPRECATED_API', object: `${p.apiName} ${p.version}`, severity: 'HIGH', points: 12,
+        recommendation: `Migrar para ${(p as any).replacement || p.apiName + ';v4'}.`,
+      })),
+    });
+  }
+
+  // ── massa de dados REAL: puxa Billing Documents do S/4 sandbox → cockpit fiscal ──
+  let fiscal = 0;
+  try {
+    const fUrl = `${base}/sap/opu/odata/sap/API_BILLING_DOCUMENT_SRV/A_BillingDocument?${encodeURIComponent('$top')}=200&${encodeURIComponent('$select')}=${encodeURIComponent('BillingDocument,BillingDocumentType,TotalGrossAmount,TransactionCurrency,BillingDocumentIsCancelled,BillingDocumentDate')}&${encodeURIComponent('$format')}=json`;
+    const fRes = await fetch(fUrl, { headers: { APIKey: apiKey, Accept: 'application/json' }, signal: AbortSignal.timeout(20000) });
+    if (fRes.ok) {
+      const fj = (await fRes.json()) as { d?: { results?: any[] } };
+      const docs = fj?.d?.results || [];
+      await prisma.fiscalDoc.deleteMany({ where: { clientId } });
+      for (const d of docs) {
+        if (!d.BillingDocument) continue;
+        const cancelled = d.BillingDocumentIsCancelled === true || d.BillingDocumentIsCancelled === 'true';
+        const cents = Math.round(Number(d.TotalGrossAmount || 0) * 100);
+        await prisma.fiscalDoc.create({
+          data: {
+            clientId, docType: `BILLING_${d.BillingDocumentType || 'F2'}`, number: String(d.BillingDocument),
+            status: cancelled ? 'CANCELLED' : 'AUTHORIZED', amountCents: isNaN(cents) ? 0 : cents,
+            message: `Fatura ${d.BillingDocumentType || ''} · ${d.TransactionCurrency || ''} (S/4 sandbox)`.trim(),
+            remediable: false, resolved: true, issuedAt: parseSapDate(d.BillingDocumentDate),
+          },
+        });
+        fiscal++;
+      }
+    }
+  } catch { /* fiscal opcional — não quebra o sync de APIs */ }
+
   const status = reachable > 0 ? 'CONNECTED' : 'ERROR';
   await prisma.s4Connection.update({ where: { clientId }, data: { lastSyncAt: new Date(), status, release: conn.release ?? 'sandbox' } });
-  return { ok: reachable > 0, probed: S4_API_PROBES.length, reachable, deprecated, results };
+  return { ok: reachable > 0, probed: S4_API_PROBES.length, reachable, deprecated, upgrade: deprecatedHit.length, fiscal, results };
+}
+
+function parseSapDate(s?: string): Date | null {
+  if (!s) return null; const m = /\/Date\((\d+)/.exec(s); return m ? new Date(Number(m[1])) : (isNaN(Date.parse(s)) ? null : new Date(s));
 }
 
 // ───────── Ingestão pelo agente (token → integration → clientId) ─────────
