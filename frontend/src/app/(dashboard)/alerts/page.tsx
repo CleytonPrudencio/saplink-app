@@ -1,151 +1,146 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getAlerts, resolveAlert } from "@/lib/api";
+import { getAlerts, resolveAlert, resolveAlertGroup, diagnoseAlert } from "@/lib/api";
 import { useToast } from "@/components/Toast";
+import { AiReport } from "@/components/AiReport";
+import ExplainData from "@/components/ExplainData";
 
 interface Alert {
-  id: string;
-  severity: string;
-  message: string;
-  status: string;
-  clientName?: string;
-  createdAt: string;
+  id: string; severity: string; type: string; message: string; resolved: boolean;
+  createdAt: string; client?: { id: string; name: string }; integration?: { id: string; name: string; type: string };
+}
+interface Group {
+  key: string; severity: string; type: string; message: string; count: number;
+  first: string; last: string; ids: string[]; client?: string; integrationId?: string | null; integrationName?: string;
+}
+
+const SEV_RANK: Record<string, number> = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
+function sevBadge(s: string) {
+  const c: Record<string, string> = { CRITICAL: "bg-rose-500/20 text-rose-400", HIGH: "bg-orange-500/20 text-orange-400", MEDIUM: "bg-amber-500/20 text-amber-400", LOW: "bg-blue-500/20 text-blue-400" };
+  return c[s?.toUpperCase()] || "bg-gray-500/20 text-gray-400";
 }
 
 export default function AlertsPage() {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [severityFilter, setSeverityFilter] = useState("ALL");
-  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [statusFilter, setStatusFilter] = useState("ACTIVE");
+  const [diag, setDiag] = useState<Record<string, { loading: boolean; text?: string }>>({});
+  const [confirm, setConfirm] = useState<Group | null>(null);
   const { notify } = useToast();
 
-  useEffect(() => {
-    loadAlerts();
-  }, []);
-
-  async function loadAlerts() {
-    try {
-      const data = await getAlerts();
-      setAlerts(Array.isArray(data) ? data : data.data || []);
-    } catch {
-      setError("Erro ao carregar alertas.");
-    } finally {
-      setLoading(false);
-    }
+  useEffect(() => { load(); }, []);
+  async function load() {
+    try { const data = await getAlerts(); setAlerts(Array.isArray(data) ? data : data.data || []); }
+    catch { notify("Erro ao carregar alertas.", "error"); } finally { setLoading(false); }
   }
 
-  async function handleResolve(id: string) {
-    try {
-      await resolveAlert(id);
-      setAlerts((prev) =>
-        prev.map((a) => (a.id === id ? { ...a, status: "RESOLVED" } : a))
-      );
-      notify("Alerta resolvido.", "success");
-    } catch {
-      notify("Não foi possível resolver o alerta. Tente novamente.", "error");
-    }
-  }
-
-  function severityBadge(severity: string) {
-    const colors: Record<string, string> = {
-      CRITICAL: "bg-rose-500/20 text-rose-400",
-      HIGH: "bg-orange-500/20 text-orange-400",
-      MEDIUM: "bg-amber-500/20 text-amber-400",
-      LOW: "bg-blue-500/20 text-blue-400",
-    };
-    return colors[severity?.toUpperCase()] || "bg-gray-500/20 text-gray-400";
-  }
-
-  const filtered = alerts.filter((a) => {
+  // Agrupa por integração+tipo+mensagem (colapsa a enxurrada)
+  const visible = alerts.filter((a) => {
     if (severityFilter !== "ALL" && a.severity?.toUpperCase() !== severityFilter) return false;
-    if (statusFilter === "ACTIVE" && a.status === "RESOLVED") return false;
-    if (statusFilter === "RESOLVED" && a.status !== "RESOLVED") return false;
+    if (statusFilter === "ACTIVE" && a.resolved) return false;
+    if (statusFilter === "RESOLVED" && !a.resolved) return false;
     return true;
   });
+  const groupsMap = new Map<string, Group>();
+  for (const a of visible) {
+    const key = `${a.integration?.id || a.message}|${a.type}`;
+    const g = groupsMap.get(key);
+    if (!g) groupsMap.set(key, { key, severity: a.severity, type: a.type, message: a.message, count: 1, first: a.createdAt, last: a.createdAt, ids: [a.id], client: a.client?.name, integrationId: a.integration?.id, integrationName: a.integration?.name });
+    else { g.count++; g.ids.push(a.id); if (a.createdAt < g.first) g.first = a.createdAt; if (a.createdAt > g.last) g.last = a.createdAt; if ((SEV_RANK[a.severity] || 0) > (SEV_RANK[g.severity] || 0)) g.severity = a.severity; }
+  }
+  const groups = Array.from(groupsMap.values()).sort((a, b) => (SEV_RANK[b.severity] || 0) - (SEV_RANK[a.severity] || 0) || b.last.localeCompare(a.last));
+
+  async function runDiagnose(g: Group) {
+    const id = g.ids[0];
+    setDiag((d) => ({ ...d, [g.key]: { loading: true } }));
+    try { const r = await diagnoseAlert(id); setDiag((d) => ({ ...d, [g.key]: { loading: false, text: r.text } })); }
+    catch { setDiag((d) => ({ ...d, [g.key]: { loading: false, text: "Não foi possível diagnosticar agora." } })); }
+  }
+  async function doResolve(g: Group) {
+    setConfirm(null);
+    try {
+      if (g.count > 1) { const r = await resolveAlertGroup({ integrationId: g.integrationId, type: g.type, message: g.integrationId ? undefined : g.message }); notify(`${r.resolved} alerta(s) resolvido(s).`, "success"); }
+      else { await resolveAlert(g.ids[0]); notify("Alerta resolvido.", "success"); }
+      await load();
+    } catch { notify("Não foi possível resolver. Tente novamente.", "error"); }
+  }
 
   if (loading) return <div className="text-[#9b95ad]">Carregando...</div>;
-  if (error) return <div className="text-rose-400">{error}</div>;
+
+  const openCount = alerts.filter((a) => !a.resolved).length;
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Alertas</h1>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <h1 className="text-2xl font-bold">Alertas</h1>
+        <ExplainData screen="Alertas" data={{ abertos: openCount, grupos: groups.slice(0, 12).map((g) => ({ severidade: g.severity, tipo: g.type, mensagem: g.message, ocorrencias: g.count, cliente: g.client, integracao: g.integrationName })) }} label="Explique e priorize (IA)" />
+      </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-4">
-        <select
-          value={severityFilter}
-          onChange={(e) => setSeverityFilter(e.target.value)}
-          className="px-4 py-2 bg-[#1a1527] border border-white/[0.08] rounded-lg text-sm text-[#e2e0ea] focus:outline-none focus:border-purple-500/50"
-        >
-          <option value="ALL">Todas severidades</option>
-          <option value="CRITICAL">Critical</option>
-          <option value="HIGH">High</option>
-          <option value="MEDIUM">Medium</option>
-          <option value="LOW">Low</option>
+      <div className="flex flex-wrap gap-3">
+        <select value={severityFilter} onChange={(e) => setSeverityFilter(e.target.value)} className="px-4 py-2 bg-[#1a1527] border border-white/[0.08] rounded-lg text-sm">
+          <option value="ALL">Todas severidades</option><option value="CRITICAL">Critical</option><option value="HIGH">High</option><option value="MEDIUM">Medium</option><option value="LOW">Low</option>
         </select>
-
         <div className="flex bg-[#1a1527] rounded-lg p-1 border border-white/[0.08]">
-          {[
-            { key: "ALL", label: "Todos" },
-            { key: "ACTIVE", label: "Ativos" },
-            { key: "RESOLVED", label: "Resolvidos" },
-          ].map((opt) => (
-            <button
-              key={opt.key}
-              onClick={() => setStatusFilter(opt.key)}
-              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors cursor-pointer ${
-                statusFilter === opt.key
-                  ? "bg-purple-500/20 text-purple-400"
-                  : "text-[#9b95ad] hover:text-white"
-              }`}
-            >
-              {opt.label}
-            </button>
+          {[{ key: "ACTIVE", label: "Ativos" }, { key: "RESOLVED", label: "Resolvidos" }, { key: "ALL", label: "Todos" }].map((o) => (
+            <button key={o.key} onClick={() => setStatusFilter(o.key)} className={`px-3 py-1.5 rounded-md text-sm font-medium cursor-pointer ${statusFilter === o.key ? "bg-purple-500/20 text-purple-400" : "text-[#9b95ad] hover:text-white"}`}>{o.label}</button>
           ))}
         </div>
+        <span className="text-sm text-[#9b95ad] self-center">{groups.length} grupo(s) · {visible.length} alerta(s)</span>
       </div>
 
-      {/* Alert Cards */}
       <div className="space-y-3">
-        {filtered.map((alert) => (
-          <div
-            key={alert.id}
-            className="bg-[#1a1527] rounded-xl p-4 border border-white/[0.08] flex items-center gap-4"
-          >
-            <span
-              className={`px-2.5 py-1 rounded-full text-xs font-semibold uppercase shrink-0 ${severityBadge(
-                alert.severity
-              )}`}
-            >
-              {alert.severity}
-            </span>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm">{alert.message}</p>
-              {alert.clientName && (
-                <p className="text-xs text-[#9b95ad] mt-0.5">{alert.clientName}</p>
+        {groups.map((g) => {
+          const d = diag[g.key];
+          return (
+            <div key={g.key} className="bg-[#1a1527] rounded-xl border border-white/[0.08] overflow-hidden">
+              <div className="p-4 flex items-start gap-4 flex-wrap">
+                <span className={`px-2.5 py-1 rounded-full text-xs font-semibold uppercase shrink-0 ${sevBadge(g.severity)}`}>{g.severity}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-[#e2e0ea]">{g.message}{g.count > 1 && <span className="ml-2 text-xs font-bold text-rose-300">×{g.count}</span>}</p>
+                  <p className="text-xs text-[#9b95ad] mt-1">
+                    <span className="font-mono px-1.5 py-0.5 rounded bg-white/[0.06] mr-1">{g.type}</span>
+                    {g.client ? `${g.client} · ` : ""}{g.integrationName || ""}
+                  </p>
+                  <p className="text-xs text-[#6b6580] mt-1">
+                    {g.count > 1 ? `primeiro ${new Date(g.first).toLocaleString("pt-BR")} · último ${new Date(g.last).toLocaleString("pt-BR")}` : new Date(g.last).toLocaleString("pt-BR")}
+                  </p>
+                </div>
+                {statusFilter !== "RESOLVED" && (
+                  <div className="flex gap-2 shrink-0">
+                    <button onClick={() => (d ? setDiag((x) => { const c = { ...x }; delete c[g.key]; return c; }) : runDiagnose(g))} className="px-3 py-1.5 text-xs font-medium bg-violet-500/15 text-violet-300 rounded-lg hover:bg-violet-500/25 cursor-pointer">{d ? "Ocultar" : "🤖 Diagnosticar"}</button>
+                    <button onClick={() => setConfirm(g)} className="px-3 py-1.5 text-xs font-medium bg-emerald-500/20 text-emerald-400 rounded-lg hover:bg-emerald-500/30 cursor-pointer">Resolver{g.count > 1 ? ` (${g.count})` : ""}</button>
+                  </div>
+                )}
+              </div>
+              {d && (
+                <div className="px-4 pb-4">
+                  {d.loading ? <div className="text-sm text-violet-300">A IA está analisando o alerta…</div> : <AiReport text={d.text || ""} title="Diagnóstico do alerta" subtitle={g.message} onRefresh={() => runDiagnose(g)} refreshing={d.loading} />}
+                </div>
               )}
-              <p className="text-xs text-[#9b95ad] mt-0.5">
-                {new Date(alert.createdAt).toLocaleString("pt-BR")}
-              </p>
             </div>
-            {alert.status !== "RESOLVED" ? (
-              <button
-                onClick={() => handleResolve(alert.id)}
-                className="px-3 py-1.5 text-xs font-medium bg-emerald-500/20 text-emerald-400 rounded-lg hover:bg-emerald-500/30 transition-colors shrink-0 cursor-pointer"
-              >
-                Resolver
-              </button>
-            ) : (
-              <span className="text-xs text-emerald-400 shrink-0">Resolvido</span>
-            )}
-          </div>
-        ))}
-        {filtered.length === 0 && (
-          <p className="text-[#9b95ad] text-sm">Nenhum alerta encontrado.</p>
-        )}
+          );
+        })}
+        {groups.length === 0 && <p className="text-[#9b95ad] text-sm">Nenhum alerta {statusFilter === "ACTIVE" ? "ativo" : ""} no momento. 🎉</p>}
       </div>
+
+      {/* Confirmação de resolução */}
+      {confirm && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setConfirm(null)}>
+          <div className="bg-[#1a1527] border border-white/[0.1] rounded-2xl p-6 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold mb-2">Resolver {confirm.count > 1 ? `${confirm.count} alertas` : "alerta"}?</h3>
+            <p className="text-sm text-[#9b95ad] mb-1">{confirm.message}</p>
+            <p className="text-xs text-[#6b6580] mb-4">
+              Marcar como resolvido só fecha o alerta no SAPLINK — confirme que a causa foi tratada. Se a falha persistir no SAP, um novo alerta será criado no próximo ciclo.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => setConfirm(null)} className="px-4 py-2 rounded-lg text-sm bg-white/[0.06] text-[#e2e0ea] hover:bg-white/[0.12] cursor-pointer">Cancelar</button>
+              <button onClick={() => doResolve(confirm)} className="px-4 py-2 rounded-lg text-sm bg-emerald-500 text-white font-semibold cursor-pointer">Confirmar</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

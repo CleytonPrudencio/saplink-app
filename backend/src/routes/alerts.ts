@@ -2,9 +2,14 @@ import { Router, Request, Response } from 'express';
 import prisma from '../lib/prisma';
 import { authMiddleware } from '../middleware/auth';
 import { tenancyMiddleware } from '../middleware/tenancy';
+import { diagnose } from '../services/ai';
 
 const router = Router();
 router.use(authMiddleware, tenancyMiddleware);
+
+async function tenantClientIds(consultancyId: string) {
+  return (await prisma.client.findMany({ where: { consultancyId }, select: { id: true } })).map((c) => c.id);
+}
 
 // GET / — list alerts for consultancy with filters
 router.get('/', async (req: Request, res: Response) => {
@@ -103,6 +108,42 @@ router.put('/:id/resolve', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Resolve alert error:', error);
     res.status(500).json({ error: 'Erro ao resolver alerta' });
+  }
+});
+
+// POST /resolve-group — resolve todos os alertas abertos de um mesmo agrupamento (integração+tipo)
+router.post('/resolve-group', async (req: Request, res: Response) => {
+  try {
+    const { integrationId, type, message } = req.body || {};
+    const clientIds = await tenantClientIds(req.consultancyId!);
+    const where: Record<string, unknown> = { clientId: { in: clientIds }, resolved: false };
+    if (integrationId) where.integrationId = integrationId; else if (message) where.message = message;
+    if (type) where.type = type;
+    const r = await prisma.alert.updateMany({ where: where as any, data: { resolved: true, resolvedAt: new Date() } });
+    res.json({ resolved: r.count });
+  } catch (error) {
+    console.error('Resolve group error:', error);
+    res.status(500).json({ error: 'Erro ao resolver o grupo.' });
+  }
+});
+
+// POST /:id/diagnose — IA explica o alerta (causa provável + o que fazer)
+router.post('/:id/diagnose', async (req: Request, res: Response) => {
+  try {
+    const alert = await prisma.alert.findUnique({ where: { id: req.params.id }, include: { client: true, integration: true } });
+    if (!alert || alert.client.consultancyId !== req.consultancyId!) { res.status(404).json({ error: 'Alerta não encontrado' }); return; }
+    const sameOpen = await prisma.alert.count({ where: { resolved: false, type: alert.type, integrationId: alert.integrationId, clientId: alert.clientId } });
+    const context = {
+      cliente: alert.client.name,
+      integracao: alert.integration?.name, tipo_integracao: alert.integration?.type,
+      tipo_alerta: alert.type, severidade: alert.severity, mensagem: alert.message,
+      ocorrencias_abertas_iguais: sameOpen, desde: alert.createdAt,
+    };
+    const text = await diagnose(`Explique este alerta e diga o que fazer para resolver: ${alert.message}`, context);
+    res.json({ text });
+  } catch (error) {
+    console.error('Alert diagnose error:', error);
+    res.status(500).json({ error: 'Erro ao diagnosticar o alerta.' });
   }
 });
 

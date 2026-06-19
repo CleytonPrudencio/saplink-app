@@ -311,6 +311,9 @@ async function analyzeFixCore(integration: AnalyzeInput): Promise<FixProposal> {
 export async function syncIntegration(integrationId: string): Promise<ProbeResult | null> {
   const integration = await prisma.integration.findUnique({ where: { id: integrationId } });
   if (!integration) return null;
+  // Integrações monitoradas pelo Agente on-premise têm dono próprio do status — não fazer probe HTTP
+  // (evita ping-pong ERROR↔OFFLINE e enxurrada de alertas duplicados).
+  if (integration.agentTokenHash) return null;
   const config = (decryptConfig(integration.config) || {}) as Cfg;
   const url = probeUrl(integration.type, config);
   if (!url) return null;
@@ -340,19 +343,25 @@ export async function syncIntegration(integrationId: string): Promise<ProbeResul
 
   // Alertas: dispara ao ENTRAR em estado ruim (de qualquer status anterior),
   // sem repetir enquanto permanecer no mesmo estado.
-  if (status !== 'ACTIVE' && integration.status !== status) {
-    await prisma.alert.create({
-      data: {
-        type: status === 'OFFLINE' ? 'INTEGRATION_OFFLINE' : 'INTEGRATION_ERROR',
-        severity: status === 'OFFLINE' ? 'CRITICAL' : 'HIGH',
-        message:
-          status === 'OFFLINE'
-            ? `Integração ${integration.name} não respondeu (${r.error || 'timeout'}).`
-            : `Integração ${integration.name} respondeu com erro HTTP ${r.httpStatus}.`,
-        clientId: integration.clientId,
-        integrationId: integration.id,
-      },
+  if (status !== 'ACTIVE') {
+    const open = await prisma.alert.findFirst({
+      where: { integrationId: integration.id, resolved: false, type: { in: ['INTEGRATION_OFFLINE', 'INTEGRATION_ERROR'] } },
+      select: { id: true },
     });
+    if (!open) {
+      await prisma.alert.create({
+        data: {
+          type: status === 'OFFLINE' ? 'INTEGRATION_OFFLINE' : 'INTEGRATION_ERROR',
+          severity: status === 'OFFLINE' ? 'CRITICAL' : 'HIGH',
+          message:
+            status === 'OFFLINE'
+              ? `Integração ${integration.name} não respondeu (${r.error || 'timeout'}).`
+              : `Integração ${integration.name} respondeu com erro HTTP ${r.httpStatus}.`,
+          clientId: integration.clientId,
+          integrationId: integration.id,
+        },
+      });
+    }
   } else if (status === 'ACTIVE' && integration.status !== 'ACTIVE') {
     await prisma.alert.updateMany({
       where: { integrationId: integration.id, resolved: false },

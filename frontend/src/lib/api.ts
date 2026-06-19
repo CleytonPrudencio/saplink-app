@@ -547,6 +547,14 @@ export async function resolveAlert(id: string) {
   const { data } = await api.put(`/alerts/${id}/resolve`);
   return data;
 }
+export async function resolveAlertGroup(payload: { integrationId?: string | null; type?: string; message?: string }) {
+  const { data } = await api.post('/alerts/resolve-group', payload);
+  return data as { resolved: number };
+}
+export async function diagnoseAlert(id: string) {
+  const { data } = await api.post(`/alerts/${id}/diagnose`);
+  return data as { text: string };
+}
 
 export async function createAlert(payload: Record<string, unknown>) {
   const { data } = await api.post('/alerts', payload);
