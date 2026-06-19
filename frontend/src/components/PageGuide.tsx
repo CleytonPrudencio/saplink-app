@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 
 interface Guide { what: string; why: string; actions: string[] }
@@ -185,14 +185,14 @@ export default function PageGuide() {
   const pathname = usePathname();
   const [hidden, setHidden] = useState(true);
   const [expanded, setExpanded] = useState(false);
-  const match = resolve(pathname || "");
+  const match = useMemo(() => resolve(pathname || ""), [pathname]);
 
   useEffect(() => {
     if (!match) { setHidden(true); return; }
     const dismissed = localStorage.getItem(`guide-off-${match[0]}`) === "1";
     setHidden(dismissed);
     setExpanded(false);
-  }, [pathname, match]);
+  }, [match]);
 
   if (!match || hidden) return null;
   const [route, g] = match;
