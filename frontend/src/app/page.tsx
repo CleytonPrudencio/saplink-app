@@ -14,6 +14,7 @@ const NAV = [
   { id: "problema", label: "Problema" },
   { id: "como", label: "Como funciona" },
   { id: "plataforma", label: "Plataforma" },
+  { id: "inovacao", label: "Inovação" },
   { id: "s4", label: "S/4HANA Cloud" },
   { id: "planos", label: "Planos" },
   { id: "faq", label: "FAQ" },
@@ -36,13 +37,12 @@ const GROUPS = [
   ["Resposta & Confiança", "#f87171", [["📣", "On-call multicanal", "Slack/Teams/Webhook/e-mail + escalonamento"], ["🎫", "Tickets Jira/ServiceNow", "Alerta vira chamado e fecha sozinho"], ["📡", "Radar de validade", "Certificados e segredos vencendo"], ["🚚", "Transports (STMS)", "Correlaciona incidente x transporte"]]],
 ];
 
-const IDEAS = [
-  ["🧨", "Blast-radius pré-transporte", "Antes de subir um TR, mostre quais interfaces e processos serão afetados."],
-  ["🩺", "Self-healing preditivo", "A fila vai estourar em 2h → o sistema propõe agir antes do incidente."],
-  ["📉", "Anomalia de negócio", "Tudo verde tecnicamente, mas o volume de pedidos caiu 60% — capture a perda silenciosa."],
-  ["🔗", "Lineage de processo", "Um incidente aparece como 'Faturamento travado', não como 'IDoc 51'."],
-  ["⚖️", "SLA-as-code", "Crédito/multa de SLA calculados e faturados automaticamente."],
-  ["🧠", "Post-mortem por IA", "RCA e runbook escritos sozinhos a cada incidente."],
+// Diferenciais que não existem em nenhum outro sistema de monitoramento SAP
+const INNOVATIONS = [
+  ["🛰️", "Rede Federada de Falhas", "O \"Waze do SAP\"", "Cada falha e a correção que funcionou viram conhecimento anônimo da rede. Quando algo quebra no seu cliente, o SAPLINK já sabe a correção vencedora — porque viu acontecer em dezenas de outros ambientes.", "Fica mais inteligente a cada cliente (efeito de rede)."],
+  ["🔗", "Causa raiz cross-camada", "On-prem + nuvem juntos", "Cruza os transports (STMS) com as falhas de CPI/IDoc que vieram depois e aponta a mudança que provavelmente causou. Ninguém mais tem as duas camadas no mesmo lugar.", "Achar a causa em minutos, não em horas."],
+  ["🤖", "AMS Autônomo", "Self-healing que aprende", "Detecta → diagnostica → corrige → mede → aprende. Correções de alta confiança são aplicadas sozinhas (com rollback e rastro). A confiança vem da Rede Federada.", "Reduz o L1/L2 manual a quase zero."],
+  ["💸", "Dinheiro em risco (ao vivo)", "Linguagem de CFO", "Traduz cada falha técnica em R$ parados agora — custo de parada por hora + documentos fiscais bloqueados, por processo de negócio.", "Muda a conversa de venda de técnica para financeira."],
 ];
 
 const FAQ = [
@@ -239,18 +239,30 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* Ideias / inovação */}
-        <section className="py-14 sm:py-16 border-t border-white/[0.06]">
-          <h2 className="text-2xl sm:text-3xl font-bold mb-2">No nosso roadmap: o que ninguém tem</h2>
-          <p className="text-[#9b95ad] mb-8">Inovações em construção que transformam operação em vantagem competitiva.</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {IDEAS.map((g) => (
-              <div key={g[1]} className="bg-[#1a1527] border border-white/[0.08] rounded-xl p-5 hover:border-purple-500/40 transition">
-                <div className="text-3xl mb-2">{g[0]}</div>
-                <p className="font-semibold">{g[1]}</p>
-                <p className="text-sm text-[#9b95ad] mt-1 leading-relaxed">{g[2]}</p>
+        {/* Inovação — diferenciais únicos (no ar) */}
+        <section id="inovacao" className="py-14 sm:py-16 border-t border-white/[0.06]">
+          <span className="inline-block px-3 py-1 rounded-full bg-purple-500/15 text-purple-300 text-xs font-bold mb-4">🦄 EXCLUSIVO · NO AR</span>
+          <h2 className="text-2xl sm:text-4xl font-bold mb-2">O que não existe em nenhum outro sistema</h2>
+          <p className="text-[#9b95ad] mb-8 max-w-3xl">Quatro diferenciais que viram moat: efeito de rede, dado cross-camada que só nós temos, autonomia e linguagem de CFO.</p>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {INNOVATIONS.map((g) => (
+              <div key={g[1]} className="bg-gradient-to-br from-purple-600/10 to-cyan-500/[0.06] border border-purple-500/25 rounded-2xl p-6 hover:border-purple-500/50 transition">
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="text-3xl">{g[0]}</span>
+                  <div>
+                    <p className="font-bold text-lg">{g[1]}</p>
+                    <p className="text-xs text-cyan-300">{g[2]}</p>
+                  </div>
+                </div>
+                <p className="text-sm text-[#c9c5d6] leading-relaxed">{g[3]}</p>
+                <p className="text-sm text-emerald-300 mt-3 flex items-center gap-1.5"><span>📈</span>{g[4]}</p>
               </div>
             ))}
+          </div>
+          <div className="mt-8 text-center">
+            <Link href="/funcionalidades" className="inline-block px-6 py-3 rounded-lg bg-white/[0.08] text-[#e2e0ea] font-semibold hover:bg-white/[0.14] transition">
+              Ver todas as funcionalidades em detalhe, com exemplos e ganhos →
+            </Link>
           </div>
         </section>
 

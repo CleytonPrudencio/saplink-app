@@ -5,6 +5,7 @@ import {
   getMe, getSla, setSlaTargets, getSlaReport, getImpact, getImpactIntegrations, setIntegrationCost,
   type SlaClient, type ImpactItem,
 } from "@/lib/api";
+import { AiReport } from "@/components/AiReport";
 
 function brl(cents: number) {
   return (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -73,10 +74,7 @@ export default function SlaPage() {
           ))}
         </div>
         {report && (
-          <div className="bg-[#15101f] border border-purple-500/20 rounded-xl p-4">
-            <p className="text-xs font-semibold text-purple-300 mb-1">🤖 Relatório de SLA — {report.client}</p>
-            <p className="text-sm text-[#c9c5d6] whitespace-pre-wrap leading-relaxed">{report.text}</p>
-          </div>
+          <AiReport text={report.text} title={`Relatório de SLA — ${report.client}`} subtitle="Análise mensal de níveis de serviço" meta={[{ label: "Cliente", value: report.client }, { label: "Gerado em", value: new Date().toLocaleString("pt-BR") }]} />
         )}
       </section>
 

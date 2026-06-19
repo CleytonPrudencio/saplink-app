@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { askPortfolio } from "@/lib/api";
+import { MarkdownLite } from "@/components/AiReport";
 
 interface Msg { role: "user" | "ai"; text: string }
 
@@ -60,8 +61,8 @@ export default function AskPage() {
         )}
         {msgs.map((m, i) => (
           <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-            <div className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm whitespace-pre-wrap leading-relaxed ${m.role === "user" ? "bg-gradient-to-r from-purple-600 to-cyan-500 text-white" : "bg-[#1a1527] border border-white/[0.08] text-[#e2e0ea]"}`}>
-              {m.text}
+            <div className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${m.role === "user" ? "bg-gradient-to-r from-purple-600 to-cyan-500 text-white whitespace-pre-wrap" : "bg-[#1a1527] border border-white/[0.08] text-[#e2e0ea]"}`}>
+              {m.role === "ai" ? <MarkdownLite text={m.text} /> : m.text}
             </div>
           </div>
         ))}
