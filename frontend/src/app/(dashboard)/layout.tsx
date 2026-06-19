@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { getMe, getBilling } from "@/lib/api";
 import Sidebar from "@/components/Sidebar";
+import PageGuide from "@/components/PageGuide";
 
 interface Consultancy {
   name?: string;
@@ -154,7 +155,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </button>
             </div>
           ) : (
-            children
+            <>
+              <PageGuide />
+              {children}
+            </>
           )}
         </div>
       </main>
