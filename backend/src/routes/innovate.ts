@@ -8,6 +8,7 @@ import { moneyGraph } from '../services/moneygraph';
 import { getProcesses, saveProcess, deleteProcess, reconcile } from '../services/recon';
 import { detectAnomalies } from '../services/bizanomaly';
 import { getConfig as getChatops, rotateToken, run as runChatops } from '../services/chatops';
+import { explainScreen } from '../services/ai';
 
 // Inovações unicórnio. Montado sob o tenantGate (auth + tenancy já aplicados).
 const router = Router();
@@ -86,6 +87,15 @@ router.get('/recon/:id', async (req: Request, res: Response) => {
 // ── Perda silenciosa de negócio ──
 router.get('/anomaly', async (req: Request, res: Response) => {
   try { res.json(await detectAnomalies(req.consultancyId!, req.query.clientId as string | undefined)); } catch (e) { console.error('anomaly', e); res.status(500).json({ error: 'Erro na detecção de anomalia.' }); }
+});
+
+// ── Explique esta tela (IA) ──
+router.post('/explain', async (req: Request, res: Response) => {
+  try {
+    const { screen, data } = req.body || {};
+    if (!screen) { res.status(400).json({ error: 'screen é obrigatório.' }); return; }
+    res.json({ text: await explainScreen(String(screen), data || {}) });
+  } catch (e) { console.error('explain', e); res.status(500).json({ error: 'Erro ao explicar a tela.' }); }
 });
 
 // ── ChatOps ──

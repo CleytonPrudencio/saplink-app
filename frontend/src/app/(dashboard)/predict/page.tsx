@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getPredict, getBenchmark, type Prediction, type BenchmarkRow } from "@/lib/api";
+import ExplainData from "@/components/ExplainData";
 
 const LEVEL: Record<string, { label: string; cls: string; bar: string }> = {
   HIGH: { label: "Alto", cls: "text-rose-300 border-rose-500/30 bg-rose-500/[0.06]", bar: "bg-rose-500" },
@@ -27,6 +28,7 @@ export default function PredictPage() {
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2">🔮 Previsão & Benchmark</h1>
         <p className="text-[#9b95ad] text-sm mt-1">Risco de falha por integração (estado + tendência) e comparação com o mercado.</p>
+        <div className="mt-3"><ExplainData screen="Previsão & Benchmark" data={{ previsao: pred?.summary, topRiscos: pred?.predictions?.slice(0, 8), benchmark: bench?.rows?.slice(0, 8) }} /></div>
       </div>
 
       {/* E1 — Previsão */}

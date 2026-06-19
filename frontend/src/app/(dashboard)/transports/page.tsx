@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { getTransports, getClients } from "@/lib/api";
+import ExplainData from "@/components/ExplainData";
 
 interface Client { id: string; name: string }
 type TData = Awaited<ReturnType<typeof getTransports>>;
@@ -23,6 +24,7 @@ export default function TransportsPage() {
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2">🚚 Radar de transports (STMS)</h1>
         <p className="text-[#9b95ad] text-sm mt-1">Transportes importados e correlação automática com incidentes abertos (provável causa).</p>
+        <div className="mt-3"><ExplainData screen="Radar de transports (STMS)" data={{ summary: data?.summary, amostra: (data as any)?.items?.slice(0, 12) }} /></div>
       </div>
 
       {s && (

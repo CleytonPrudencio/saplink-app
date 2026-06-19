@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import ExplainData from "@/components/ExplainData";
 import { getCatalog, getClients, type CatalogItem } from "@/lib/api";
 
 interface Client { id: string; name: string }
@@ -42,6 +43,7 @@ export default function CatalogPage() {
         <p className="text-[#9b95ad] text-sm mt-1">
           O landscape de integração vivo, auto-descoberto pelo agente: parceiros, destinos RFC, message types e serviços OData.
         </p>
+        <div className="mt-3"><ExplainData screen="Catálogo de interfaces" data={{ summary: data?.summary, amostra: data?.items?.slice(0, 12) }} /></div>
       </div>
 
       {s && (

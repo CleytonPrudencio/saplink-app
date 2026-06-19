@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getS4Events } from "@/lib/api";
+import ExplainData from "@/components/ExplainData";
 
 const ST: Record<string, string> = {
   DELIVERED: "bg-emerald-500/15 text-emerald-300", DEAD_LETTER: "bg-rose-500/15 text-rose-300",
@@ -20,6 +21,7 @@ export default function EventsPage() {
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2">📨 Event Mesh — eventos de negócio</h1>
         <p className="text-[#9b95ad] text-sm mt-1">Observabilidade da integração orientada a eventos do S/4HANA Cloud: entrega, dead-letter, retry e lag.</p>
+        <div className="mt-3"><ExplainData screen="Event Mesh — eventos" data={{ summary: data?.summary, amostra: data?.items?.slice(0, 12) }} /></div>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

@@ -273,6 +273,7 @@ export async function getAnomalies() { const { data } = await api.get('/innovate
 export async function getChatops() { const { data } = await api.get('/innovate/chatops'); return data as { enabled: boolean; hasToken: boolean; token?: string; channel?: string }; }
 export async function rotateChatopsToken(channel?: string) { const { data } = await api.post('/innovate/chatops/token', { channel }); return data as { token: string }; }
 export async function runChatops(text: string) { const { data } = await api.post('/innovate/chatops/run', { text }); return data as { reply: string; action: string }; }
+export async function explainScreen(screen: string, data: unknown) { const { data: r } = await api.post('/innovate/explain', { screen, data }); return r as { text: string }; }
 
 // C1 — Canais de notificação / on-call
 export interface NotificationChannel {

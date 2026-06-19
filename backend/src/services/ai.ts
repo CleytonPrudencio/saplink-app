@@ -146,6 +146,26 @@ sem texto extra, no formato {"action":"...","clientName":"...","filter":"..."}. 
   return runAI(sys, userMessage, 150);
 }
 
+const EXPLAIN_PROMPT = `Você é o copiloto de operações SAP do SAPLINK. O usuário está olhando uma tela e te enviou
+os dados que ela mostra. Explique em português, de forma OBJETIVA e prática, em 3 blocos curtos (sem markdown pesado):
+
+### Leitura
+2-3 frases: o que esses números querem dizer, em linguagem de negócio (não repita os dados, interprete).
+
+### Pontos de atenção
+Bullets curtos com o que está pior / merece olhar (cite nomes/valores reais do contexto). Se está tudo bem, diga isso.
+
+### O que fazer agora
+2-3 ações priorizadas e concretas (qual tela/transação/passo). Sempre acionável.
+
+Não invente dados fora do contexto. Seja direto — o usuário quer saber "e daí?".`;
+
+/** Explica os dados de uma tela e recomenda ações. Torna qualquer tela de dados acionável. */
+export async function explainScreen(screen: string, data: object): Promise<string> {
+  const userMessage = `Tela: ${screen}\n\nDados que a tela está mostrando:\n${JSON.stringify(data, null, 2)}\n\nExplique e recomende.`;
+  return runAI(EXPLAIN_PROMPT, userMessage, 480);
+}
+
 /** Indica se algum provedor de IA está configurado (Ollama ou Claude). */
 export function aiEnabled(): boolean {
   return !!(process.env.OLLAMA_URL || process.env.ANTHROPIC_API_KEY);

@@ -153,6 +153,26 @@ const GUIDES: Record<string, Guide> = {
     why: "Mantém o serviço ativo e mostra o que está contratado.",
     actions: ["Acompanhe a próxima fatura", "Adicione integrações/usuários conforme cresce"],
   },
+  "/settings": {
+    what: "Configurações da consultoria: marca (white-label), usuários e preferências.",
+    why: "Deixa o SAPLINK com a sua cara — na interface, nos relatórios e no portal do cliente.",
+    actions: ["Suba o logo e defina a cor da marca", "Cadastre os usuários da sua equipe"],
+  },
+  "/platform/leads": {
+    what: "Contatos que demonstraram interesse pela landing page.",
+    why: "É o seu funil de vendas — cada lead é uma oportunidade.",
+    actions: ["Fale com os leads novos primeiro", "Atualize o status conforme avança a negociação"],
+  },
+  "/platform/revenue": {
+    what: "Receita da plataforma: assinaturas, MRR e faturas.",
+    why: "A saúde financeira do negócio num lugar só.",
+    actions: ["Acompanhe o MRR e a inadimplência", "Identifique consultorias em risco de churn"],
+  },
+  "/platform": {
+    what: "Painel da plataforma: todas as consultorias (tenants) ativas.",
+    why: "Visão de quem usa o SAPLINK e como está cada conta.",
+    actions: ["Entre numa consultoria para ver detalhes", "Acompanhe adoção e uso"],
+  },
 };
 
 function resolve(pathname: string): [string, Guide] | null {
