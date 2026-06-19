@@ -151,15 +151,15 @@ export default function DeadCodePage() {
               <div key={entry.id} className={`bg-[#1a1527] rounded-xl border overflow-hidden transition-all ${isExpanded ? rec.borderColor : 'border-white/[0.08]'}`}>
                 {/* Row header — clickable */}
                 <button onClick={() => setExpandedId(isExpanded ? null : entry.id)} className="w-full p-4 text-left hover:bg-[#231d35] transition cursor-pointer">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 flex-wrap min-w-0">
                       <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${rec.bgColor} ${rec.color}`}>{rec.label}</span>
-                      <span className="font-mono font-medium text-sm text-[#e2e0ea]">{entry.objectName}</span>
+                      <span className="font-mono font-medium text-sm text-[#e2e0ea] break-all">{entry.objectName}</span>
                       <span className="px-2 py-0.5 bg-purple-500/15 text-purple-400 rounded text-[10px] font-medium uppercase">{type}</span>
                     </div>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-4 shrink-0 pl-1">
                       <span className="text-xs text-[#9b95ad]">{daysSinceLastUse(entry.lastUsed)}</span>
-                      <span className="text-xs text-[#9b95ad]">{entry.usageCount} exec.</span>
+                      <span className="text-xs text-[#9b95ad] whitespace-nowrap">{entry.usageCount} exec.</span>
                       <span className="text-[#9b95ad]">{isExpanded ? '−' : '+'}</span>
                     </div>
                   </div>

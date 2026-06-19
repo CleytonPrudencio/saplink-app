@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, Fragment } from "react";
 import { getCloud, diagnoseCloud, type CloudItem } from "@/lib/api";
+import { AiReport } from "@/components/AiReport";
 
 function statusCls(s?: string | null) {
   const u = (s || "").toUpperCase();
@@ -108,14 +109,17 @@ export default function CloudPage() {
                       ) : d?.err ? (
                         <div className="text-sm text-rose-300">Não foi possível gerar o diagnóstico agora. Tente novamente.</div>
                       ) : (
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2 text-xs text-[#9b95ad]">
-                            <span className="px-1.5 py-0.5 rounded bg-violet-500/15 text-violet-300 font-medium">Diagnóstico IA</span>
-                            {(d?.at || i.aiDiagnosedAt) && <span>{new Date((d?.at || i.aiDiagnosedAt)!).toLocaleString("pt-BR")}</span>}
-                            <button onClick={() => runDiagnose(i, true)} className="ml-auto underline hover:text-violet-300">Refazer análise</button>
-                          </div>
-                          <pre className="text-sm text-[#e2e0ea] whitespace-pre-wrap font-sans leading-relaxed">{d?.text || i.aiDiagnosis}</pre>
-                        </div>
+                        <AiReport
+                          text={(d?.text || i.aiDiagnosis) as string}
+                          title="Diagnóstico de falha — CPI/AIF"
+                          subtitle={`${i.source} · ${i.artifact} · ${i.status || "FAILED"}`}
+                          meta={[
+                            { label: "Artefato", value: i.artifact },
+                            ...((d?.at || i.aiDiagnosedAt) ? [{ label: "Gerado em", value: new Date((d?.at || i.aiDiagnosedAt)!).toLocaleString("pt-BR") }] : []),
+                          ]}
+                          onRefresh={() => runDiagnose(i, true)}
+                          refreshing={d?.loading}
+                        />
                       )}
                     </td>
                   </tr>

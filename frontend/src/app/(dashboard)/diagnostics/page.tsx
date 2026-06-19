@@ -11,6 +11,7 @@ import {
   diagnoseIntegration,
   autoFixIntegration,
 } from "@/lib/api";
+import { AiReport } from "@/components/AiReport";
 
 interface FixChange { field: string; label: string; from: string; to: string }
 interface SapNoteHint {
@@ -435,17 +436,17 @@ function DiagnosticsContent() {
 
       {/* Response */}
       {(response || analyzing) && (
-        <div className="bg-[#1a1527] rounded-xl p-6 border border-white/[0.08]">
-          <h3 className="text-sm font-semibold text-[#9b95ad] mb-3">Resultado</h3>
-          {analyzing ? (
+        analyzing ? (
+          <div className="bg-[#1a1527] rounded-xl p-6 border border-white/[0.08]">
+            <h3 className="text-sm font-semibold text-[#9b95ad] mb-3">Resultado</h3>
             <div className="flex items-center gap-3 text-[#9b95ad]">
               <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
               A IA está analisando o ambiente... isso pode levar até ~2 min. Pode continuar usando o sistema.
             </div>
-          ) : (
-            <div className="text-sm whitespace-pre-wrap">{response}</div>
-          )}
-        </div>
+          </div>
+        ) : (
+          <AiReport text={response} title="Diagnóstico do ambiente SAP" meta={[{ label: "Gerado em", value: new Date().toLocaleString("pt-BR") }]} />
+        )
       )}
 
       {/* History */}
@@ -475,9 +476,8 @@ function DiagnosticsContent() {
                 </button>
                 {isExpanded && (
                   <div className="px-4 pb-4 border-t border-white/[0.05]">
-                    <div className="mt-4 bg-[#0f0b1a] rounded-lg p-4">
-                      <p className="text-xs font-semibold text-purple-400 uppercase tracking-wider mb-3">Resultado do Diagnóstico</p>
-                      <div className="text-sm text-[#e2e0ea] whitespace-pre-wrap leading-relaxed">{entry.response}</div>
+                    <div className="mt-4">
+                      <AiReport text={entry.response} title="Diagnóstico do ambiente SAP" subtitle={entry.query} meta={[{ label: "Gerado em", value: new Date(entry.createdAt).toLocaleString("pt-BR") }]} />
                     </div>
                   </div>
                 )}

@@ -34,5 +34,9 @@ html, body { max-width: 100%; }
 img, svg, video { max-width: 100%; height: auto; }
 @media (max-width: 640px) {
   /* evita estouro horizontal por palavras/URLs longas */
-  .break-anywhere, table { word-break: break-word; }
+  .break-anywhere { word-break: break-word; }
+  /* tabelas: em vez de espremer as colunas (ilegível), rola na horizontal */
+  .overflow-x-auto { -webkit-overflow-scrolling: touch; }
+  .overflow-x-auto > table { min-width: 640px; }
+  .overflow-x-auto > table th, .overflow-x-auto > table td { white-space: nowrap; }
 }

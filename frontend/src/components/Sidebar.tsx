@@ -129,7 +129,7 @@ export default function Sidebar({ user, consultancy }: SidebarProps) {
 
   const nav = (
     <div className="flex flex-col h-full">
-      <div className="p-6 shrink-0">
+      <div className="py-6 pr-6 pl-16 md:pl-6 shrink-0">
         <Link href="/dashboard" className="block" onClick={() => setMobileOpen(false)}>
           {consultancy?.logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
