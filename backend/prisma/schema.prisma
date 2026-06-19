@@ -217,6 +217,8 @@ model RemediationAction {
   requestedAt   DateTime     @default(now())
   approvedAt    DateTime?
   executedAt    DateTime?
+  confidence    Int?         // AMS autônomo: 0-100 (confiança da IA/rede na correção)
+  autoExecuted  Boolean      @default(false) // executada sem aprovação humana
   @@index([clientId, status])
   @@index([integrationId, status])
 }
@@ -526,4 +528,38 @@ model WebhookEvent {
   provider        String
   providerEventId String   @unique
   processedAt     DateTime @default(now())
+}
+
+// ====================== Inovações unicórnio ======================
+
+// Rede Federada de Falhas ("Waze do SAP") — assinatura GLOBAL e anonimizada de falha + correções.
+model FailureSignature {
+  id            String   @id @default(uuid())
+  sigKey        String   @unique // hash normalizado: source + tipo + erro sem ids
+  source        String   // CPI | AIF | IDOC | QRFC | TRFC | INTEGRATION
+  errorNorm     String   // mensagem normalizada (sem GUIDs/números)
+  sampleMessage String?  // exemplo real (anonimizado)
+  occurrences   Int      @default(0) // total de ocorrências na rede
+  clientsCount  Int      @default(0) // nº de tenants distintos afetados
+  fixes         Json?    // [{action, count, successCount, avgMinutes}]
+  firstSeenAt   DateTime @default(now())
+  lastSeenAt    DateTime @default(now())
+  @@index([occurrences])
+}
+
+// Liga assinatura ↔ tenant de forma anonimizada (hash do clientId) — só para contar distintos.
+model FailureSignatureClient {
+  sigKey     String
+  clientHash String
+  lastSeenAt DateTime @default(now())
+  @@id([sigKey, clientHash])
+}
+
+// AMS Autônomo — política de auto-correção por consultoria.
+model AutoHealPolicy {
+  consultancyId  String   @id
+  enabled        Boolean  @default(false)
+  minConfidence  Int      @default(85) // só auto-executa acima desta confiança
+  allowedActions Json?    // ["REPROCESS_IDOC","RETRY_TRFC","UNLOCK_QUEUE"]
+  updatedAt      DateTime @updatedAt
 }

@@ -1,4 +1,5 @@
 import prisma from '../lib/prisma';
+import { recordFix } from './federated';
 
 // Mapeia o tipo de item para a ação de remediação padrão e a transação SAP equivalente.
 export const ACTION_FOR_KIND: Record<string, string> = {
@@ -100,5 +101,11 @@ export async function recordResult(integrationId: string, actionId: string, resu
   if (result.ok && action.sapItemId) {
     await prisma.sapItem.update({ where: { id: action.sapItemId }, data: { resolved: true } }).catch(() => {});
   }
+  // ensina a Rede Federada: esta correção funcionou/falhou para esta assinatura de falha
+  try {
+    const item = action.sapItemId ? await prisma.sapItem.findUnique({ where: { id: action.sapItemId }, select: { kind: true, statusText: true } }) : null;
+    const minutes = action.requestedAt ? Math.round((Date.now() - action.requestedAt.getTime()) / 60000) : undefined;
+    if (item) await recordFix(item.kind, item.statusText, action.actionType, result.ok, minutes);
+  } catch { /* não bloqueia */ }
   return { action: updated };
 }

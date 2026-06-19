@@ -256,6 +256,14 @@ export async function getCpiConfigs() { const { data } = await api.get('/s4/cpi'
 export async function saveCpiConfig(clientId: string, payload: Record<string, unknown>) { const { data } = await api.put(`/s4/cpi/${clientId}`, payload); return data; }
 export async function syncCpi(clientId: string) { const { data } = await api.post(`/s4/cpi/${clientId}/sync`); return data; }
 
+// 🦄 Inovações
+export async function getFederated() { const { data } = await api.get('/innovate/federated'); return data as { summary: { signatures: number; occurrences: number }; items: any[] }; }
+export async function lookupFederated(source: string, message: string) { const { data } = await api.get('/innovate/federated/lookup', { params: { source, message } }); return data as { occurrences: number; clientsCount?: number; bestFix?: any; fixes?: any[]; sampleMessage?: string }; }
+export async function getCausal(clientId?: string) { const { data } = await api.get('/innovate/causal', { params: clientId ? { clientId } : {} }); return data as { window: number; summary: { correlated: number }; items: any[] }; }
+export async function getAutoheal() { const { data } = await api.get('/innovate/autoheal'); return data as { policy: { enabled: boolean; minConfidence: number; allowedActions: string[] }; scoreboard: any }; }
+export async function saveAutohealPolicy(payload: { enabled?: boolean; minConfidence?: number; allowedActions?: string[] }) { const { data } = await api.put('/innovate/autoheal/policy', payload); return data as { policy: any }; }
+export async function getMoneyGraph() { const { data } = await api.get('/innovate/money'); return data as { summary: { totalAtRiskCents: number; downtimeAtRiskCents: number; fiscalAtRiskCents: number; integrationsDown: number }; byProcess: any[]; nodes: any[] }; }
+
 // C1 — Canais de notificação / on-call
 export interface NotificationChannel {
   id: string; type: string; name: string; target: string; minSeverity: string; level: number; enabled: boolean;

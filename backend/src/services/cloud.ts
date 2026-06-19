@@ -1,5 +1,6 @@
 import prisma from '../lib/prisma';
 import { diagnose } from './ai';
+import { recordFailure } from './federated';
 
 export interface CloudItemInput {
   source: string;       // CPI | AIF
@@ -69,9 +70,10 @@ export async function ingestCloud(integrationId: string, clientId: string, items
     n++;
     if (failed) {
       failedArtifacts.add(it.artifact);
-      // nova falha (não existia ou estava resolvida) → garante alerta
+      // nova falha (não existia ou estava resolvida) → garante alerta + alimenta a rede federada
       if (!existing || existing.resolved) {
         if (await ensureCloudAlert(integrationId, clientId, it.source, it.artifact, it.status || 'FAILED', it.error)) alerts++;
+        await recordFailure(clientId, it.source, it.error || it.status).catch(() => {});
       }
     } else {
       seenHealthy.add(it.artifact);

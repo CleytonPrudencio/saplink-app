@@ -71,6 +71,15 @@ const tenantGroups: MenuGroup[] = [
     ],
   },
   {
+    title: "\uD83E\uDD84 Inova\u00E7\u00E3o",
+    items: [
+      { href: "/federated", label: "Rede Federada", icon: "\uD83D\uDEF0\uFE0F" },
+      { href: "/causal", label: "Causa cross-camada", icon: "\uD83D\uDD17" },
+      { href: "/autoheal", label: "AMS Aut\u00F4nomo", icon: "\uD83E\uDD16" },
+      { href: "/money", label: "Dinheiro em risco", icon: "\uD83D\uDCB8" },
+    ],
+  },
+  {
     title: "Valor & relat\u00F3rios",
     items: [
       { href: "/sla", label: "SLA & Impacto", icon: "\uD83D\uDCC8" },

@@ -8,6 +8,7 @@ import { ingestCatalog, CatalogItemInput } from '../services/catalog';
 import { ingestTransports, TransportInput } from '../services/transports';
 import { ingestCloud, CloudItemInput } from '../services/cloud';
 import { ingestS4 } from '../services/s4';
+import { autoHealClient } from '../services/autoheal';
 
 // Rotas do Agente on-premise. SEM JWT/tenancy: o agente autentica por token próprio
 // (header x-agent-token), que mapeia direto para a integração.
@@ -56,7 +57,13 @@ router.post('/sap-items', async (req: Request, res: Response) => {
   try {
     const items = (req.body?.items || []) as SapItemInput[];
     const result = await ingestSapItems(integration.id, integration.clientId, items);
-    res.json({ ok: true, ...result });
+    // AMS Autônomo: tenta auto-corrigir itens de alta confiança (assíncrono, não bloqueia)
+    let autoHealed = 0;
+    try {
+      const client = await prisma.client.findUnique({ where: { id: integration.clientId }, select: { consultancyId: true } });
+      if (client) autoHealed = await autoHealClient(client.consultancyId, integration.clientId);
+    } catch (e) { console.error('autoHeal error:', e); }
+    res.json({ ok: true, ...result, autoHealed });
   } catch (error) {
     console.error('Agent sap-items error:', error);
     res.status(500).json({ error: 'Erro ao processar itens do agente' });

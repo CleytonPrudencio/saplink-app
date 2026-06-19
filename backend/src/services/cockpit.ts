@@ -1,4 +1,5 @@
 import prisma from '../lib/prisma';
+import { recordFailure } from './federated';
 
 export interface SapItemInput {
   kind: string;            // IDOC | QRFC | TRFC
@@ -28,11 +29,14 @@ export async function ingestSapItems(integrationId: string, clientId: string, it
       depth: typeof it.depth === 'number' ? it.depth : 1,
       remediable: !!it.remediable,
     };
+    const prev = await prisma.sapItem.findUnique({ where: { integrationId_kind_ref: { integrationId, kind: it.kind, ref: it.ref } }, select: { resolved: true } });
     await prisma.sapItem.upsert({
       where: { integrationId_kind_ref: { integrationId, kind: it.kind, ref: it.ref } },
       update: { ...data, clientId, resolved: false, lastSeenAt: new Date() },
       create: { integrationId, clientId, kind: it.kind, ref: it.ref, ...data },
     });
+    // item de erro novo → alimenta a Rede Federada (anonimizado)
+    if (!prev || prev.resolved) await recordFailure(clientId, it.kind, it.statusText || it.statusCode).catch(() => {});
   }
   const existing = await prisma.sapItem.findMany({
     where: { integrationId, resolved: false },
