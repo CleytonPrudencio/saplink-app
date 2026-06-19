@@ -35,7 +35,7 @@ services:
       ANTHROPIC_API_KEY: ""
       # IA local grátis via Ollama (deixe OLLAMA_URL vazio para usar Claude/mock)
       OLLAMA_URL: "http://ollama:11434"
-      OLLAMA_MODEL: "qwen2.5:3b"
+      OLLAMA_MODEL: "qwen2.5:7b"
       PORT: "8080"
       SIMULATION_ENABLED: "${SIMULATION_ENABLED:-false}"
       SIMULATION_INTERVAL: "30000"
