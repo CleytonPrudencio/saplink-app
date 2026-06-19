@@ -80,6 +80,10 @@ const tenantGroups: MenuGroup[] = [
       { href: "/recon", label: "Reconcilia\u00E7\u00E3o E2E", icon: "\uD83D\uDD01" },
       { href: "/anomaly", label: "Perda silenciosa", icon: "\uD83D\uDCC9" },
       { href: "/chatops", label: "ChatOps", icon: "\uD83D\uDCAC" },
+      { href: "/preflight", label: "Pr\u00E9-voo de mudan\u00E7a", icon: "\uD83E\uDDE8" },
+      { href: "/timemachine", label: "Time machine", icon: "\u23EA" },
+      { href: "/audit", label: "Auditoria & SoD", icon: "\uD83D\uDEE1\uFE0F" },
+      { href: "/partners", label: "Parceiros & FinOps", icon: "\uD83E\uDD1D" },
     ],
   },
   {

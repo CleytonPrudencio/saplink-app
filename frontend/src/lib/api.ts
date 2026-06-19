@@ -274,6 +274,13 @@ export async function getChatops() { const { data } = await api.get('/innovate/c
 export async function rotateChatopsToken(channel?: string) { const { data } = await api.post('/innovate/chatops/token', { channel }); return data as { token: string }; }
 export async function runChatops(text: string) { const { data } = await api.post('/innovate/chatops/run', { text }); return data as { reply: string; action: string }; }
 export async function explainScreen(screen: string, data: unknown) { const { data: r } = await api.post('/innovate/explain', { screen, data }); return r as { text: string }; }
+// Inovações v3
+export async function getPreflightList() { const { data } = await api.get('/innovate/preflight'); return data as { transports: any[] }; }
+export async function getBlastRadius(id: string) { const { data } = await api.get(`/innovate/preflight/${id}`); return data as any; }
+export async function getIncidents() { const { data } = await api.get('/innovate/timemachine'); return data as { incidents: any[] }; }
+export async function getTimeline(id: string) { const { data } = await api.get(`/innovate/timemachine/${id}`); return data as any; }
+export async function getAudit() { const { data } = await api.get('/innovate/audit'); return data as { summary: { changes: number; remediations: number; sodViolations: number }; ledger: any[] }; }
+export async function getPartners() { const { data } = await api.get('/innovate/partners'); return data as { partners: any[]; summary: any; finops: { flows: any[]; summary: any } }; }
 
 // C1 — Canais de notificação / on-call
 export interface NotificationChannel {

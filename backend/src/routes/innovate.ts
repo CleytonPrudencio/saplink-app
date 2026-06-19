@@ -9,6 +9,10 @@ import { getProcesses, saveProcess, deleteProcess, reconcile } from '../services
 import { detectAnomalies } from '../services/bizanomaly';
 import { getConfig as getChatops, rotateToken, run as runChatops } from '../services/chatops';
 import { explainScreen } from '../services/ai';
+import { listTransports as pfList, blastRadius } from '../services/preflight';
+import { listIncidents, timeline } from '../services/timemachine';
+import { auditLedger } from '../services/audit';
+import { partnerReliability, btpFinops } from '../services/partners';
 
 // Inovações unicórnio. Montado sob o tenantGate (auth + tenancy já aplicados).
 const router = Router();
@@ -108,6 +112,37 @@ router.post('/chatops/token', requireConsultancyAdmin, async (req: Request, res:
 router.post('/chatops/run', async (req: Request, res: Response) => {
   try { res.json(await runChatops(req.consultancyId!, String(req.body?.text || ''), req.user?.userId)); }
   catch (e) { console.error('chatops run', e); res.status(500).json({ error: 'Erro ao processar comando.' }); }
+});
+
+// ── Pré-voo de mudança (blast radius) ──
+router.get('/preflight', async (req: Request, res: Response) => {
+  try { res.json({ transports: await pfList(req.consultancyId!) }); } catch (e) { console.error('preflight', e); res.status(500).json({ error: 'Erro no pré-voo.' }); }
+});
+router.get('/preflight/:id', async (req: Request, res: Response) => {
+  const r = await blastRadius(req.consultancyId!, req.params.id);
+  if ('error' in r) { res.status(404).json({ error: 'Transport não encontrado.' }); return; }
+  res.json(r);
+});
+
+// ── Time machine de incidente ──
+router.get('/timemachine', async (req: Request, res: Response) => {
+  try { res.json({ incidents: await listIncidents(req.consultancyId!) }); } catch (e) { console.error('timemachine', e); res.status(500).json({ error: 'Erro na time machine.' }); }
+});
+router.get('/timemachine/:id', async (req: Request, res: Response) => {
+  const r = await timeline(req.consultancyId!, req.params.id);
+  if ('error' in r) { res.status(404).json({ error: 'Incidente não encontrado.' }); return; }
+  res.json(r);
+});
+
+// ── Auditoria / Compliance ──
+router.get('/audit', async (req: Request, res: Response) => {
+  try { res.json(await auditLedger(req.consultancyId!)); } catch (e) { console.error('audit', e); res.status(500).json({ error: 'Erro na auditoria.' }); }
+});
+
+// ── Parceiros EDI + FinOps BTP ──
+router.get('/partners', async (req: Request, res: Response) => {
+  try { res.json({ ...(await partnerReliability(req.consultancyId!)), finops: await btpFinops(req.consultancyId!) }); }
+  catch (e) { console.error('partners', e); res.status(500).json({ error: 'Erro nos parceiros/FinOps.' }); }
 });
 
 export default router;

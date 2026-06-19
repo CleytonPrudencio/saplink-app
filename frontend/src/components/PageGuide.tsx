@@ -153,6 +153,26 @@ const GUIDES: Record<string, Guide> = {
     why: "Mantém o serviço ativo e mostra o que está contratado.",
     actions: ["Acompanhe a próxima fatura", "Adicione integrações/usuários conforme cresce"],
   },
+  "/preflight": {
+    what: "Pré-voo de mudança: o raio de impacto de um transport antes de ir pra produção.",
+    why: "Evita a parada pós-deploy — você sabe o que vai mexer e testa o certo.",
+    actions: ["Escolha o transport a subir", "Veja o score de risco e o que será afetado", "Siga o plano de teste antes do import"],
+  },
+  "/timemachine": {
+    what: "Reconstrói a linha do tempo de um incidente + o quanto teria sido economizado com detecção rápida.",
+    why: "Prova de ROI irrefutável e aprendizado de causa.",
+    actions: ["Escolha o incidente", "Veja a sequência de eventos", "Use o contrafactual de R$ na renovação"],
+  },
+  "/audit": {
+    what: "Trilha de mudanças e remediações com checagem de segregação de função (SoD).",
+    why: "Compliance pronto para o auditor, sem montar planilha.",
+    actions: ["Revise as violações SoD em vermelho", "Gere o pacote de evidências com IA"],
+  },
+  "/partners": {
+    what: "Ranking de parceiros EDI por dado ruim + custo estimado de BTP por IFlow.",
+    why: "Cobra o parceiro certo e controla o gasto de nuvem.",
+    actions: ["Aja sobre o parceiro com mais erros", "Veja o IFlow que mais consome BTP"],
+  },
   "/settings": {
     what: "Configurações da consultoria: marca (white-label), usuários e preferências.",
     why: "Deixa o SAPLINK com a sua cara — na interface, nos relatórios e no portal do cliente.",
