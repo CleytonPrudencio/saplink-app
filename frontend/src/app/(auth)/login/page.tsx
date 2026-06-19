@@ -88,12 +88,12 @@ export default function LoginPage() {
         </form>
 
         <p className="text-center text-sm text-[#9b95ad] mt-6">
-          Ainda nao tem conta?{" "}
+          Quer conhecer o SAPLINK?{" "}
           <Link
-            href="/register"
+            href="/"
             className="text-purple-400 hover:text-purple-300 transition-colors"
           >
-            Criar conta
+            Tenho interesse
           </Link>
         </p>
       </div>

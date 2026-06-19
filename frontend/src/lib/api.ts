@@ -89,6 +89,20 @@ export async function getPublicPlans() {
   return data;
 }
 
+// Lead / manifestação de interesse (cadastro fechado por enquanto)
+export async function submitLead(payload: Record<string, unknown>) {
+  const { data } = await api.post('/leads', payload);
+  return data;
+}
+export async function getLeads(status?: string) {
+  const { data } = await api.get('/leads', { params: status ? { status } : {} });
+  return data as { leads: any[]; counts: Record<string, number> };
+}
+export async function updateLeadStatus(id: string, status: string) {
+  const { data } = await api.patch(`/leads/${id}`, { status });
+  return data;
+}
+
 // Copiloto "Pergunte ao SAPLINK"
 export async function askPortfolio(question: string) {
   const { data } = await api.post('/ask', { question });

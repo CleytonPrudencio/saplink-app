@@ -369,7 +369,7 @@ export default function BillingPage() {
         {b.invoices.length === 0 ? (
           <p className="px-6 pb-6 text-sm text-[#9b95ad]">Nenhuma fatura ainda.</p>
         ) : (
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto"><table className="w-full text-sm min-w-[520px]">
             <thead>
               <tr className="text-[#9b95ad] text-xs uppercase tracking-wider border-b border-white/[0.06]">
                 <th className="text-left px-6 py-2">Data</th>
@@ -403,7 +403,7 @@ export default function BillingPage() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         )}
       </div>
 

@@ -414,6 +414,22 @@ model CpiConfig {
   createdAt     DateTime @default(now())
 }
 
+// Lead (manifestação de interesse na landing) — cadastro público fechado por enquanto.
+model Lead {
+  id        String   @id @default(uuid())
+  name      String
+  email     String
+  phone     String?
+  company   String?
+  role      String?
+  employees String?
+  message   String?
+  source    String?  @default("landing")
+  status    String   @default("NEW") // NEW | CONTACTED | QUALIFIED | DISCARDED
+  createdAt DateTime @default(now())
+  @@index([status, createdAt])
+}
+
 model Diagnostic {
   id        String   @id @default(uuid())
   query     String

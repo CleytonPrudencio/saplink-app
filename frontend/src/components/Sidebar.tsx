@@ -93,6 +93,7 @@ const platformGroups: MenuGroup[] = [
     title: "Plataforma",
     items: [
       { href: "/platform", label: "Consultorias", icon: "\uD83C\uDFE2" },
+      { href: "/platform/leads", label: "Leads", icon: "\uD83D\uDCE5" },
       { href: "/platform/revenue", label: "Receita", icon: "\uD83D\uDCB0" },
     ],
   },
