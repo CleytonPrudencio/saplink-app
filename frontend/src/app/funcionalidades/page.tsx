@@ -38,6 +38,30 @@ const GROUPS: Group[] = [
         example: "\"R$ 14.430 parados agora — Exportação/Faturamento: integração EDI ANTT fora há 3,2h\". O diretor entende na hora; o técnico não precisa traduzir.",
         gains: ["Prioriza pelo que dói no caixa, não pelo alerta mais barulhento", "Justifica o contrato de monitoramento em R$", "Muda a venda de técnica para financeira"],
       },
+      {
+        icon: "🔁", name: "Reconciliação ponta-a-ponta", tagline: "Entregue ≠ virou negócio", flag: "Exclusivo",
+        how: "Você define a jornada esperada do documento (ex.: Pedido no CPI → Ordem no S/4 → Fatura). O SAPLINK conta quantos documentos chegaram a cada estágio numa janela de tempo e mostra o funil — onde o volume some entre uma etapa e outra.",
+        example: "1.000 pedidos entraram, 998 viraram ordem, mas só 940 geraram fatura. O painel aponta: \"60 documentos perdidos entre Ordem → Fatura — investigue aqui primeiro\".",
+        gains: ["Pega a falha silenciosa que diz 'sucesso' mas o objeto nunca nasceu", "Mostra o vazamento exato no processo, não só um erro solto", "Garante que o que entrou virou faturamento de verdade"],
+      },
+      {
+        icon: "⚙️", name: "Remediação generativa", tagline: "A IA escreve a correção", flag: "Exclusivo",
+        how: "Além de diagnosticar, a IA gera o artefato de correção pronto: o trecho de Groovy do CPI, o ajuste de mapeamento, o filtro OData ou o comando SAP — com resumo, onde aplicar e como validar. Sai como relatório estilizado e PDF.",
+        example: "Falha \"Sold-to party não encontrado\" → a IA devolve o Groovy de verificação pronto, indica colar no artefato SalesOrder_Replication e como testar.",
+        gains: ["De 'explica o problema' para 'entrega a solução'", "Reduz o tempo de correção a minutos", "Padroniza a qualidade da correção entre analistas"],
+      },
+      {
+        icon: "💬", name: "ChatOps por WhatsApp", tagline: "Opere o SAP por mensagem", flag: "Exclusivo",
+        how: "Conecte um canal (WhatsApp Cloud API, Twilio, Telegram) via webhook com token. A IA entende o comando em português, executa o que é leitura na hora e, para ações que mexem no SAP, cria um pedido com aprovação. Tem console de teste dentro do app.",
+        example: "No WhatsApp do plantão: \"reprocessa os IDocs travados do cliente Agro\" → \"📝 Criei 7 pedidos de correção para Agro. Aprove no painel para o agente executar\".",
+        gains: ["Operação na palma da mão, sem abrir o painel", "Plantão responde de qualquer lugar", "Seguro: nada destrutivo roda sem aprovação"],
+      },
+      {
+        icon: "📉", name: "Perda silenciosa de negócio", tagline: "Radar de receita", flag: "Exclusivo",
+        how: "O SAPLINK aprende o volume normal de cada fluxo de mensagens e compara com o agora. Se o volume cai muito abaixo do esperado — mesmo com tudo 'verde' tecnicamente — dispara um alerta de negócio.",
+        example: "Tudo verde, mas entraram 60% menos pedidos na última hora vs a média. O radar avisa antes de o cliente ligar perguntando do faturamento.",
+        gains: ["Captura a perda que nenhum monitor técnico vê", "Antecipa problema de negócio, não só de TI", "Protege a receita silenciosamente parada"],
+      },
     ],
   },
   {

@@ -43,6 +43,10 @@ const INNOVATIONS = [
   ["🔗", "Causa raiz cross-camada", "On-prem + nuvem juntos", "Cruza os transports (STMS) com as falhas de CPI/IDoc que vieram depois e aponta a mudança que provavelmente causou. Ninguém mais tem as duas camadas no mesmo lugar.", "Achar a causa em minutos, não em horas."],
   ["🤖", "AMS Autônomo", "Self-healing que aprende", "Detecta → diagnostica → corrige → mede → aprende. Correções de alta confiança são aplicadas sozinhas (com rollback e rastro). A confiança vem da Rede Federada.", "Reduz o L1/L2 manual a quase zero."],
   ["💸", "Dinheiro em risco (ao vivo)", "Linguagem de CFO", "Traduz cada falha técnica em R$ parados agora — custo de parada por hora + documentos fiscais bloqueados, por processo de negócio.", "Muda a conversa de venda de técnica para financeira."],
+  ["🔁", "Reconciliação ponta-a-ponta", "Entregue ≠ virou negócio", "Rastreia o documento pela jornada (pedido → ordem → fatura) e mostra onde o volume se perde. Pega a falha silenciosa que diz \"sucesso\" mas o objeto nunca nasceu.", "Acha o vazamento que nenhum monitor vê."],
+  ["⚙️", "Remediação generativa", "A IA escreve a correção", "Não só descreve o problema — entrega o artefato pronto (Groovy, mapeamento, filtro OData) para colar e aplicar.", "De \"explica\" para \"resolve\" em segundos."],
+  ["💬", "ChatOps por WhatsApp", "Opere o SAP por mensagem", "\"Reprocessa os IDocs do cliente X\" pelo WhatsApp/Telegram — a IA entende, age e pede aprovação para o que mexe no SAP.", "Operação na palma da mão, sem abrir o painel."],
+  ["📉", "Perda silenciosa de negócio", "Radar de receita", "Alerta quando o volume cai muito abaixo do normal — mesmo com tudo verde tecnicamente. Captura a receita parando antes de virar reclamação.", "Vê o prejuízo que o monitor técnico não vê."],
 ];
 
 const FAQ = [
@@ -243,7 +247,7 @@ export default function LandingPage() {
         <section id="inovacao" className="py-14 sm:py-16 border-t border-white/[0.06]">
           <span className="inline-block px-3 py-1 rounded-full bg-purple-500/15 text-purple-300 text-xs font-bold mb-4">🦄 EXCLUSIVO · NO AR</span>
           <h2 className="text-2xl sm:text-4xl font-bold mb-2">O que não existe em nenhum outro sistema</h2>
-          <p className="text-[#9b95ad] mb-8 max-w-3xl">Quatro diferenciais que viram moat: efeito de rede, dado cross-camada que só nós temos, autonomia e linguagem de CFO.</p>
+          <p className="text-[#9b95ad] mb-8 max-w-3xl">Oito diferenciais que viram moat: efeito de rede, dado cross-camada que só nós temos, autonomia, reconciliação que ninguém faz, IA que escreve a correção, operação por WhatsApp e a linguagem do CFO.</p>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {INNOVATIONS.map((g) => (
               <div key={g[1]} className="bg-gradient-to-br from-purple-600/10 to-cyan-500/[0.06] border border-purple-500/25 rounded-2xl p-6 hover:border-purple-500/50 transition">
