@@ -52,11 +52,22 @@ export async function syncCpi(consultancyId: string, clientId: string) {
     if (!res.ok) { await mark(cfg.id, `MPL HTTP ${res.status} — confira a baseUrl/permissão (MessageProcessingLog.Read).`); return { ok: false, reason: `http_${res.status}` }; }
     const data = (await res.json()) as { d?: { results?: any[] } };
     const rows = data.d?.results || [];
-    const items = rows.map((r) => ({
+    const items: any[] = rows.map((r) => ({
       source: 'CPI', artifact: r.IntegrationFlowName || r.ApplicationMessageType || '(iflow)', messageId: r.MessageGuid,
-      direction: undefined, status: (r.Status || '').toUpperCase(), error: r.LogEnd ? undefined : undefined,
+      direction: undefined, status: (r.Status || '').toUpperCase(), error: undefined,
       occurredAt: (parseSapDate(r.LogEnd) || parseSapDate(r.LogStart) || new Date()).toISOString(),
     })).filter((i) => i.messageId);
+    // puxa a mensagem de erro detalhada dos MPL com falha (até 15, pra não estourar)
+    let ef = 0;
+    for (const it of items) {
+      if (ef >= 15) break;
+      if (/FAIL|ERROR|ESCAL/i.test(it.status)) {
+        try {
+          const er = await fetch(`${cfg.baseUrl}/MessageProcessingLogs('${it.messageId}')/ErrorInformation/$value`, { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(8000) });
+          if (er.ok) { const t = (await er.text()).trim(); if (t) { it.error = t.slice(0, 400); ef++; } }
+        } catch { /* ignore */ }
+      }
+    }
     // pendura num "integration" CPI do cliente (cria se não existir)
     let integ = await prisma.integration.findFirst({ where: { clientId, type: 'CPI', name: 'SAP Cloud Integration (BTP)' } });
     if (!integ) integ = await prisma.integration.create({ data: { name: 'SAP Cloud Integration (BTP)', type: 'CPI', status: 'ACTIVE', clientId } });

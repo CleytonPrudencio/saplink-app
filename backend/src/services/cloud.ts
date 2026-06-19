@@ -10,12 +10,50 @@ export interface CloudItemInput {
   occurredAt?: string;
 }
 
-/** Ingere mensagens CPI/AIF reportadas pelo agente (upsert por integração+source+messageId). */
+function cloudSeverity(status: string): string {
+  const s = (status || '').toUpperCase();
+  if (s.includes('ESCAL')) return 'CRITICAL';
+  if (s.includes('FAIL') || s.includes('ERROR')) return 'HIGH';
+  return 'MEDIUM'; // RETRY
+}
+
+/** Cria 1 alerta aberto por artefato com falha (dedup) — alimenta on-call/ticket/SLA. */
+async function ensureCloudAlert(integrationId: string, clientId: string, source: string, artifact: string, status: string, err?: string | null) {
+  const tag = `${source} · ${artifact}`;
+  const open = await prisma.alert.findFirst({ where: { integrationId, resolved: false, type: 'CLOUD_FAILURE', message: { startsWith: tag } } });
+  if (open) return false;
+  await prisma.alert.create({
+    data: {
+      type: 'CLOUD_FAILURE', severity: cloudSeverity(status),
+      message: `${tag} — mensagem ${status}${err ? `: ${String(err).slice(0, 180)}` : ''}`,
+      clientId, integrationId,
+    },
+  });
+  return true;
+}
+
+/** Resolve os alertas de CPI/AIF de artefatos que voltaram a processar sem falha. */
+async function clearCloudAlerts(integrationId: string, healthyArtifacts: Set<string>) {
+  const open = await prisma.alert.findMany({ where: { integrationId, resolved: false, type: 'CLOUD_FAILURE' }, select: { id: true, message: true } });
+  for (const a of open) {
+    for (const art of healthyArtifacts) {
+      if (a.message.includes(`· ${art} `) || a.message.includes(`· ${art} —`)) {
+        await prisma.alert.update({ where: { id: a.id }, data: { resolved: true, resolvedAt: new Date() } });
+        break;
+      }
+    }
+  }
+}
+
+/** Ingere mensagens CPI/AIF (upsert por integração+source+messageId) + gera alertas de falha. */
 export async function ingestCloud(integrationId: string, clientId: string, items: CloudItemInput[]) {
-  let n = 0;
+  let n = 0, alerts = 0;
+  const seenHealthy = new Set<string>();
+  const failedArtifacts = new Set<string>();
   for (const it of items || []) {
     if (!it.source || !it.artifact || !it.messageId) continue;
     const failed = /FAIL|ERROR|ESCAL|RETRY/i.test(it.status || '');
+    const existing = await prisma.cloudItem.findUnique({ where: { integrationId_source_messageId: { integrationId, source: it.source, messageId: it.messageId } } });
     const data = {
       clientId, artifact: it.artifact, direction: it.direction ?? null,
       status: it.status ?? null, error: it.error ?? null,
@@ -28,8 +66,20 @@ export async function ingestCloud(integrationId: string, clientId: string, items
       create: { integrationId, source: it.source, messageId: it.messageId, ...data },
     });
     n++;
+    if (failed) {
+      failedArtifacts.add(it.artifact);
+      // nova falha (não existia ou estava resolvida) → garante alerta
+      if (!existing || existing.resolved) {
+        if (await ensureCloudAlert(integrationId, clientId, it.source, it.artifact, it.status || 'FAILED', it.error)) alerts++;
+      }
+    } else {
+      seenHealthy.add(it.artifact);
+    }
   }
-  return { upserted: n };
+  // artefatos que só tiveram sucesso no lote → resolve alertas antigos (recuperação)
+  const healthy = new Set([...seenHealthy].filter((a) => !failedArtifacts.has(a)));
+  if (healthy.size) await clearCloudAlerts(integrationId, healthy);
+  return { upserted: n, alerts };
 }
 
 export interface CloudFilters { source?: string; status?: string; q?: string; clientId?: string }
