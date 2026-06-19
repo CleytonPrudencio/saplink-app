@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getS4Upgrade, getS4Apis } from "@/lib/api";
+import ExplainData from "@/components/ExplainData";
 
 const IMPACT: Record<string, { label: string; cls: string }> = {
   BREAKING: { label: "Quebra", cls: "bg-rose-500/15 text-rose-300" },
@@ -27,6 +28,7 @@ export default function UpgradePage() {
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2">🚀 Radar de Upgrade <span className="text-sm font-normal text-[#9b95ad]">· release {data?.release}</span></h1>
         <p className="text-[#9b95ad] text-sm mt-1">O que vai quebrar/mudar no próximo upgrade do S/4HANA Cloud — mapeado ao que você realmente usa.</p>
+        <div className="mt-3"><ExplainData screen="Radar de Upgrade S/4HANA" data={{ release: data?.release, resumo: data?.summary, achados: data?.findings?.slice(0, 12), apisDepreciadas: apis?.items?.filter((a: any) => a.deprecated) }} label="Gerar plano de upgrade (IA)" /></div>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

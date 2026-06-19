@@ -5,6 +5,7 @@ import {
   getMe, getValidityRadar, refreshCert, refreshAllCerts, setSecretExpiry,
   getAllIntegrations, type ValidityItem,
 } from "@/lib/api";
+import ExplainData from "@/components/ExplainData";
 
 interface IntegrationLite { id: string; name: string; type: string; client?: { name?: string } }
 
@@ -112,6 +113,7 @@ export default function ValidityPage() {
           </button>
         )}
       </div>
+      <ExplainData screen="Radar de validade (certificados/segredos)" data={{ itens: items.slice(0, 20) }} label="O que renovar primeiro (IA)" />
 
       {/* Resumo */}
       <div className="flex flex-wrap gap-3">

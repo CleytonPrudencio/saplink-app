@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { getMe, getS4Fiscal, reprocessFiscal } from "@/lib/api";
+import ExplainData from "@/components/ExplainData";
 
 function brl(c: number) { return (c / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }); }
 const ST: Record<string, { label: string; cls: string }> = {
@@ -37,6 +38,7 @@ export default function FiscalPage() {
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2">🧾 Fiscal — DRC / eDocument</h1>
         <p className="text-[#9b95ad] text-sm mt-1">NF-e, NFS-e e CT-e do S/4HANA Cloud: rejeições da SEFAZ, contingência e fila — com reprocesso.</p>
+        <div className="mt-3"><ExplainData screen="Cockpit Fiscal (DRC)" data={{ resumo: data?.summary, bloqueados: (data?.items || []).filter((d: any) => !d.resolved).slice(0, 12) }} /></div>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

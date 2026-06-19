@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getS4Overview, getS4Comm, getS4Apis, getMe, getClients, getCpiConfigs, saveCpiConfig, syncCpi, getS4Connections, saveS4Connection, syncS4Connection } from "@/lib/api";
+import ExplainData from "@/components/ExplainData";
 
 function brl(c: number) { return (c / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }); }
 const SEV: Record<string, string> = { EXPIRED: "text-rose-400", CRITICAL: "text-orange-400", WARN: "text-amber-300", OK: "text-emerald-400" };
@@ -88,6 +89,7 @@ export default function S4Page() {
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2">☁️ S/4HANA Cloud</h1>
         <p className="text-[#9b95ad] text-sm mt-1">Operação, governança de Clean Core e fiscal do seu S/4HANA Cloud — sem agente, via Communication Arrangement.</p>
+        <div className="mt-3"><ExplainData screen="Visão geral S/4HANA Cloud" data={{ overview: ov, apis: apis?.summary, comm: comm?.summary }} /></div>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

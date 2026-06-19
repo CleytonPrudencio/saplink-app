@@ -6,6 +6,7 @@ import {
   type SlaClient, type ImpactItem,
 } from "@/lib/api";
 import { AiReport } from "@/components/AiReport";
+import ExplainData from "@/components/ExplainData";
 
 function brl(cents: number) {
   return (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -60,6 +61,7 @@ export default function SlaPage() {
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2">📊 SLA & Impacto financeiro</h1>
         <p className="text-[#9b95ad] text-sm mt-1">Cumprimento de SLA por cliente e exposição em R$ — para apresentar ao C-level.</p>
+        <div className="mt-3"><ExplainData screen="SLA & Impacto financeiro" data={{ sla, impacto: impact?.totals }} /></div>
       </div>
 
       {/* SLA */}

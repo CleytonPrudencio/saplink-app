@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getCausal } from "@/lib/api";
+import ExplainData from "@/components/ExplainData";
 
 export default function CausalPage() {
   const [data, setData] = useState<{ window: number; summary: { correlated: number }; items: any[] } | null>(null);
@@ -14,6 +15,7 @@ export default function CausalPage() {
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2">🔗 Causa raiz cross-camada</h1>
         <p className="text-[#9b95ad] text-sm mt-1">Cruza os <b>transports (STMS, on-prem)</b> com as <b>falhas de CPI/IDoc</b> que apareceram logo depois — e aponta a mudança que provavelmente causou. Só o SAPLINK tem as duas camadas juntas.</p>
+        <div className="mt-3"><ExplainData screen="Causa raiz cross-camada" data={{ summary: data?.summary, links: data?.items?.slice(0, 8) }} /></div>
       </div>
 
       {data && (

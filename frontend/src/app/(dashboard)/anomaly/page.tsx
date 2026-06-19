@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getAnomalies } from "@/lib/api";
+import ExplainData from "@/components/ExplainData";
 
 const ST: Record<string, { c: string; l: string }> = {
   STOPPED: { c: "text-rose-400", l: "PAROU" },
@@ -20,6 +21,7 @@ export default function AnomalyPage() {
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2">📉 Perda silenciosa de negócio</h1>
         <p className="text-[#9b95ad] text-sm mt-1">Detecta quando o <b>volume</b> de mensagens cai muito abaixo do normal — mesmo com tudo &quot;verde&quot; tecnicamente. O alerta que captura receita parando antes de virar reclamação.</p>
+        <div className="mt-3"><ExplainData screen="Perda silenciosa de negócio" data={{ summary: data?.summary, fluxos: data?.items?.slice(0, 10) }} /></div>
       </div>
 
       {data && (

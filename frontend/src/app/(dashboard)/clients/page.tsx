@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import ExplainData from "@/components/ExplainData";
 import { getClients, createClient, deleteClient, getPortalStatus, enableClientPortal, disableClientPortal } from "@/lib/api";
 import HealthScoreRing from "@/components/HealthScoreRing";
 
@@ -107,6 +108,7 @@ export default function ClientsPage() {
           {showForm ? "Cancelar" : "+ Novo cliente"}
         </button>
       </div>
+      <ExplainData screen="Carteira de clientes" data={{ clientes: clients.map((c: any) => ({ nome: c.name, health: c.healthScore, integracoes: c.integrationCount ?? c._count?.integrations, alertas: c.alertCount ?? c._count?.alerts })) }} label="Priorizar a carteira (IA)" />
 
       {error && <div className="text-rose-400">{error}</div>}
 

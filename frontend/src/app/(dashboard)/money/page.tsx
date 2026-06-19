@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getMoneyGraph } from "@/lib/api";
+import ExplainData from "@/components/ExplainData";
 
 function brl(c: number) { return (c / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }); }
 
@@ -19,6 +20,7 @@ export default function MoneyPage() {
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2">💸 Dinheiro em risco (ao vivo)</h1>
         <p className="text-[#9b95ad] text-sm mt-1">Traduz cada falha técnica em R$ parados agora — custo de parada por hora das integrações + documentos fiscais bloqueados. O dashboard que o diretor entende.</p>
+        <div className="mt-3"><ExplainData screen="Dinheiro em risco" data={{ summary: data?.summary, porProcesso: data?.byProcess, integracoes: data?.nodes?.slice(0, 8) }} /></div>
       </div>
 
       {loading ? <div className="text-[#9b95ad]">Carregando...</div> : (

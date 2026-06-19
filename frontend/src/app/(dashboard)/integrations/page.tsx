@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { getAllIntegrations, testIntegration, deleteIntegration, syncIntegration, syncAllIntegrations, updateIntegration } from "@/lib/api";
 import { Modal, Field, inputClass } from "@/components/Modal";
 import { useToast } from "@/components/Toast";
+import ExplainData from "@/components/ExplainData";
 
 interface Integration {
   id: string;
@@ -224,6 +225,8 @@ export default function IntegrationsPage() {
           </button>
         </div>
       </div>
+
+      <ExplainData screen="Integrações" data={{ stats, integracoes: integrations.slice(0, 20).map((i: any) => ({ nome: i.name, tipo: i.type, status: i.status, latencia: i.latency, erro: i.errorRate, uptime: i.uptime })) }} />
 
       {/* Stats Bar (clicáveis: filtram por status) */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">

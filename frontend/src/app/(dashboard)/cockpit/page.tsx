@@ -6,6 +6,7 @@ import {
   approveRemediation, rejectRemediation,
   type CockpitData, type SapItemView, type RemediationAction,
 } from "@/lib/api";
+import ExplainData from "@/components/ExplainData";
 
 interface Client { id: string; name: string }
 
@@ -94,6 +95,7 @@ export default function CockpitPage() {
         <p className="text-[#9b95ad] text-sm mt-1">
           IDocs em erro e filas qRFC/tRFC de toda a carteira num só painel (BD87 · SMQ1/2 · SM58).
         </p>
+        <div className="mt-3"><ExplainData screen="Cockpit de IDoc & filas" data={{ resumo: data?.summary, itens: data?.items?.slice(0, 15) }} /></div>
       </div>
 
       {/* Resumo */}

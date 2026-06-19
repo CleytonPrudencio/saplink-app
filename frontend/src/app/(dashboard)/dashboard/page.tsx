@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import ExplainData from "@/components/ExplainData";
 import { getClients, getAlertStats, getAlerts } from "@/lib/api";
 import HealthScoreRing from "@/components/HealthScoreRing";
 
@@ -105,7 +106,10 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      <h1 className="text-2xl font-bold">Dashboard</h1>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <h1 className="text-2xl font-bold">Dashboard</h1>
+        <ExplainData screen="Dashboard da carteira" data={{ alertas: stats, clientes: clients.map((c: any) => ({ nome: c.name, health: c.healthScore })), alertasRecentes: recentAlerts.slice(0, 8) }} label="Resuma minha carteira (IA)" />
+      </div>
 
       {/* Stats Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

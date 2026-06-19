@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getS4CleanCore } from "@/lib/api";
+import ExplainData from "@/components/ExplainData";
 
 const CAT: Record<string, string> = {
   DEPRECATED_API: "API depreciada", CUSTOM_CDS: "CDS custom", SIDE_BY_SIDE: "Side-by-side (BTP)", IN_APP: "Extensão in-app", MODIFICATION: "Modificação",
@@ -20,6 +21,7 @@ export default function CleanCorePage() {
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2">🧼 Clean Core Score</h1>
         <p className="text-[#9b95ad] text-sm mt-1">O quão "limpo" está o core do S/4HANA Cloud — a métrica que a SAP cobra, com plano de remediação.</p>
+        <div className="mt-3"><ExplainData screen="Clean Core Score" data={{ score: data?.overall, porCategoria: data?.byCategory, itens: data?.items?.slice(0, 12) }} label="Plano de remediação (IA)" /></div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getFederated } from "@/lib/api";
+import ExplainData from "@/components/ExplainData";
 
 export default function FederatedPage() {
   const [data, setData] = useState<{ summary: { signatures: number; occurrences: number }; items: any[] } | null>(null);
@@ -14,6 +15,7 @@ export default function FederatedPage() {
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2">🛰️ Rede Federada de Falhas</h1>
         <p className="text-[#9b95ad] text-sm mt-1">O &quot;Waze do SAP&quot;: cada falha e a correção que funcionou viram conhecimento anonimizado da rede. Quanto mais clientes, mais inteligente fica.</p>
+        <div className="mt-3"><ExplainData screen="Rede Federada de Falhas" data={{ summary: data?.summary, top: data?.items?.slice(0, 8) }} /></div>
       </div>
 
       {data && (
