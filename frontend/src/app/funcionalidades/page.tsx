@@ -62,6 +62,36 @@ const GROUPS: Group[] = [
         example: "Tudo verde, mas entraram 60% menos pedidos na última hora vs a média. O radar avisa antes de o cliente ligar perguntando do faturamento.",
         gains: ["Captura a perda que nenhum monitor técnico vê", "Antecipa problema de negócio, não só de TI", "Protege a receita silenciosamente parada"],
       },
+      {
+        icon: "🧨", name: "Pré-voo de mudança (blast radius)", tagline: "Antes do deploy, não depois", flag: "Exclusivo",
+        how: "Antes de um transport ir pra produção, o SAPLINK cruza catálogo + integrações + custo e calcula o raio de impacto (interfaces, processos, R$/h) e um score de risco 0-100, com plano de teste.",
+        example: "Transport que mexe em user-exit do MIGO → score 78 (ALTO), afeta Faturamento (R$ 45k/h). Plano: validar o processo de faturamento ponta-a-ponta antes de subir.",
+        gains: ["Acaba com a parada pós-upgrade", "Testa o que importa, não tudo", "Decisão de subir/não-subir com dado"],
+      },
+      {
+        icon: "⏪", name: "Time machine de incidente", tagline: "Replay + contrafactual de R$", flag: "Exclusivo",
+        how: "Reconstrói a linha do tempo completa de um incidente (transports → falhas → alertas) e calcula o contrafactual: quanto teria sido economizado com detecção mais rápida.",
+        example: "Incidente de 2h30 = R$ 112k. Com detecção em 5 min seriam R$ 8k → R$ 104k salvos. Número irrefutável pra reunião de renovação.",
+        gains: ["Prova de ROI que renova contrato", "Aprende a causa do incidente", "Justifica o investimento em monitoramento"],
+      },
+      {
+        icon: "🛡️", name: "Auditoria & Compliance autônoma", tagline: "SoD e evidências automáticas", flag: "Exclusivo",
+        how: "Trilha unificada de mudanças (transports) e remediações (quem pediu/aprovou), com checagem de segregação de função (SoD) e pacote de evidências gerado por IA para o auditor.",
+        example: "Detecta que a mesma pessoa pediu e aprovou uma remediação (violação de SoD) e marca em vermelho. Gera o relatório de evidências SOX/LGPD sozinho.",
+        gains: ["Compliance sem montar planilha", "Pega violação de SoD na hora", "Evidência pronta pro auditor"],
+      },
+      {
+        icon: "🤝", name: "Confiabilidade de parceiro EDI", tagline: "Quem manda dado ruim", flag: "Exclusivo",
+        how: "Agrega os erros por parceiro (IDocs/itens) e ranqueia por quem mais causa falha — com taxa de erro, % do total e um score de confiabilidade.",
+        example: "\"O fornecedor KU_FORNEC22 causa 41% dos seus erros de IDoc (score 38).\" Munição pra cobrar o parceiro certo, não a sua TI.",
+        gains: ["Cobra o ofensor certo", "Negociação com dado", "Reduz erro recorrente na origem"],
+      },
+      {
+        icon: "💵", name: "FinOps de BTP", tagline: "Custo de nuvem por IFlow", flag: "Exclusivo",
+        how: "Liga o volume de mensagens de cada IFlow ao custo estimado de consumo do BTP (tarifa configurável) e ranqueia por gasto — flagrando o IFlow desgovernado.",
+        example: "Um IFlow de timer disparando 1M de mensagens/mês = ~R$ 312/mês sozinho. O SAPLINK flagra o desperdício antes da fatura surpresa.",
+        gains: ["Fim da surpresa na fatura do BTP", "Acha o IFlow em loop", "Otimiza o gasto de nuvem"],
+      },
     ],
   },
   {
