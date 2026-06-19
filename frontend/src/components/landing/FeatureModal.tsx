@@ -25,32 +25,125 @@ function SimRisk({ accent }: { accent: string }) {
   );
 }
 
-function SimFailFlow({ steps, accent }: { steps: string[]; accent: string }) {
-  const [active, setActive] = useState(-1);
+export interface Demo {
+  metric: string;        // ex.: "IDocs em erro"
+  action: string;        // ex.: "Reprocessar (BD87)"
+  rows: [string, string, string][]; // ref, detalhe, statusFinal
+  kpis: { detect: string; time: string; auto: string; impact: string };
+  result: string;
+}
+
+function SimLiveOps({ accent, steps, demo }: { accent: string; steps: string[]; demo: Demo }) {
+  const [p, setP] = useState(0); // 0..100
   const [running, setRunning] = useState(false);
   useEffect(() => {
     if (!running) return;
-    if (active >= steps.length - 1) { setRunning(false); return; }
-    const t = setTimeout(() => setActive((a) => a + 1), 750);
+    if (p >= 100) { setRunning(false); return; }
+    const t = setTimeout(() => setP((x) => Math.min(100, x + 4)), 80);
     return () => clearTimeout(t);
-  }, [running, active, steps.length]);
-  function run() { setActive(0); setRunning(true); }
+  }, [running, p]);
+  const start = () => { setP(0); setRunning(true); };
+  const rows = demo.rows;
+  const resolved = Math.round((p / 100) * rows.length);
+  const stepIdx = p === 0 ? -1 : Math.min(steps.length - 1, Math.floor((p / 100) * steps.length));
+  const done = p >= 100;
+
   return (
     <div className="space-y-4">
-      <button onClick={run} disabled={running} className="px-4 py-2 rounded-lg text-white text-sm font-semibold disabled:opacity-50 cursor-pointer" style={{ background: accent }}>
-        {running ? "Simulando…" : active >= steps.length - 1 ? "▶ Rodar de novo" : "▶ Simular ao vivo"}
-      </button>
-      <div className="space-y-2">
-        {steps.map((s, i) => {
-          const on = i <= active;
-          return (
-            <div key={i} className="flex items-center gap-3">
-              <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-all" style={{ background: on ? accent : "rgba(255,255,255,0.06)", color: on ? "#fff" : "#6b6580" }}>{i === steps.length - 1 && on ? "✓" : i + 1}</div>
-              <div className={`flex-1 rounded-lg px-3 py-2 text-sm transition-all ${on ? "text-[#e2e0ea]" : "text-[#6b6580]"}`} style={{ background: on ? `${accent}10` : "rgba(255,255,255,0.02)", border: `1px solid ${on ? accent + "30" : "rgba(255,255,255,0.05)"}` }}>{s}</div>
-            </div>
-          );
-        })}
+      {/* KPIs */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        {[
+          { l: "Detectados", v: String(rows.length), live: true },
+          { l: "Resolvidos", v: `${resolved}/${rows.length}`, live: true },
+          { l: "Tempo", v: done ? demo.kpis.time : "…", hl: true },
+          { l: "Impacto", v: done ? demo.kpis.impact : "…", hl: true },
+        ].map((k) => (
+          <div key={k.l} className="bg-[#0f0b1a] rounded-lg p-2.5 text-center border border-white/[0.06]">
+            <div className="text-base font-bold" style={{ color: k.hl && done ? "#34d399" : accent }}>{k.v}</div>
+            <div className="text-[10px] text-[#9b95ad] mt-0.5">{k.l}</div>
+          </div>
+        ))}
       </div>
+
+      {/* Tabela de registros (dados fictícios) */}
+      <div className="rounded-lg border border-white/[0.08] overflow-hidden">
+        <div className="px-3 py-1.5 text-[11px] uppercase tracking-wider text-[#9b95ad] bg-white/[0.03] border-b border-white/[0.06]">{demo.metric}</div>
+        <div className="divide-y divide-white/[0.04]">
+          {rows.map((r, i) => {
+            const ok = i < resolved;
+            const proc = running && i === resolved;
+            return (
+              <div key={i} className="flex items-center gap-2 px-3 py-2 text-sm">
+                <span className="font-mono text-xs text-[#c9c5d6] w-24 shrink-0 truncate">{r[0]}</span>
+                <span className="text-xs text-[#9b95ad] flex-1 min-w-0 truncate">{r[1]}</span>
+                <span className={`text-[11px] px-1.5 py-0.5 rounded shrink-0 ${ok ? "bg-emerald-500/15 text-emerald-300" : proc ? "bg-amber-500/15 text-amber-300" : "bg-rose-500/15 text-rose-300"}`}>
+                  {ok ? `✓ ${r[2]}` : proc ? "processando…" : "pendente"}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Progresso + pipeline */}
+      <div className="h-1.5 bg-white/[0.06] rounded-full overflow-hidden"><div className="h-full transition-all" style={{ width: `${p}%`, background: accent }} /></div>
+      <div className="flex flex-wrap gap-1.5">
+        {steps.map((s, i) => (
+          <span key={i} className={`text-[11px] px-2 py-1 rounded-full transition-all ${i <= stepIdx ? "text-white" : "text-[#6b6580]"}`} style={{ background: i <= stepIdx ? `${accent}25` : "rgba(255,255,255,0.04)" }}>{i + 1}. {s}</span>
+        ))}
+      </div>
+
+      {done && (
+        <div className="rounded-lg px-4 py-3 text-sm" style={{ background: "#34d39914", border: "1px solid #34d39940" }}>
+          <span className="text-emerald-300 font-semibold">✓ {demo.result}</span>
+          <div className="text-xs text-[#9b95ad] mt-1">{demo.kpis.auto} automático · {demo.kpis.time}</div>
+        </div>
+      )}
+
+      <button onClick={start} disabled={running} className="w-full px-4 py-2.5 rounded-lg text-white text-sm font-semibold disabled:opacity-50 cursor-pointer" style={{ background: accent }}>
+        {running ? `Processando… ${p}%` : done ? "▶ Rodar de novo" : `▶ ${demo.action}`}
+      </button>
+    </div>
+  );
+}
+
+export interface Trend { label: string; points: number[]; threshold: number; mode: "rise" | "drop"; verdict: string }
+
+function SimTrend({ trend, accent }: { trend: Trend; accent: string }) {
+  const [n, setN] = useState(0);
+  const [running, setRunning] = useState(false);
+  useEffect(() => {
+    if (!running) return;
+    if (n >= trend.points.length) { setRunning(false); return; }
+    const t = setTimeout(() => setN((x) => x + 1), 280);
+    return () => clearTimeout(t);
+  }, [running, n, trend.points.length]);
+  const start = () => { setN(0); setRunning(true); };
+  const W = 320, H = 120, max = Math.max(...trend.points, trend.threshold) * 1.1;
+  const pts = trend.points.slice(0, n);
+  const x = (i: number) => (i / (trend.points.length - 1)) * W;
+  const y = (v: number) => H - (v / max) * H;
+  const path = pts.map((v, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
+  const last = pts[pts.length - 1] ?? 0;
+  const breached = trend.mode === "rise" ? last >= trend.threshold : last <= trend.threshold;
+  const done = n >= trend.points.length;
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-[#9b95ad]">{trend.label}</p>
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full bg-[#0f0b1a] rounded-lg border border-white/[0.06]">
+        <line x1="0" y1={y(trend.threshold)} x2={W} y2={y(trend.threshold)} stroke="#f87171" strokeDasharray="4 4" strokeWidth="1" />
+        <text x="4" y={y(trend.threshold) - 4} fill="#f87171" fontSize="9">limite</text>
+        {path && <path d={path} fill="none" stroke={accent} strokeWidth="2.5" />}
+        {pts.map((v, i) => <circle key={i} cx={x(i)} cy={y(v)} r="2.5" fill={accent} />)}
+      </svg>
+      {done && (
+        <div className="rounded-lg px-4 py-3 text-sm" style={{ background: breached ? "#f8717114" : "#34d39914", border: `1px solid ${breached ? "#f8717140" : "#34d39940"}` }}>
+          <span className={breached ? "text-rose-300 font-semibold" : "text-emerald-300 font-semibold"}>{trend.verdict}</span>
+        </div>
+      )}
+      <button onClick={start} disabled={running} className="w-full px-4 py-2.5 rounded-lg text-white text-sm font-semibold disabled:opacity-50 cursor-pointer" style={{ background: accent }}>
+        {running ? "Analisando tendência…" : done ? "▶ Rodar de novo" : "▶ Simular tendência"}
+      </button>
     </div>
   );
 }
@@ -135,12 +228,23 @@ function Slider({ label, value, min, max, step = 1, onChange, suffix = "", fmt }
   );
 }
 
-function renderSim(kind: string, accent: string, steps?: string[]) {
-  if (kind === "risk") return <SimRisk accent={accent} />;
-  if (kind === "score") return <SimScore />;
-  if (kind === "bench") return <SimBench />;
-  if (kind === "chat") return <SimChat />;
-  return <SimFailFlow accent={accent} steps={steps && steps.length ? steps : ["SAP gera o erro", "SAPLINK detecta na hora", "Alerta no Slack/Teams + ticket", "IA diagnostica a causa", "Correção aplicada — resolvido"]} />;
+const DEFAULT_STEPS = ["SAP gera o erro", "SAPLINK detecta na hora", "Alerta + diagnóstico IA", "Correção aplicada", "Resolvido"];
+const DEFAULT_DEMO: Demo = {
+  metric: "Itens em atenção", action: "Resolver itens",
+  rows: [["#A-1042", "exemplo de item em erro", "ok"], ["#A-1043", "exemplo de item em erro", "ok"], ["#A-1044", "exemplo de item em erro", "ok"]],
+  kpis: { detect: "3", time: "~2 min (vs 40 min manual)", auto: "100%", impact: "0 retrabalho" }, result: "3 itens resolvidos no fluxo simulado.",
+};
+const DEFAULT_TREND: Trend = { label: "Métrica monitorada ao longo do tempo", points: [10, 12, 14, 18, 25, 38, 60], threshold: 50, mode: "rise", verdict: "Tendência de alta — o SAPLINK avisaria antes de estourar." };
+
+function renderSim(d: FeatureDetail, accent: string, name: string) {
+  if (d.sim === "risk") return <SimRisk accent={accent} />;
+  if (d.sim === "score") return <SimScore />;
+  if (d.sim === "bench") return <SimBench />;
+  if (d.sim === "chat") return <SimChat />;
+  if (d.sim === "trend") return <SimTrend trend={d.trend || TRENDS[name] || DEFAULT_TREND} accent={accent} />;
+  const steps = d.simSteps && d.simSteps.length ? d.simSteps : DEFAULT_STEPS;
+  const demo = d.demo || DEMOS[name] || DEFAULT_DEMO;
+  return <SimLiveOps accent={accent} steps={steps} demo={demo} />;
 }
 
 // ---------- Conteúdo por funcionalidade ----------
@@ -150,8 +254,10 @@ export interface FeatureDetail {
   flow: [string, string][];
   cases: [string, string][];
   implement: string[];
-  sim: "risk" | "fail" | "score" | "bench" | "chat";
+  sim: "risk" | "fail" | "score" | "bench" | "chat" | "trend";
   simSteps?: string[];
+  demo?: Demo;
+  trend?: Trend;
 }
 
 export const FEATURES: Record<string, FeatureDetail> = {
@@ -202,7 +308,7 @@ export const FEATURES: Record<string, FeatureDetail> = {
     flow: [["Coleta histórico", "Métricas no tempo"], ["Detecta tendência", "Anomalia subindo"], ["Avisa antes", "Janela em vez de incidente"]],
     cases: [["Fim do apaga-incêndio", "age na janela de manutenção"], ["Menos quebra de SLA", "antecipa o problema"]],
     implement: ["Conecte as integrações", "O histórico se acumula", "O radar passa a prever"],
-    sim: "fail", simSteps: ["Fila cresce 15%/h", "Tendência detectada", "Aviso: estoura em ~2h", "Você age antes", "Incidente evitado"],
+    sim: "trend",
   },
   "Digest semanal por IA": {
     intro: "Toda semana a IA escreve o resumo da saúde da carteira (panorama, atenção, recomendações) e envia por e-mail com a sua marca.",
@@ -342,7 +448,7 @@ export const FEATURES: Record<string, FeatureDetail> = {
     flow: [["Aprende o volume normal", "Por fluxo"], ["Compara com agora", "Última hora"], ["Queda anormal?", "Dispara alerta"]],
     cases: [["Vê o que o monitor não vê", "tudo verde, receita caindo"], ["Antecipa o problema", "antes do cliente ligar"]],
     implement: ["Conecte CPI/integrações", "O baseline se forma sozinho", "Investigue os alertas de queda"],
-    sim: "fail", simSteps: ["Tudo verde tecnicamente", "Mas: −60% de pedidos/h", "Baseline detecta a queda", "Alerta de negócio", "Você investiga a causa"],
+    sim: "trend",
   },
   "Transports (STMS)": {
     intro: "Acompanha os transports importados e correlaciona automaticamente com as falhas que vieram depois (provável causa).",
@@ -351,6 +457,90 @@ export const FEATURES: Record<string, FeatureDetail> = {
     implement: ["Agente instalado", "Os transports aparecem", "Veja a correlação na tela 'Causa cross-camada'"],
     sim: "fail", simSteps: ["Transport DEVK900231 vai pra PRD", "2h depois: IFlow falha", "SAPLINK correlaciona", "Aponta: provável causa (80%)", "Você reverte/corrige o transport"],
   },
+};
+
+// Dados fictícios dos simuladores (mini-painéis com resultado)
+export const DEMOS: Record<string, Demo> = {
+  "Cockpit de IDoc & filas": {
+    metric: "IDocs em erro · cliente Agro Nordeste", action: "Reprocessar tudo (BD87)",
+    rows: [["90004412", "ORDERS05 · status 51", "status 53"], ["90004415", "DESADV01 · status 64", "processado"], ["TID_A0F12", "tRFC SYSFAIL", "reexecutado"], ["90004418", "INVOIC02 · status 51", "status 53"]],
+    kpis: { detect: "4", time: "~3 min (vs 1h20 manual)", auto: "com aprovação", impact: "−96% tempo" }, result: "4 itens reprocessados — fila zerada.",
+  },
+  "Remediação autônoma": {
+    metric: "Itens remediáveis em aberto", action: "Reprocessar/destravar",
+    rows: [["90004412", "IDoc 51 — registro não gravado", "status 53"], ["SAPLINK_OUT_3", "fila qRFC SYSFAIL", "destravada"], ["TID_B7A91", "tRFC CPICERR", "reexecutado"]],
+    kpis: { detect: "3", time: "~2 min", auto: "100%", impact: "R$ 0 de retrabalho" }, result: "3 correções aplicadas com log e antes/depois.",
+  },
+  "Alertas em tempo real": {
+    metric: "Alertas abertos agora", action: "Notificar + acompanhar",
+    rows: [["CPI", "SalesOrder_Replication FAILED", "notificado"], ["IDOC", "3 IDocs 51 (Metalúrgica)", "ticket aberto"], ["TLS", "cert vence em 7 dias", "agendado"]],
+    kpis: { detect: "3", time: "< 1 min p/ notificar", auto: "dedup + auto-resolve", impact: "MTTR −40%" }, result: "3 alertas roteados ao canal certo, sem duplicar.",
+  },
+  "Diagnóstico + SAP Notes": {
+    metric: "Falhas aguardando diagnóstico", action: "Diagnosticar com IA",
+    rows: [["MPL_88231", "HTTP 500 — Sold-to party", "causa: BP inexistente"], ["MPL_88240", "timeout no receiver", "causa: endpoint fora"], ["IDoc 90004412", "status 51", "causa: conta contábil"]],
+    kpis: { detect: "3", time: "~8 s por diagnóstico", auto: "causa + Nota + PDF", impact: "júnior produz como sênior" }, result: "3 diagnósticos com causa raiz e passos de correção.",
+  },
+  "Event Mesh + CPI/AIF": {
+    metric: "Mensagens CPI/Eventos (BTP)", action: "Sincronizar MPL",
+    rows: [["AGo1QDIL…", "SalesOrder_Replication FAILED", "erro capturado"], ["evt.salesorder", "dead-letter", "reenfileirado"], ["AGo1P-V1R…", "SapLink COMPLETED", "ok"]],
+    kpis: { detect: "30 MPL", time: "tempo real", auto: "erro detalhado + IA", impact: "vê o que a nuvem esconde" }, result: "Falhas reais do CPI viram alerta + diagnóstico.",
+  },
+  "On-call multicanal": {
+    metric: "Incidente em escalonamento", action: "Disparar on-call",
+    rows: [["#INC-01", "CRITICAL — IFlow fora", "Slack plantão"], ["#INC-01", "sem resposta em 30 min", "escalou p/ líder"], ["#INC-01", "reconhecido", "em atendimento"]],
+    kpis: { detect: "1", time: "imediato", auto: "escalonamento", impact: "nada no vácuo" }, result: "Incidente notificado e escalado automaticamente.",
+  },
+  "Tickets Jira/ServiceNow": {
+    metric: "Alertas → chamados", action: "Sincronizar tickets",
+    rows: [["INC-4521", "IFlow SalesOrder FAILED", "aberto"], ["INC-4522", "3 IDocs em erro", "aberto"], ["INC-4521", "integração recuperou", "fechado sozinho"]],
+    kpis: { detect: "2", time: "automático", auto: "abre e fecha", impact: "zero retrabalho" }, result: "Chamados abertos e fechados em sincronia com a realidade.",
+  },
+  "AMS Autônomo": {
+    metric: "Correções de alta confiança", action: "Piloto automático",
+    rows: [["90004412", "IDoc 51 — conf. rede 94%", "auto-resolvido"], ["SAPLINK_OUT_3", "fila SYSFAIL — conf. 91%", "auto-resolvido"], ["90004418", "IDoc 51 — conf. 96%", "auto-resolvido"]],
+    kpis: { detect: "3", time: "madrugada, sem humano", auto: "100%", impact: "L1/L2 ≈ 0" }, result: "3 correções aplicadas sozinhas, com rollback e rastro.",
+  },
+  "Causa raiz cross-camada": {
+    metric: "Falhas correlacionadas a mudanças", action: "Correlacionar",
+    rows: [["SalesOrder_Replication", "falhou 14:20", "← transp. DEVK900231 (80%)"], ["IF_Bank_Payment", "falhou 14:35", "← transp. DEVK900231 (72%)"], ["IF_Material_Sync", "ok", "sem correlação"]],
+    kpis: { detect: "2", time: "minutos (vs horas)", auto: "score de confiança", impact: "fim do ping-pong" }, result: "Causa provável apontada: transport DEVK900231.",
+  },
+  "Transports (STMS)": {
+    metric: "Transports recentes em PRD", action: "Analisar impacto",
+    rows: [["DEVK900231", "user-exit MIGO (ZMM)", "⚠ correlacionado a 2 falhas"], ["DEVK900228", "estrutura IDoc ORDERS05", "ok"], ["DEVK900219", "mapeamento CPI", "ok"]],
+    kpis: { detect: "3", time: "automático", auto: "correlação", impact: "causa em minutos" }, result: "1 transport sob suspeita, ligado a 2 falhas.",
+  },
+  "Reconciliação ponta-a-ponta": {
+    metric: "Funil: Pedido → Ordem → Fatura (24h)", action: "Reconciliar jornada",
+    rows: [["Pedido (CPI)", "1.000 entraram", "1.000"], ["Ordem (S/4)", "998 criadas", "−2"], ["Fatura", "940 emitidas", "−58 ⚠"]],
+    kpis: { detect: "1.000", time: "tempo real", auto: "detecção de gap", impact: "94% conclusão" }, result: "58 documentos perdidos entre Ordem → Fatura.",
+  },
+  "Remediação generativa": {
+    metric: "Falhas → correção pronta", action: "Gerar correção (IA)",
+    rows: [["SalesOrder_Replication", "Sold-to party não encontrado", "Groovy gerado"], ["IF_Bank_Payment", "campo BUKRS vazio", "mapeamento gerado"], ["API_SALES v2", "depreciada", "filtro v4 gerado"]],
+    kpis: { detect: "3", time: "~10 s", auto: "código pronto", impact: "de 'explica' a 'resolve'" }, result: "3 correções escritas pela IA, prontas pra colar.",
+  },
+  "Catálogo de interfaces": {
+    metric: "Landscape auto-descoberto", action: "Descobrir interfaces",
+    rows: [["LS_ECCCLNT100", "parceiro lógico (WE20)", "mapeado"], ["PI_PROD", "destino RFC (SM59)", "mapeado"], ["API_SALES_ORDER_SRV", "serviço OData", "mapeado"]],
+    kpis: { detect: "9", time: "automático", auto: "atualiza sozinho", impact: "doc que não envelhece" }, result: "9 interfaces inventariadas sem planilha manual.",
+  },
+  "Radar de validade": {
+    metric: "Certificados e segredos", action: "Reavaliar validade",
+    rows: [["e-CPF NF-e", "vence em 7 dias", "⚠ CRÍTICO"], ["TLS dev.hub", "vence em 24 dias", "atenção"], ["Token CPI", "vence em 90 dias", "ok"]],
+    kpis: { detect: "3", time: "automático", auto: "alerta antecipado", impact: "evita a parada mais boba" }, result: "1 certificado crítico sinalizado a tempo.",
+  },
+  "Rede Federada de Falhas": {
+    metric: "Assinaturas de falha na rede", action: "Consultar a rede",
+    rows: [["Sold-to party not found", "visto 37× / 12 clientes", "fix: criar BP (89%)"], ["BUKRS vazio", "visto 14× / 6 clientes", "fix: mapear de-para (81%)"], ["timeout receiver", "visto 9× / 5 clientes", "fix: retry+backoff (76%)"]],
+    kpis: { detect: "60 falhas", time: "instantâneo", auto: "anonimizado", impact: "fica + esperto a cada cliente" }, result: "Correção vencedora sugerida por assinatura.",
+  },
+};
+
+export const TRENDS: Record<string, Trend> = {
+  "Previsão de falha": { label: "Profundidade da fila qRFC (últimas horas)", points: [8, 11, 13, 19, 28, 41, 58], threshold: 50, mode: "rise", verdict: "⚠ Vai estourar em ~2h — o SAPLINK avisa antes do incidente." },
+  "Perda silenciosa de negócio": { label: "Pedidos/hora (tudo verde tecnicamente)", points: [62, 60, 58, 40, 28, 22, 18], threshold: 30, mode: "drop", verdict: "⚠ Queda de ~70% no volume — receita parando, sem nenhum erro técnico." },
 };
 
 const FALLBACK: FeatureDetail = {
@@ -376,10 +566,10 @@ export default function FeatureModal({ feature, onClose, onInterest }: { feature
   const accent = feature.accent;
 
   return (
-    <div className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm flex items-start sm:items-center justify-center p-0 sm:p-6 overflow-y-auto" onClick={onClose}>
-      <div className="bg-[#140d24] w-full sm:rounded-2xl border border-white/[0.1] sm:my-6 min-h-screen sm:min-h-0 max-w-full sm:max-w-3xl lg:max-w-6xl shadow-2xl" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[60] bg-black/85 backdrop-blur-md flex items-start sm:items-center justify-center p-0 sm:p-6 overflow-y-auto" onClick={onClose}>
+      <div className="bg-[#211a3a] w-full sm:rounded-2xl ring-1 ring-purple-400/20 border border-white/[0.12] sm:my-6 min-h-screen sm:min-h-0 max-w-full sm:max-w-3xl lg:max-w-6xl shadow-[0_24px_90px_rgba(0,0,0,0.7)]" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className="sticky top-0 z-10 flex items-center gap-3 px-5 sm:px-7 py-4 border-b border-white/[0.08] bg-[#140d24]/95 backdrop-blur sm:rounded-t-2xl">
+        <div className="sticky top-0 z-10 flex items-center gap-3 px-5 sm:px-7 py-4 border-b border-white/[0.1] bg-gradient-to-r from-[#2a2150] to-[#211a3a] sm:rounded-t-2xl">
           <span className="text-3xl">{feature.icon}</span>
           <div className="min-w-0 flex-1">
             <h2 className="text-lg sm:text-xl font-bold truncate">{feature.name}</h2>
@@ -412,7 +602,7 @@ export default function FeatureModal({ feature, onClose, onInterest }: { feature
             <div>
               <h3 className="text-sm font-bold uppercase tracking-wider text-[#9b95ad] mb-3">🎮 Simulador interativo</h3>
               <div className="bg-[#1a1527] border rounded-xl p-4" style={{ borderColor: `${accent}30` }}>
-                {renderSim(d.sim, accent, d.simSteps)}
+                {renderSim(d, accent, feature.name)}
               </div>
             </div>
           </div>
