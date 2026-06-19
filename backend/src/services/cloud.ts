@@ -1,4 +1,5 @@
 import prisma from '../lib/prisma';
+import { diagnose } from './ai';
 
 export interface CloudItemInput {
   source: string;       // CPI | AIF
@@ -82,6 +83,50 @@ export async function ingestCloud(integrationId: string, clientId: string, items
   return { upserted: n, alerts };
 }
 
+/**
+ * Diagnóstico de IA para uma falha de CPI/AIF: causa raiz + passos de correção + prevenção.
+ * Salva no próprio CloudItem (cache) — re-chama a IA com `force` se já houver diagnóstico.
+ */
+export async function diagnoseCloudItem(consultancyId: string, id: string, force = false) {
+  const item = await prisma.cloudItem.findUnique({ where: { id } });
+  if (!item) return { error: 'NOT_FOUND' as const };
+  // valida o tenant pelo cliente do item
+  const client = await prisma.client.findFirst({ where: { id: item.clientId, consultancyId }, select: { name: true } });
+  if (!client) return { error: 'NOT_FOUND' as const };
+  if (item.aiDiagnosis && !force) {
+    return { ok: true, diagnosis: item.aiDiagnosis, diagnosedAt: item.aiDiagnosedAt, cached: true };
+  }
+  const integration = item.integrationId
+    ? await prisma.integration.findUnique({ where: { id: item.integrationId }, select: { name: true } })
+    : null;
+
+  // outras falhas recentes do mesmo artefato dão padrão à IA (recorrência?)
+  const related = await prisma.cloudItem.findMany({
+    where: { clientId: item.clientId, source: item.source, artifact: item.artifact, resolved: false, NOT: { id: item.id } },
+    orderBy: { occurredAt: 'desc' }, take: 5,
+    select: { status: true, error: true, occurredAt: true },
+  });
+
+  const context = {
+    cliente: client.name,
+    plataforma: item.source === 'CPI' ? 'SAP Cloud Integration (BTP/CPI)' : 'SAP AIF (Application Interface Framework)',
+    integracao: integration?.name,
+    artefato_ou_iflow: item.artifact,
+    direcao: item.direction,
+    status: item.status,
+    messageId: item.messageId,
+    ocorrido_em: item.occurredAt,
+    erro: item.error || '(sem detalhe de erro capturado)',
+    falhas_recentes_do_mesmo_artefato: related.map((r) => ({ status: r.status, erro: r.error, em: r.occurredAt })),
+  };
+  const query = `Esta mensagem de integração ${item.source} falhou no artefato "${item.artifact}". `
+    + `Diagnostique a causa raiz com base no erro e proponha os passos de correção (no SAP/S4 e no IFlow/CPI quando couber) e como prevenir a recorrência.`;
+
+  const diagnosis = await diagnose(query, context);
+  await prisma.cloudItem.update({ where: { id: item.id }, data: { aiDiagnosis: diagnosis, aiDiagnosedAt: new Date() } });
+  return { ok: true, diagnosis, diagnosedAt: new Date(), cached: false };
+}
+
 export interface CloudFilters { source?: string; status?: string; q?: string; clientId?: string }
 
 export async function getCloud(consultancyId: string, f: CloudFilters = {}) {
@@ -110,6 +155,7 @@ export async function getCloud(consultancyId: string, f: CloudFilters = {}) {
     items: items.map((i) => ({
       id: i.id, source: i.source, artifact: i.artifact, messageId: i.messageId,
       direction: i.direction, status: i.status, error: i.error, occurredAt: i.occurredAt, resolved: i.resolved,
+      aiDiagnosis: i.aiDiagnosis, aiDiagnosedAt: i.aiDiagnosedAt,
     })),
     summary: { total: all.length, failed, bySource },
   };

@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { getCloud, type CloudItem } from "@/lib/api";
+import { useEffect, useState, useCallback, Fragment } from "react";
+import { getCloud, diagnoseCloud, type CloudItem } from "@/lib/api";
 
 function statusCls(s?: string | null) {
   const u = (s || "").toUpperCase();
@@ -11,14 +11,29 @@ function statusCls(s?: string | null) {
   if (u === "RETRY") return "bg-amber-500/15 text-amber-300";
   return "bg-white/[0.06] text-[#9b95ad]";
 }
+const isFail = (s?: string | null) => /FAIL|ERROR|ESCAL|RETRY/i.test(s || "");
 
 export default function CloudPage() {
   const [data, setData] = useState<{ items: CloudItem[]; summary: { total: number; failed: number; bySource: Record<string, number> } } | null>(null);
   const [filters, setFilters] = useState({ source: "", status: "", q: "" });
   const [loading, setLoading] = useState(true);
+  const [diag, setDiag] = useState<Record<string, { loading: boolean; text?: string; at?: string | null; err?: boolean }>>({});
+  const [open, setOpen] = useState<Record<string, boolean>>({});
 
   const load = useCallback(async () => { setData(await getCloud(filters)); }, [filters]);
   useEffect(() => { setLoading(true); load().catch(() => {}).finally(() => setLoading(false)); }, [load]);
+
+  const runDiagnose = useCallback(async (it: CloudItem, force = false) => {
+    setOpen((o) => ({ ...o, [it.id]: true }));
+    if (!force && it.aiDiagnosis) { setDiag((d) => ({ ...d, [it.id]: { loading: false, text: it.aiDiagnosis!, at: it.aiDiagnosedAt } })); return; }
+    setDiag((d) => ({ ...d, [it.id]: { loading: true } }));
+    try {
+      const r = await diagnoseCloud(it.id, force);
+      setDiag((d) => ({ ...d, [it.id]: { loading: false, text: r.diagnosis, at: r.diagnosedAt } }));
+    } catch {
+      setDiag((d) => ({ ...d, [it.id]: { loading: false, err: true } }));
+    }
+  }, []);
 
   const s = data?.summary;
 
@@ -57,11 +72,15 @@ export default function CloudPage() {
             <thead><tr className="text-left text-[#9b95ad] border-b border-white/[0.08] bg-white/[0.02]">
               <th className="px-3 py-2 font-medium">Fonte</th><th className="px-3 py-2 font-medium">Artefato</th>
               <th className="px-3 py-2 font-medium">Message ID</th><th className="px-3 py-2 font-medium">Status</th>
-              <th className="px-3 py-2 font-medium">Quando</th>
+              <th className="px-3 py-2 font-medium">Quando</th><th className="px-3 py-2 font-medium">IA</th>
             </tr></thead>
             <tbody>
-              {data.items.map((i) => (
-                <tr key={i.id} className="border-b border-white/[0.04]">
+              {data.items.map((i) => {
+                const d = diag[i.id];
+                const failed = isFail(i.status) && !i.resolved;
+                return (
+                <Fragment key={i.id}>
+                <tr className="border-b border-white/[0.04]">
                   <td className="px-3 py-2"><span className="text-xs font-mono px-1.5 py-0.5 rounded bg-white/[0.06]">{i.source}</span></td>
                   <td className="px-3 py-2 text-[#e2e0ea]">{i.artifact}{i.direction && <span className="text-[10px] text-[#9b95ad] ml-1">{i.direction === "INBOUND" ? "↓" : "↑"}</span>}</td>
                   <td className="px-3 py-2 font-mono text-xs text-[#9b95ad]">{i.messageId}</td>
@@ -70,8 +89,39 @@ export default function CloudPage() {
                     {i.error && <span className="block text-xs text-[#9b95ad] mt-0.5 max-w-xs">{i.error}</span>}
                   </td>
                   <td className="px-3 py-2 text-xs text-[#9b95ad]">{i.occurredAt ? new Date(i.occurredAt).toLocaleString("pt-BR") : "—"}</td>
+                  <td className="px-3 py-2">
+                    {failed ? (
+                      <button
+                        onClick={() => (open[i.id] ? setOpen((o) => ({ ...o, [i.id]: false })) : runDiagnose(i))}
+                        className="text-xs px-2 py-1 rounded-lg bg-violet-500/15 text-violet-300 hover:bg-violet-500/25 whitespace-nowrap"
+                      >
+                        {d?.loading ? "Analisando…" : i.aiDiagnosis || d?.text ? (open[i.id] ? "Ocultar" : "Ver solução") : "Diagnosticar com IA"}
+                      </button>
+                    ) : <span className="text-xs text-[#9b95ad]">—</span>}
+                  </td>
                 </tr>
-              ))}
+                {open[i.id] && (
+                  <tr className="border-b border-white/[0.04] bg-violet-500/[0.04]">
+                    <td colSpan={6} className="px-4 py-3">
+                      {d?.loading ? (
+                        <div className="text-sm text-violet-300">A IA está analisando a causa raiz e os passos de correção…</div>
+                      ) : d?.err ? (
+                        <div className="text-sm text-rose-300">Não foi possível gerar o diagnóstico agora. Tente novamente.</div>
+                      ) : (
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 text-xs text-[#9b95ad]">
+                            <span className="px-1.5 py-0.5 rounded bg-violet-500/15 text-violet-300 font-medium">Diagnóstico IA</span>
+                            {(d?.at || i.aiDiagnosedAt) && <span>{new Date((d?.at || i.aiDiagnosedAt)!).toLocaleString("pt-BR")}</span>}
+                            <button onClick={() => runDiagnose(i, true)} className="ml-auto underline hover:text-violet-300">Refazer análise</button>
+                          </div>
+                          <pre className="text-sm text-[#e2e0ea] whitespace-pre-wrap font-sans leading-relaxed">{d?.text || i.aiDiagnosis}</pre>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                )}
+                </Fragment>
+              ); })}
             </tbody>
           </table>
         </div>

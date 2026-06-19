@@ -282,6 +282,8 @@ model CloudItem {
   occurredAt    DateTime?
   createdAt     DateTime @default(now())
   resolved      Boolean  @default(false)
+  aiDiagnosis   String?  // causa raiz + passos de correção gerados pela IA
+  aiDiagnosedAt DateTime?
   @@unique([integrationId, source, messageId])
   @@index([clientId, source, resolved])
 }

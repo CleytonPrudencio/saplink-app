@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { getCloud } from '../services/cloud';
+import { getCloud, diagnoseCloudItem } from '../services/cloud';
 
 // F1/F2 — CPI / AIF. Sob o tenantGate.
 const router = Router();
@@ -15,6 +15,18 @@ router.get('/', async (req: Request, res: Response) => {
   } catch (e) {
     console.error('Cloud error:', e);
     res.status(500).json({ error: 'Erro ao carregar CPI/AIF.' });
+  }
+});
+
+// IA: diagnostica uma falha CPI/AIF (causa raiz + correção). ?force=1 refaz.
+router.post('/:id/diagnose', async (req: Request, res: Response) => {
+  try {
+    const r = await diagnoseCloudItem(req.consultancyId!, req.params.id, req.query.force === '1');
+    if ('error' in r) { res.status(404).json({ error: 'Mensagem não encontrada.' }); return; }
+    res.json(r);
+  } catch (e) {
+    console.error('Cloud diagnose error:', e);
+    res.status(500).json({ error: 'Erro ao diagnosticar a falha.' });
   }
 });
 

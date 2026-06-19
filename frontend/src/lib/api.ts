@@ -179,12 +179,17 @@ export async function getBenchmark() {
 export interface CloudItem {
   id: string; source: string; artifact: string; messageId: string; direction?: string | null;
   status?: string | null; error?: string | null; occurredAt?: string | null; resolved: boolean;
+  aiDiagnosis?: string | null; aiDiagnosedAt?: string | null;
 }
 export async function getCloud(filters: { source?: string; status?: string; q?: string; clientId?: string } = {}) {
   const params: Record<string, string> = {};
   for (const k of ["source", "status", "q", "clientId"] as const) if (filters[k]) params[k] = filters[k]!;
   const { data } = await api.get('/cloud', { params });
   return data as { items: CloudItem[]; summary: { total: number; failed: number; bySource: Record<string, number> } };
+}
+export async function diagnoseCloud(id: string, force = false) {
+  const { data } = await api.post(`/cloud/${id}/diagnose`, null, { params: force ? { force: "1" } : {} });
+  return data as { ok: boolean; diagnosis: string; diagnosedAt?: string | null; cached?: boolean };
 }
 
 // D1 — SLA por cliente
