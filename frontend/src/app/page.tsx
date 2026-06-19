@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getPublicPlans, submitLead } from "@/lib/api";
+import FeatureModal from "@/components/landing/FeatureModal";
 
 interface Plan {
   key: string; name: string; description?: string; priceCents: number;
@@ -114,6 +115,7 @@ export default function LandingPage() {
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [interest, setInterest] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [feature, setFeature] = useState<{ icon: string; name: string; tagline: string; accent: string } | null>(null);
 
   useEffect(() => { getPublicPlans().then((p) => setPlans(Array.isArray(p) ? p : [])).catch(() => {}); }, []);
   const cta = (label: string, primary = true, cls = "") => (
@@ -123,6 +125,7 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-[#0f0b1a] text-[#e2e0ea] overflow-x-hidden">
       <InterestModal open={interest} onClose={() => setInterest(false)} />
+      <FeatureModal feature={feature} onClose={() => setFeature(null)} onInterest={() => setInterest(true)} />
 
       {/* Header */}
       <header className="sticky top-0 z-50 bg-[#0f0b1a]/85 backdrop-blur border-b border-white/[0.06]">
@@ -213,11 +216,12 @@ export default function LandingPage() {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                   {(feats as string[][]).map((f) => (
-                    <div key={f[1]} className="bg-[#0f0b1a] rounded-xl p-4 border border-white/[0.05]">
+                    <button key={f[1]} onClick={() => setFeature({ icon: f[0], name: f[1], tagline: f[2], accent: accent as string })} className="text-left bg-[#0f0b1a] rounded-xl p-4 border border-white/[0.05] hover:border-white/[0.2] hover:bg-white/[0.02] transition group cursor-pointer">
                       <div className="text-2xl mb-1.5">{f[0]}</div>
                       <p className="font-semibold text-sm">{f[1]}</p>
                       <p className="text-xs text-[#9b95ad] mt-1 leading-relaxed">{f[2]}</p>
-                    </div>
+                      <p className="text-[11px] mt-2 font-medium opacity-0 group-hover:opacity-100 transition" style={{ color: accent as string }}>Ver detalhes, simulador e como implementar →</p>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -250,7 +254,7 @@ export default function LandingPage() {
           <p className="text-[#9b95ad] mb-8 max-w-3xl">Oito diferenciais que viram moat: efeito de rede, dado cross-camada que só nós temos, autonomia, reconciliação que ninguém faz, IA que escreve a correção, operação por WhatsApp e a linguagem do CFO.</p>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {INNOVATIONS.map((g) => (
-              <div key={g[1]} className="bg-gradient-to-br from-purple-600/10 to-cyan-500/[0.06] border border-purple-500/25 rounded-2xl p-6 hover:border-purple-500/50 transition">
+              <button key={g[1]} onClick={() => setFeature({ icon: g[0], name: g[1], tagline: g[2], accent: "#a78bfa" })} className="text-left bg-gradient-to-br from-purple-600/10 to-cyan-500/[0.06] border border-purple-500/25 rounded-2xl p-6 hover:border-purple-500/60 transition group cursor-pointer">
                 <div className="flex items-center gap-3 mb-2">
                   <span className="text-3xl">{g[0]}</span>
                   <div>
@@ -260,7 +264,8 @@ export default function LandingPage() {
                 </div>
                 <p className="text-sm text-[#c9c5d6] leading-relaxed">{g[3]}</p>
                 <p className="text-sm text-emerald-300 mt-3 flex items-center gap-1.5"><span>📈</span>{g[4]}</p>
-              </div>
+                <p className="text-[11px] mt-3 text-purple-300 opacity-0 group-hover:opacity-100 transition">Abrir detalhes + simulador →</p>
+              </button>
             ))}
           </div>
           <div className="mt-8 text-center">
