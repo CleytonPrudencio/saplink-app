@@ -3,18 +3,15 @@
 import { useState, useRef, useEffect } from "react";
 import { askPortfolio } from "@/lib/api";
 import { MarkdownLite } from "@/components/AiReport";
+import { useLang } from "@/i18n/I18n";
+import { T } from "./i18n";
 
 interface Msg { role: "user" | "ai"; text: string }
 
-const SUGGESTIONS = [
-  "Quais clientes têm integração com erro agora?",
-  "Resumo da saúde da minha carteira",
-  "Quais integrações estão com uptime abaixo do SLA?",
-  "Onde estão os alertas mais críticos?",
-  "Qual cliente precisa de atenção urgente?",
-];
-
 export default function AskPage() {
+  const { lang } = useLang();
+  const t = T[lang];
+  const SUGGESTIONS = t.suggestions;
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(false);
@@ -30,9 +27,9 @@ export default function AskPage() {
     setLoading(true);
     try {
       const r = await askPortfolio(text);
-      setMsgs((m) => [...m, { role: "ai", text: r.answer || "Sem resposta." }]);
+      setMsgs((m) => [...m, { role: "ai", text: r.answer || t.noAnswer }]);
     } catch (e: any) {
-      setMsgs((m) => [...m, { role: "ai", text: e?.response?.data?.error || "Erro ao consultar o copiloto." }]);
+      setMsgs((m) => [...m, { role: "ai", text: e?.response?.data?.error || t.errorAsk }]);
     } finally {
       setLoading(false);
     }
@@ -41,15 +38,15 @@ export default function AskPage() {
   return (
     <div className="max-w-3xl mx-auto flex flex-col h-[calc(100vh-160px)]">
       <div className="mb-4">
-        <h1 className="text-2xl font-bold flex items-center gap-2">🤖 Pergunte ao SAPLINK</h1>
-        <p className="text-[#9b95ad] text-sm mt-1">Copiloto de operação — pergunte em linguagem natural sobre toda a sua carteira.</p>
+        <h1 className="text-2xl font-bold flex items-center gap-2">🤖 {t.title}</h1>
+        <p className="text-[#9b95ad] text-sm mt-1">{t.subtitle}</p>
       </div>
 
       {/* Conversa */}
       <div className="flex-1 overflow-auto space-y-3 pr-1">
         {msgs.length === 0 && (
           <div className="text-center text-[#9b95ad] mt-10">
-            <p className="mb-4">Comece com uma pergunta:</p>
+            <p className="mb-4">{t.startWith}</p>
             <div className="flex flex-wrap gap-2 justify-center">
               {SUGGESTIONS.map((s) => (
                 <button key={s} onClick={() => send(s)} className="px-3 py-2 text-sm rounded-lg bg-[#1a1527] border border-white/[0.08] hover:border-purple-500/40 hover:text-white transition cursor-pointer text-left">
@@ -70,7 +67,7 @@ export default function AskPage() {
           <div className="flex justify-start">
             <div className="bg-[#1a1527] border border-white/[0.08] rounded-2xl px-4 py-3 text-sm text-[#9b95ad] flex items-center gap-2">
               <div className="w-4 h-4 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
-              Analisando a carteira... pode levar até ~1 min.
+              {t.analyzing}
             </div>
           </div>
         )}
@@ -82,11 +79,11 @@ export default function AskPage() {
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Pergunte sobre clientes, integrações, alertas..."
+          placeholder={t.inputPlaceholder}
           className="flex-1 px-4 py-3 bg-[#1a1527] border border-white/[0.1] rounded-xl text-sm focus:outline-none focus:border-purple-500/50"
         />
         <button type="submit" disabled={loading || !q.trim()} className="px-5 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-cyan-500 text-white font-semibold disabled:opacity-40 cursor-pointer">
-          Enviar
+          {t.send}
         </button>
       </form>
     </div>

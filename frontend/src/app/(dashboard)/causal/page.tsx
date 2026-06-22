@@ -3,31 +3,35 @@
 import { useEffect, useState } from "react";
 import { getCausal } from "@/lib/api";
 import ExplainData from "@/components/ExplainData";
+import { useLang } from "@/i18n/I18n";
+import { T } from "./i18n";
 
 export default function CausalPage() {
   const [data, setData] = useState<{ window: number; summary: { correlated: number }; items: any[] } | null>(null);
   const [loading, setLoading] = useState(true);
+  const { lang } = useLang();
+  const t = T[lang];
 
   useEffect(() => { getCausal().then(setData).catch(() => {}).finally(() => setLoading(false)); }, []);
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2">🔗 Causa raiz cross-camada</h1>
-        <p className="text-[#9b95ad] text-sm mt-1">Cruza os <b>transports (STMS, on-prem)</b> com as <b>falhas de CPI/IDoc</b> que apareceram logo depois — e aponta a mudança que provavelmente causou. Só o SAPLINK tem as duas camadas juntas.</p>
+        <h1 className="text-2xl font-bold flex items-center gap-2">🔗 {t.title}</h1>
+        <p className="text-[#9b95ad] text-sm mt-1">{t.subtitleA}<b>{t.subtitleB}</b>{t.subtitleC}<b>{t.subtitleD}</b>{t.subtitleE}</p>
         <div className="mt-3"><ExplainData screen="Causa raiz cross-camada" data={{ summary: data?.summary, links: data?.items?.slice(0, 8) }} /></div>
       </div>
 
       {data && (
         <div className="grid grid-cols-2 gap-3 max-w-sm">
-          <Stat label="Correlações encontradas" value={data.summary.correlated} accent="text-orange-300" />
-          <Stat label="Janela de análise" value={`${data.window}h`} accent="text-[#e2e0ea]" />
+          <Stat label={t.correlationsFound} value={data.summary.correlated} accent="text-orange-300" />
+          <Stat label={t.analysisWindow} value={`${data.window}h`} accent="text-[#e2e0ea]" />
         </div>
       )}
 
-      {loading ? <div className="text-[#9b95ad]">Carregando...</div> : !data || data.items.length === 0 ? (
+      {loading ? <div className="text-[#9b95ad]">{t.loading}</div> : !data || data.items.length === 0 ? (
         <div className="bg-[#1a1527] rounded-xl p-8 border border-white/[0.08] text-center text-[#9b95ad]">
-          Nenhuma falha recente correlacionada a um transport. (Precisa de transports importados + falhas na janela de {data?.window ?? 8}h.)
+          {t.empty(data?.window ?? 8)}
         </div>
       ) : (
         <div className="space-y-3">
@@ -42,16 +46,16 @@ export default function CausalPage() {
               <div className="mt-3 flex items-center gap-3 bg-orange-500/[0.07] border border-orange-500/20 rounded-lg px-3 py-2 flex-wrap">
                 <span className="text-2xl">⬅️</span>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm text-orange-200">Provável causa: <b>{l.topCause.trNumber}</b> — {l.topCause.description || "transport"}</p>
-                  <p className="text-xs text-[#9b95ad]">{l.topCause.owner ? `por ${l.topCause.owner} · ` : ""}importado {l.topCause.gapHours}h antes da falha · alvo {l.topCause.target || "—"}</p>
+                  <p className="text-sm text-orange-200">{t.probableCause} <b>{l.topCause.trNumber}</b> — {l.topCause.description || t.transportFallback}</p>
+                  <p className="text-xs text-[#9b95ad]">{t.causeMeta(l.topCause.owner, l.topCause.gapHours, l.topCause.target || "—")}</p>
                 </div>
                 <div className="text-right shrink-0">
                   <div className="text-lg font-bold text-orange-300">{l.topCause.confidence}%</div>
-                  <div className="text-[10px] text-[#9b95ad]">confiança</div>
+                  <div className="text-[10px] text-[#9b95ad]">{t.confidence}</div>
                 </div>
               </div>
               {l.otherCauses?.length > 0 && (
-                <p className="text-[11px] text-[#6b6580] mt-2">Outros suspeitos: {l.otherCauses.map((c: any) => c.trNumber).join(", ")}</p>
+                <p className="text-[11px] text-[#6b6580] mt-2">{t.otherSuspects(l.otherCauses.map((c: any) => c.trNumber).join(", "))}</p>
               )}
             </div>
           ))}

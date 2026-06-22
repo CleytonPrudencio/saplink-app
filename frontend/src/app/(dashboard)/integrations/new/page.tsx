@@ -9,6 +9,8 @@ import {
   testIntegration,
   updateIntegration,
 } from "@/lib/api";
+import { useLang } from "@/i18n/I18n";
+import { T } from "./i18n";
 
 interface TypeField {
   key: string;
@@ -50,15 +52,16 @@ const typeIcons: Record<string, string> = {
   FILE_SFTP: "SF",
 };
 
-const steps = [
-  "Escolher Tipo",
-  "Dados Basicos",
-  "Configuracao",
-  "Testar Conexao",
-];
-
 export default function NewIntegrationPage() {
   const router = useRouter();
+  const { lang } = useLang();
+  const t = T[lang];
+  const steps = [
+    t.stepChooseType,
+    t.stepBasicData,
+    t.stepConfig,
+    t.stepTestConnection,
+  ];
   const [step, setStep] = useState(0);
 
   // Step 1
@@ -144,7 +147,7 @@ export default function NewIntegrationPage() {
       const result = await testIntegration(testId);
       setTestResult(result);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Erro ao testar conexão";
+      const message = err instanceof Error ? err.message : t.testError;
       setTestResult({ success: false, message, details: {} });
     } finally {
       setTesting(false);
@@ -174,7 +177,7 @@ export default function NewIntegrationPage() {
       setCreatedId(result.id || result.data?.id);
       router.push("/integrations");
     } catch {
-      setCreateError("Erro ao criar integração. Tente novamente.");
+      setCreateError(t.createError);
     } finally {
       setCreating(false);
     }
@@ -221,20 +224,20 @@ export default function NewIntegrationPage() {
       {step === 0 && (
         <div className="space-y-6">
           <div>
-            <h2 className="text-xl font-bold">Escolha o tipo de integracao</h2>
-            <p className="text-[#9b95ad] text-sm mt-1">Selecione o tipo de sistema que deseja integrar</p>
+            <h2 className="text-xl font-bold">{t.step1Title}</h2>
+            <p className="text-[#9b95ad] text-sm mt-1">{t.step1Subtitle}</p>
           </div>
 
           {typesLoading ? (
-            <p className="text-[#9b95ad]">Carregando tipos...</p>
+            <p className="text-[#9b95ad]">{t.loadingTypes}</p>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {types.map((t) => {
-                const isSelected = selectedType?.type === t.type;
+              {types.map((it) => {
+                const isSelected = selectedType?.type === it.type;
                 return (
                   <div
-                    key={t.type}
-                    onClick={() => setSelectedType(t)}
+                    key={it.type}
+                    onClick={() => setSelectedType(it)}
                     className={`bg-[#1a1527] rounded-xl p-4 border-2 cursor-pointer transition-all hover:bg-[#231d35] ${
                       isSelected
                         ? "border-purple-500 bg-purple-500/5"
@@ -243,16 +246,16 @@ export default function NewIntegrationPage() {
                   >
                     <div className="flex items-start gap-3">
                       <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center text-purple-400 text-xs font-bold shrink-0">
-                        {t.icon || typeIcons[t.type] || t.type.slice(0, 2).toUpperCase()}
+                        {it.icon || typeIcons[it.type] || it.type.slice(0, 2).toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
-                          <p className="font-medium text-sm">{t.name}</p>
+                          <p className="font-medium text-sm">{it.name}</p>
                           {isSelected && (
-                            <span className="text-xs text-purple-400 font-medium">Selecionado</span>
+                            <span className="text-xs text-purple-400 font-medium">{t.selected}</span>
                           )}
                         </div>
-                        <p className="text-xs text-[#9b95ad] mt-0.5">{t.description}</p>
+                        <p className="text-xs text-[#9b95ad] mt-0.5">{it.description}</p>
                       </div>
                     </div>
                   </div>
@@ -267,7 +270,7 @@ export default function NewIntegrationPage() {
               disabled={!canAdvance()}
               className="px-6 py-2.5 bg-gradient-to-r from-purple-600 to-purple-500 text-white text-sm font-medium rounded-lg hover:from-purple-500 hover:to-purple-400 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              Proximo
+              {t.next}
             </button>
           </div>
         </div>
@@ -277,32 +280,32 @@ export default function NewIntegrationPage() {
       {step === 1 && (
         <div className="space-y-6">
           <div>
-            <h2 className="text-xl font-bold">Dados da integracao</h2>
-            <p className="text-[#9b95ad] text-sm mt-1">Preencha as informacoes basicas</p>
+            <h2 className="text-xl font-bold">{t.step2Title}</h2>
+            <p className="text-[#9b95ad] text-sm mt-1">{t.step2Subtitle}</p>
           </div>
 
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-[#e2e0ea] mb-1.5">
-                Nome da integracao <span className="text-rose-400">*</span>
+                {t.nameLabel} <span className="text-rose-400">*</span>
               </label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Ex: SAP ECC Producao"
+                placeholder={t.namePlaceholder}
                 className="w-full px-4 py-2.5 bg-[#0f0b1a] border border-white/[0.08] rounded-lg text-sm text-[#e2e0ea] placeholder-[#9b95ad]/50 focus:outline-none focus:border-purple-500/50"
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-[#e2e0ea] mb-1.5">
-                Descricao
+                {t.descriptionLabel}
               </label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Descricao opcional da integracao"
+                placeholder={t.descriptionPlaceholder}
                 rows={3}
                 className="w-full px-4 py-2.5 bg-[#0f0b1a] border border-white/[0.08] rounded-lg text-sm text-[#e2e0ea] placeholder-[#9b95ad]/50 focus:outline-none focus:border-purple-500/50 resize-none"
               />
@@ -310,17 +313,17 @@ export default function NewIntegrationPage() {
 
             <div>
               <label className="block text-sm font-medium text-[#e2e0ea] mb-1.5">
-                Cliente vinculado <span className="text-rose-400">*</span>
+                {t.clientLabel} <span className="text-rose-400">*</span>
               </label>
               {clientsLoading ? (
-                <p className="text-[#9b95ad] text-sm">Carregando clientes...</p>
+                <p className="text-[#9b95ad] text-sm">{t.loadingClients}</p>
               ) : (
                 <select
                   value={selectedClientId}
                   onChange={(e) => setSelectedClientId(e.target.value)}
                   className="w-full px-4 py-2.5 bg-[#0f0b1a] border border-white/[0.08] rounded-lg text-sm text-[#e2e0ea] focus:outline-none focus:border-purple-500/50"
                 >
-                  <option value="">Selecione um cliente</option>
+                  <option value="">{t.selectClient}</option>
                   {clients.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name}
@@ -331,9 +334,9 @@ export default function NewIntegrationPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[#e2e0ea] mb-1.5">Ambiente</label>
+              <label className="block text-sm font-medium text-[#e2e0ea] mb-1.5">{t.environmentLabel}</label>
               <div className="grid grid-cols-3 gap-2">
-                {[["DEV", "Desenvolvimento"], ["HML", "Homologação"], ["PRD", "Produção"]].map(([v, l]) => (
+                {[["DEV", t.envDev], ["HML", t.envHml], ["PRD", t.envPrd]].map(([v, l]) => (
                   <button
                     key={v}
                     type="button"
@@ -344,7 +347,7 @@ export default function NewIntegrationPage() {
                   </button>
                 ))}
               </div>
-              <p className="text-xs text-[#6b6580] mt-1.5">Separa dev/homologação/produção do mesmo cliente — cada ambiente tem suas próprias integrações, credenciais e alertas.</p>
+              <p className="text-xs text-[#6b6580] mt-1.5">{t.environmentHint}</p>
             </div>
           </div>
 
@@ -353,14 +356,14 @@ export default function NewIntegrationPage() {
               onClick={() => setStep(0)}
               className="px-6 py-2.5 bg-white/[0.06] text-[#e2e0ea] text-sm font-medium rounded-lg hover:bg-white/[0.1] transition-colors cursor-pointer"
             >
-              Voltar
+              {t.back}
             </button>
             <button
               onClick={() => setStep(2)}
               disabled={!canAdvance()}
               className="px-6 py-2.5 bg-gradient-to-r from-purple-600 to-purple-500 text-white text-sm font-medium rounded-lg hover:from-purple-500 hover:to-purple-400 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              Proximo
+              {t.next}
             </button>
           </div>
         </div>
@@ -370,9 +373,9 @@ export default function NewIntegrationPage() {
       {step === 2 && selectedType && (
         <div className="space-y-6">
           <div>
-            <h2 className="text-xl font-bold">Configuracao de conexao</h2>
+            <h2 className="text-xl font-bold">{t.step3Title}</h2>
             <p className="text-[#9b95ad] text-sm mt-1">
-              Configure os parametros para <span className="text-purple-400">{selectedType.name}</span>
+              {t.step3SubtitlePrefix} <span className="text-purple-400">{selectedType.name}</span>
             </p>
           </div>
 
@@ -389,7 +392,7 @@ export default function NewIntegrationPage() {
                     onChange={(e) => handleConfigChange(field.key, e.target.value)}
                     className="w-full px-4 py-2.5 bg-[#0f0b1a] border border-white/[0.08] rounded-lg text-sm text-[#e2e0ea] focus:outline-none focus:border-purple-500/50"
                   >
-                    <option value="">Selecione...</option>
+                    <option value="">{t.selectPlaceholder}</option>
                     {field.options.map((opt) => (
                       <option key={opt} value={opt}>{opt}</option>
                     ))}
@@ -407,7 +410,7 @@ export default function NewIntegrationPage() {
             ))}
 
             {selectedType.fields.length === 0 && (
-              <p className="text-[#9b95ad] text-sm">Nenhum campo de configuracao necessario para este tipo.</p>
+              <p className="text-[#9b95ad] text-sm">{t.noConfigFields}</p>
             )}
           </div>
 
@@ -416,14 +419,14 @@ export default function NewIntegrationPage() {
               onClick={() => setStep(1)}
               className="px-6 py-2.5 bg-white/[0.06] text-[#e2e0ea] text-sm font-medium rounded-lg hover:bg-white/[0.1] transition-colors cursor-pointer"
             >
-              Voltar
+              {t.back}
             </button>
             <button
               onClick={() => setStep(3)}
               disabled={!canAdvance()}
               className="px-6 py-2.5 bg-gradient-to-r from-purple-600 to-purple-500 text-white text-sm font-medium rounded-lg hover:from-purple-500 hover:to-purple-400 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              Proximo
+              {t.next}
             </button>
           </div>
         </div>
@@ -433,28 +436,28 @@ export default function NewIntegrationPage() {
       {step === 3 && selectedType && (
         <div className="space-y-6">
           <div>
-            <h2 className="text-xl font-bold">Revisar e testar</h2>
-            <p className="text-[#9b95ad] text-sm mt-1">Confira os dados e teste a conexao</p>
+            <h2 className="text-xl font-bold">{t.step4Title}</h2>
+            <p className="text-[#9b95ad] text-sm mt-1">{t.step4Subtitle}</p>
           </div>
 
           {/* Summary Card */}
           <div className="bg-[#1a1527] rounded-xl p-5 border border-white/[0.08] space-y-3">
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div>
-                <p className="text-[#9b95ad] text-xs">Tipo</p>
+                <p className="text-[#9b95ad] text-xs">{t.summaryType}</p>
                 <p className="text-[#e2e0ea] font-medium">{selectedType.name}</p>
               </div>
               <div>
-                <p className="text-[#9b95ad] text-xs">Nome</p>
+                <p className="text-[#9b95ad] text-xs">{t.summaryName}</p>
                 <p className="text-[#e2e0ea] font-medium">{name}</p>
               </div>
               <div>
-                <p className="text-[#9b95ad] text-xs">Cliente</p>
+                <p className="text-[#9b95ad] text-xs">{t.summaryClient}</p>
                 <p className="text-[#e2e0ea] font-medium">{selectedClientName}</p>
               </div>
               {description && (
                 <div>
-                  <p className="text-[#9b95ad] text-xs">Descricao</p>
+                  <p className="text-[#9b95ad] text-xs">{t.summaryDescription}</p>
                   <p className="text-[#e2e0ea] font-medium">{description}</p>
                 </div>
               )}
@@ -462,7 +465,7 @@ export default function NewIntegrationPage() {
 
             {Object.keys(configValues).length > 0 && (
               <div className="pt-3 border-t border-white/[0.06]">
-                <p className="text-xs text-[#9b95ad] mb-2">Configuracao</p>
+                <p className="text-xs text-[#9b95ad] mb-2">{t.summaryConfig}</p>
                 <div className="space-y-1 text-sm">
                   {Object.entries(configValues).map(([key, val]) => {
                     const field = selectedType.fields.find((f) => f.key === key);
@@ -485,14 +488,14 @@ export default function NewIntegrationPage() {
           {!testResult && !testing && (
             <div className="space-y-3">
               <div className="bg-cyan-500/10 border border-cyan-500/20 rounded-lg p-4">
-                <p className="text-sm text-cyan-400 font-medium mb-1">🔌 Testar antes de salvar</p>
-                <p className="text-xs text-[#9b95ad]">Vamos verificar se a conexão funciona antes de criar a integração.</p>
+                <p className="text-sm text-cyan-400 font-medium mb-1">{t.testBannerTitle}</p>
+                <p className="text-xs text-[#9b95ad]">{t.testBannerText}</p>
               </div>
               <button
                 onClick={handleTest}
                 className="w-full px-6 py-3.5 bg-gradient-to-r from-cyan-600 to-cyan-500 text-white text-sm font-semibold rounded-lg hover:from-cyan-500 hover:to-cyan-400 transition-all cursor-pointer"
               >
-                Testar Conexão
+                {t.testConnectionBtn}
               </button>
             </div>
           )}
@@ -501,8 +504,8 @@ export default function NewIntegrationPage() {
           {testing && (
             <div className="bg-[#1a1527] rounded-xl p-8 border border-purple-500/20 text-center">
               <div className="w-12 h-12 border-3 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-              <p className="text-sm text-purple-400 font-medium">Testando conexão...</p>
-              <p className="text-xs text-[#9b95ad] mt-1">Verificando configuração e conectividade</p>
+              <p className="text-sm text-purple-400 font-medium">{t.testingTitle}</p>
+              <p className="text-xs text-[#9b95ad] mt-1">{t.testingSubtitle}</p>
             </div>
           )}
 
@@ -517,8 +520,8 @@ export default function NewIntegrationPage() {
                         <svg className="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                       </div>
                       <div>
-                        <span className="text-emerald-400 font-semibold">Conexão bem-sucedida!</span>
-                        <p className="text-xs text-emerald-400/70">Tudo pronto para salvar a integração.</p>
+                        <span className="text-emerald-400 font-semibold">{t.successTitle}</span>
+                        <p className="text-xs text-emerald-400/70">{t.successSubtitle}</p>
                       </div>
                     </>
                   ) : (
@@ -527,8 +530,8 @@ export default function NewIntegrationPage() {
                         <svg className="w-6 h-6 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                       </div>
                       <div>
-                        <span className="text-rose-400 font-semibold">Falha na conexão</span>
-                        <p className="text-xs text-rose-400/70">Verifique as configurações e tente novamente.</p>
+                        <span className="text-rose-400 font-semibold">{t.failTitle}</span>
+                        <p className="text-xs text-rose-400/70">{t.failSubtitle}</p>
                       </div>
                     </>
                   )}
@@ -550,15 +553,15 @@ export default function NewIntegrationPage() {
               <div className="flex gap-3">
                 {testResult.success ? (
                   <button onClick={() => router.push("/integrations")} className="flex-1 px-6 py-3.5 bg-gradient-to-r from-purple-600 to-purple-500 text-white text-sm font-semibold rounded-lg hover:from-purple-500 hover:to-purple-400 transition-all cursor-pointer">
-                    ✅ Salvar Integração
+                    {t.saveIntegration}
                   </button>
                 ) : (
                   <>
                     <button onClick={() => { setTestResult(null); setStep(2); }} className="flex-1 px-6 py-3 bg-white/[0.06] text-[#e2e0ea] text-sm font-medium rounded-lg hover:bg-white/[0.1] transition-colors cursor-pointer">
-                      ← Corrigir Configuração
+                      {t.fixConfig}
                     </button>
                     <button onClick={() => { setTestResult(null); setTesting(false); }} className="flex-1 px-6 py-3 bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-sm font-medium rounded-lg hover:bg-cyan-500/15 transition cursor-pointer">
-                      🔄 Testar Novamente
+                      {t.testAgain}
                     </button>
                   </>
                 )}
@@ -567,7 +570,7 @@ export default function NewIntegrationPage() {
               {/* Save anyway if test failed */}
               {!testResult.success && (
                 <button onClick={() => router.push("/integrations")} className="w-full px-6 py-2.5 text-[#9b95ad] text-xs hover:text-white transition cursor-pointer">
-                  Salvar mesmo assim (a integração será criada com status de erro)
+                  {t.saveAnyway}
                 </button>
               )}
             </div>
@@ -577,7 +580,7 @@ export default function NewIntegrationPage() {
           {!testResult && !testing && (
             <div className="flex justify-start">
               <button onClick={() => setStep(2)} className="px-6 py-2.5 bg-white/[0.06] text-[#e2e0ea] text-sm font-medium rounded-lg hover:bg-white/[0.1] transition-colors cursor-pointer">
-                Voltar
+                {t.back}
               </button>
             </div>
           )}

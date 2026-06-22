@@ -7,23 +7,30 @@ import {
 } from "@/lib/api";
 import ExplainData from "@/components/ExplainData";
 import { usePaginate, Pagination } from "@/components/Pagination";
+import { useLang } from "@/i18n/I18n";
+import { T } from "./i18n";
 
 interface IntegrationLite { id: string; name: string; type: string; client?: { name?: string } }
 
-const SEV: Record<string, { label: string; cls: string; dot: string }> = {
-  EXPIRED: { label: "Expirado", cls: "text-rose-400 border-rose-500/30 bg-rose-500/[0.06]", dot: "bg-rose-500" },
-  CRITICAL: { label: "Crítico", cls: "text-orange-400 border-orange-500/30 bg-orange-500/[0.06]", dot: "bg-orange-500" },
-  WARN: { label: "Atenção", cls: "text-amber-300 border-amber-500/30 bg-amber-500/[0.06]", dot: "bg-amber-400" },
-  OK: { label: "OK", cls: "text-emerald-400 border-emerald-500/20 bg-emerald-500/[0.04]", dot: "bg-emerald-500" },
+const SEV: Record<string, { cls: string; dot: string }> = {
+  EXPIRED: { cls: "text-rose-400 border-rose-500/30 bg-rose-500/[0.06]", dot: "bg-rose-500" },
+  CRITICAL: { cls: "text-orange-400 border-orange-500/30 bg-orange-500/[0.06]", dot: "bg-orange-500" },
+  WARN: { cls: "text-amber-300 border-amber-500/30 bg-amber-500/[0.06]", dot: "bg-amber-400" },
+  OK: { cls: "text-emerald-400 border-emerald-500/20 bg-emerald-500/[0.04]", dot: "bg-emerald-500" },
 };
 
-function fmtDays(d: number) {
-  if (d < 0) return `expirou há ${Math.abs(d)} dia(s)`;
-  if (d === 0) return "expira hoje";
-  return `${d} dia(s)`;
-}
-
 export default function ValidityPage() {
+  const { lang } = useLang();
+  const t = T[lang];
+  const SEV_LABEL: Record<string, string> = {
+    EXPIRED: t.sevExpired, CRITICAL: t.sevCritical, WARN: t.sevWarn, OK: t.sevOk,
+  };
+  function fmtDays(d: number) {
+    if (d < 0) return t.expiredAgo(Math.abs(d));
+    if (d === 0) return t.expiresToday;
+    return t.daysLeft(d);
+  }
+
   const [items, setItems] = useState<ValidityItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -56,9 +63,9 @@ export default function ValidityPage() {
     try {
       const r = await refreshAllCerts();
       setItems(r.items);
-      setMsg(`Verificados ${r.checked} certificado(s); ${r.expiring} expirando em breve.`);
+      setMsg(t.checkedMsg(r.checked, r.expiring));
     } catch {
-      setMsg("Erro ao reavaliar certificados.");
+      setMsg(t.refreshAllError);
     } finally {
       setRefreshing(false);
     }
@@ -86,9 +93,9 @@ export default function ValidityPage() {
       });
       setForm({ integrationId: "", secretLabel: "", secretExpiresAt: "" });
       await load();
-      setMsg("Validade do segredo registrada.");
+      setMsg(t.secretSaved);
     } catch {
-      setMsg("Erro ao registrar a validade do segredo.");
+      setMsg(t.secretError);
     } finally {
       setSavingSecret(false);
     }
@@ -97,25 +104,25 @@ export default function ValidityPage() {
   const counts = items.reduce((a: Record<string, number>, i) => { a[i.severity] = (a[i.severity] || 0) + 1; return a; }, {});
   const pag = usePaginate<any>(items, 20);
 
-  if (loading) return <div className="text-[#9b95ad]">Carregando...</div>;
+  if (loading) return <div className="text-[#9b95ad]">{t.loading}</div>;
 
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">📡 Radar de validade</h1>
+          <h1 className="text-2xl font-bold flex items-center gap-2">📡 {t.title}</h1>
           <p className="text-[#9b95ad] text-sm mt-1">
-            Certificados TLS (detectados automaticamente) e segredos com expiração — antes de virarem incidente.
+            {t.subtitle}
           </p>
         </div>
         {isAdmin && (
           <button onClick={onRefreshAll} disabled={refreshing}
             className="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-cyan-500 text-white text-sm font-semibold disabled:opacity-40 cursor-pointer">
-            {refreshing ? "Verificando..." : "Reavaliar certificados"}
+            {refreshing ? t.refreshing : t.refreshAll}
           </button>
         )}
       </div>
-      <ExplainData screen="Radar de validade (certificados/segredos)" data={{ itens: items.slice(0, 20) }} label="O que renovar primeiro (IA)" />
+      <ExplainData screen={t.explainScreen} data={{ itens: items.slice(0, 20) }} label={t.explainLabel} />
 
       {/* Resumo */}
       <div className="flex flex-wrap gap-3">
@@ -123,7 +130,7 @@ export default function ValidityPage() {
           <div key={s} className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${SEV[s].cls}`}>
             <span className={`w-2 h-2 rounded-full ${SEV[s].dot}`} />
             <span className="text-sm font-semibold">{counts[s] || 0}</span>
-            <span className="text-xs opacity-80">{SEV[s].label}</span>
+            <span className="text-xs opacity-80">{SEV_LABEL[s]}</span>
           </div>
         ))}
       </div>
@@ -133,7 +140,7 @@ export default function ValidityPage() {
       {/* Lista */}
       {items.length === 0 ? (
         <div className="bg-[#1a1527] rounded-xl p-8 border border-white/[0.08] text-center text-[#9b95ad]">
-          Nenhuma validade monitorada ainda. Reavalie os certificados ou registre a expiração de um segredo abaixo.
+          {t.empty}
         </div>
       ) : (
         <div className="space-y-2">
@@ -146,7 +153,7 @@ export default function ValidityPage() {
                     <div className="flex items-center gap-2">
                       <span className={`w-2 h-2 rounded-full ${sev.dot}`} />
                       <p className="font-semibold text-[#e2e0ea] truncate">{i.integration}</p>
-                      <span className="text-[11px] px-1.5 py-0.5 rounded bg-white/[0.06] text-[#9b95ad]">{i.kind === "CERT" ? "Certificado TLS" : i.label}</span>
+                      <span className="text-[11px] px-1.5 py-0.5 rounded bg-white/[0.06] text-[#9b95ad]">{i.kind === "CERT" ? t.certTls : i.label}</span>
                     </div>
                     <p className="text-xs text-[#9b95ad] mt-1">
                       {i.client} · {i.type}
@@ -155,12 +162,12 @@ export default function ValidityPage() {
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-semibold">{fmtDays(i.daysLeft)}</p>
-                    <p className="text-xs text-[#9b95ad]">{new Date(i.expiresAt).toLocaleDateString("pt-BR")}</p>
+                    <p className="text-xs text-[#9b95ad]">{new Date(i.expiresAt).toLocaleDateString(lang === "pt" ? "pt-BR" : lang === "es" ? "es" : "en-US")}</p>
                   </div>
                   {isAdmin && i.kind === "CERT" && (
                     <button onClick={() => onRefreshOne(i.integrationId)} disabled={rowBusy === i.integrationId}
                       className="text-xs px-3 py-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] disabled:opacity-40 cursor-pointer">
-                      {rowBusy === i.integrationId ? "..." : "Reavaliar"}
+                      {rowBusy === i.integrationId ? "..." : t.refreshRow}
                     </button>
                   )}
                 </div>
@@ -174,27 +181,27 @@ export default function ValidityPage() {
       {/* Registrar validade de segredo (admin) */}
       {isAdmin && (
         <form onSubmit={onSaveSecret} className="bg-[#1a1527] rounded-xl p-6 border border-white/[0.08] space-y-3">
-          <h2 className="text-lg font-semibold">Registrar validade de um segredo</h2>
+          <h2 className="text-lg font-semibold">{t.registerTitle}</h2>
           <p className="text-sm text-[#9b95ad]">
-            Para o que a plataforma não lê sozinha: senha de usuário RFC, client secret OAuth, certificado SNC.
+            {t.registerHint}
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <select value={form.integrationId} onChange={(e) => setForm({ ...form, integrationId: e.target.value })} required
               className="bg-[#0f0b1a] border border-white/[0.1] rounded-lg px-3 py-2 text-sm">
-              <option value="">Integração...</option>
+              <option value="">{t.integrationPlaceholder}</option>
               {integrations.map((i) => (
                 <option key={i.id} value={i.id}>{i.name} ({i.type})</option>
               ))}
             </select>
             <input value={form.secretLabel} onChange={(e) => setForm({ ...form, secretLabel: e.target.value })}
-              placeholder="Ex.: Senha do usuário RFC"
+              placeholder={t.secretLabelPlaceholder}
               className="bg-[#0f0b1a] border border-white/[0.1] rounded-lg px-3 py-2 text-sm" />
             <input type="date" value={form.secretExpiresAt} onChange={(e) => setForm({ ...form, secretExpiresAt: e.target.value })} required
               className="bg-[#0f0b1a] border border-white/[0.1] rounded-lg px-3 py-2 text-sm" />
           </div>
           <button type="submit" disabled={savingSecret}
             className="px-4 py-2 rounded-lg bg-purple-500 text-white text-sm font-semibold disabled:opacity-40 cursor-pointer">
-            {savingSecret ? "Salvando..." : "Registrar validade"}
+            {savingSecret ? t.saving : t.saveSecret}
           </button>
         </form>
       )}

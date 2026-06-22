@@ -5,6 +5,8 @@ import { getAlerts, resolveAlert, resolveAlertGroup, diagnoseAlert } from "@/lib
 import { useToast } from "@/components/Toast";
 import { AiReport } from "@/components/AiReport";
 import ExplainData from "@/components/ExplainData";
+import { useLang } from "@/i18n/I18n";
+import { T } from "./i18n";
 
 interface Alert {
   id: string; severity: string; type: string; message: string; resolved: boolean;
@@ -22,6 +24,8 @@ function sevBadge(s: string) {
 }
 
 export default function AlertsPage() {
+  const { lang } = useLang();
+  const t = T[lang];
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [loading, setLoading] = useState(true);
   const [severityFilter, setSeverityFilter] = useState("ALL");
@@ -33,7 +37,7 @@ export default function AlertsPage() {
   useEffect(() => { load(); }, []);
   async function load() {
     try { const data = await getAlerts(); setAlerts(Array.isArray(data) ? data : data.data || []); }
-    catch { notify("Erro ao carregar alertas.", "error"); } finally { setLoading(false); }
+    catch { notify(t.loadError, "error"); } finally { setLoading(false); }
   }
 
   // Agrupa por integração+tipo+mensagem (colapsa a enxurrada)
@@ -56,38 +60,38 @@ export default function AlertsPage() {
     const id = g.ids[0];
     setDiag((d) => ({ ...d, [g.key]: { loading: true } }));
     try { const r = await diagnoseAlert(id); setDiag((d) => ({ ...d, [g.key]: { loading: false, text: r.text } })); }
-    catch { setDiag((d) => ({ ...d, [g.key]: { loading: false, text: "Não foi possível diagnosticar agora." } })); }
+    catch { setDiag((d) => ({ ...d, [g.key]: { loading: false, text: t.diagnoseFallback } })); }
   }
   async function doResolve(g: Group) {
     setConfirm(null);
     try {
-      if (g.count > 1) { const r = await resolveAlertGroup({ integrationId: g.integrationId, type: g.type, message: g.integrationId ? undefined : g.message }); notify(`${r.resolved} alerta(s) resolvido(s).`, "success"); }
-      else { await resolveAlert(g.ids[0]); notify("Alerta resolvido.", "success"); }
+      if (g.count > 1) { const r = await resolveAlertGroup({ integrationId: g.integrationId, type: g.type, message: g.integrationId ? undefined : g.message }); notify(t.resolvedCount(r.resolved), "success"); }
+      else { await resolveAlert(g.ids[0]); notify(t.resolvedOne, "success"); }
       await load();
-    } catch { notify("Não foi possível resolver. Tente novamente.", "error"); }
+    } catch { notify(t.resolveError, "error"); }
   }
 
-  if (loading) return <div className="text-[#9b95ad]">Carregando...</div>;
+  if (loading) return <div className="text-[#9b95ad]">{t.loading}</div>;
 
   const openCount = alerts.filter((a) => !a.resolved).length;
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <h1 className="text-2xl font-bold">Alertas</h1>
-        <ExplainData screen="Alertas" data={{ abertos: openCount, grupos: groups.slice(0, 12).map((g) => ({ severidade: g.severity, tipo: g.type, mensagem: g.message, ocorrencias: g.count, cliente: g.client, integracao: g.integrationName })) }} label="Explique e priorize (IA)" />
+        <h1 className="text-2xl font-bold">{t.title}</h1>
+        <ExplainData screen="Alertas" data={{ abertos: openCount, grupos: groups.slice(0, 12).map((g) => ({ severidade: g.severity, tipo: g.type, mensagem: g.message, ocorrencias: g.count, cliente: g.client, integracao: g.integrationName })) }} label={t.explainLabel} />
       </div>
 
       <div className="flex flex-wrap gap-3">
         <select value={severityFilter} onChange={(e) => setSeverityFilter(e.target.value)} className="px-4 py-2 bg-[#1a1527] border border-white/[0.08] rounded-lg text-sm">
-          <option value="ALL">Todas severidades</option><option value="CRITICAL">Critical</option><option value="HIGH">High</option><option value="MEDIUM">Medium</option><option value="LOW">Low</option>
+          <option value="ALL">{t.allSeverities}</option><option value="CRITICAL">Critical</option><option value="HIGH">High</option><option value="MEDIUM">Medium</option><option value="LOW">Low</option>
         </select>
         <div className="flex bg-[#1a1527] rounded-lg p-1 border border-white/[0.08]">
-          {[{ key: "ACTIVE", label: "Ativos" }, { key: "RESOLVED", label: "Resolvidos" }, { key: "ALL", label: "Todos" }].map((o) => (
+          {[{ key: "ACTIVE", label: t.statusActive }, { key: "RESOLVED", label: t.statusResolved }, { key: "ALL", label: t.statusAll }].map((o) => (
             <button key={o.key} onClick={() => setStatusFilter(o.key)} className={`px-3 py-1.5 rounded-md text-sm font-medium cursor-pointer ${statusFilter === o.key ? "bg-purple-500/20 text-purple-400" : "text-[#9b95ad] hover:text-white"}`}>{o.label}</button>
           ))}
         </div>
-        <span className="text-sm text-[#9b95ad] self-center">{groups.length} grupo(s) · {visible.length} alerta(s)</span>
+        <span className="text-sm text-[#9b95ad] self-center">{t.groupsCount(groups.length, visible.length)}</span>
       </div>
 
       <div className="space-y-3">
@@ -104,39 +108,39 @@ export default function AlertsPage() {
                     {g.client ? `${g.client} · ` : ""}{g.integrationName || ""}
                   </p>
                   <p className="text-xs text-[#6b6580] mt-1">
-                    {g.count > 1 ? `primeiro ${new Date(g.first).toLocaleString("pt-BR")} · último ${new Date(g.last).toLocaleString("pt-BR")}` : new Date(g.last).toLocaleString("pt-BR")}
+                    {g.count > 1 ? t.firstLast(new Date(g.first).toLocaleString("pt-BR"), new Date(g.last).toLocaleString("pt-BR")) : new Date(g.last).toLocaleString("pt-BR")}
                   </p>
                 </div>
                 {statusFilter !== "RESOLVED" && (
                   <div className="flex gap-2 shrink-0">
-                    <button onClick={() => (d ? setDiag((x) => { const c = { ...x }; delete c[g.key]; return c; }) : runDiagnose(g))} className="px-3 py-1.5 text-xs font-medium bg-violet-500/15 text-violet-300 rounded-lg hover:bg-violet-500/25 cursor-pointer">{d ? "Ocultar" : "🤖 Diagnosticar"}</button>
-                    <button onClick={() => setConfirm(g)} className="px-3 py-1.5 text-xs font-medium bg-emerald-500/20 text-emerald-400 rounded-lg hover:bg-emerald-500/30 cursor-pointer">Resolver{g.count > 1 ? ` (${g.count})` : ""}</button>
+                    <button onClick={() => (d ? setDiag((x) => { const c = { ...x }; delete c[g.key]; return c; }) : runDiagnose(g))} className="px-3 py-1.5 text-xs font-medium bg-violet-500/15 text-violet-300 rounded-lg hover:bg-violet-500/25 cursor-pointer">{d ? t.hide : t.diagnose}</button>
+                    <button onClick={() => setConfirm(g)} className="px-3 py-1.5 text-xs font-medium bg-emerald-500/20 text-emerald-400 rounded-lg hover:bg-emerald-500/30 cursor-pointer">{t.resolve}{g.count > 1 ? ` (${g.count})` : ""}</button>
                   </div>
                 )}
               </div>
               {d && (
                 <div className="px-4 pb-4">
-                  {d.loading ? <div className="text-sm text-violet-300">A IA está analisando o alerta…</div> : <AiReport text={d.text || ""} title="Diagnóstico do alerta" subtitle={g.message} onRefresh={() => runDiagnose(g)} refreshing={d.loading} />}
+                  {d.loading ? <div className="text-sm text-violet-300">{t.analyzing}</div> : <AiReport text={d.text || ""} title={t.diagReportTitle} subtitle={g.message} onRefresh={() => runDiagnose(g)} refreshing={d.loading} />}
                 </div>
               )}
             </div>
           );
         })}
-        {groups.length === 0 && <p className="text-[#9b95ad] text-sm">Nenhum alerta {statusFilter === "ACTIVE" ? "ativo" : ""} no momento. 🎉</p>}
+        {groups.length === 0 && <p className="text-[#9b95ad] text-sm">{t.noAlerts(statusFilter === "ACTIVE")}</p>}
       </div>
 
       {/* Confirmação de resolução */}
       {confirm && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setConfirm(null)}>
           <div className="bg-[#1a1527] border border-white/[0.1] rounded-2xl p-6 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-lg font-bold mb-2">Resolver {confirm.count > 1 ? `${confirm.count} alertas` : "alerta"}?</h3>
+            <h3 className="text-lg font-bold mb-2">{t.confirmTitle(confirm.count)}</h3>
             <p className="text-sm text-[#9b95ad] mb-1">{confirm.message}</p>
             <p className="text-xs text-[#6b6580] mb-4">
-              Marcar como resolvido só fecha o alerta no SAPLINK — confirme que a causa foi tratada. Se a falha persistir no SAP, um novo alerta será criado no próximo ciclo.
+              {t.confirmHint}
             </p>
             <div className="flex gap-2 justify-end">
-              <button onClick={() => setConfirm(null)} className="px-4 py-2 rounded-lg text-sm bg-white/[0.06] text-[#e2e0ea] hover:bg-white/[0.12] cursor-pointer">Cancelar</button>
-              <button onClick={() => doResolve(confirm)} className="px-4 py-2 rounded-lg text-sm bg-emerald-500 text-white font-semibold cursor-pointer">Confirmar</button>
+              <button onClick={() => setConfirm(null)} className="px-4 py-2 rounded-lg text-sm bg-white/[0.06] text-[#e2e0ea] hover:bg-white/[0.12] cursor-pointer">{t.cancel}</button>
+              <button onClick={() => doResolve(confirm)} className="px-4 py-2 rounded-lg text-sm bg-emerald-500 text-white font-semibold cursor-pointer">{t.confirm}</button>
             </div>
           </div>
         </div>

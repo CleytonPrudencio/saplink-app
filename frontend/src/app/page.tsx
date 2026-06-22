@@ -15,31 +15,6 @@ interface Plan {
 }
 const brl = (c: number) => (c / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-const GROUPS = [
-  ["Operação", "#22d3ee", [["🛰️", "Cockpit de IDoc & filas", "BD87 + SMQ + SM58 num painel multi-cliente"], ["✨", "Remediação autônoma", "Reprocessa/destrava com aprovação e log"], ["📚", "Catálogo de interfaces", "Landscape auto-descoberto (WE20/SM59)"], ["🔔", "Alertas em tempo real", "Detecção e resolução automática"]]],
-  ["Inteligência IA", "#a78bfa", [["💬", "Copiloto da carteira", "Pergunte em linguagem natural"], ["🤖", "Diagnóstico + SAP Notes", "Causa raiz e a Nota provável"], ["🔮", "Previsão de falha", "Anomalia antes de quebrar"], ["📬", "Digest semanal por IA", "Resumo white-label no e-mail"]]],
-  ["Valor & SLA", "#34d399", [["📈", "SLA por cliente", "Compliance + relatório por IA"], ["💰", "Impacto em R$", "Custo da parada por hora"], ["🏆", "Benchmark de mercado", "Sua carteira vs percentil"], ["🪪", "Portal do cliente", "White-label, read-only"]]],
-  ["S/4HANA Cloud", "#fbbf24", [["🚀", "Radar de Upgrade", "O que quebra no próximo release"], ["🧼", "Clean Core Score", "A métrica que a SAP cobra"], ["🧾", "Fiscal DRC (NF-e)", "Rejeição SEFAZ, contingência"], ["📨", "Event Mesh + CPI/AIF", "Dead-letter, lag, MPL"]]],
-  ["Resposta & Confiança", "#f87171", [["📣", "On-call multicanal", "Slack/Teams/Webhook/e-mail + escalonamento"], ["🎫", "Tickets Jira/ServiceNow", "Alerta vira chamado e fecha sozinho"], ["📡", "Radar de validade", "Certificados e segredos vencendo"], ["🚚", "Transports (STMS)", "Correlaciona incidente x transporte"]]],
-];
-
-// Diferenciais que não existem em nenhum outro sistema de monitoramento SAP
-const INNOVATIONS = [
-  ["🛰️", "Rede Federada de Falhas", "O \"Waze do SAP\"", "Cada falha e a correção que funcionou viram conhecimento anônimo da rede. Quando algo quebra no seu cliente, o SAPLINK já sabe a correção vencedora — porque viu acontecer em dezenas de outros ambientes.", "Fica mais inteligente a cada cliente (efeito de rede)."],
-  ["🔗", "Causa raiz cross-camada", "On-prem + nuvem juntos", "Cruza os transports (STMS) com as falhas de CPI/IDoc que vieram depois e aponta a mudança que provavelmente causou. Ninguém mais tem as duas camadas no mesmo lugar.", "Achar a causa em minutos, não em horas."],
-  ["🤖", "AMS Autônomo", "Self-healing que aprende", "Detecta → diagnostica → corrige → mede → aprende. Correções de alta confiança são aplicadas sozinhas (com rollback e rastro). A confiança vem da Rede Federada.", "Reduz o L1/L2 manual a quase zero."],
-  ["💸", "Dinheiro em risco (ao vivo)", "Linguagem de CFO", "Traduz cada falha técnica em R$ parados agora — custo de parada por hora + documentos fiscais bloqueados, por processo de negócio.", "Muda a conversa de venda de técnica para financeira."],
-  ["🔁", "Reconciliação ponta-a-ponta", "Entregue ≠ virou negócio", "Rastreia o documento pela jornada (pedido → ordem → fatura) e mostra onde o volume se perde. Pega a falha silenciosa que diz \"sucesso\" mas o objeto nunca nasceu.", "Acha o vazamento que nenhum monitor vê."],
-  ["⚙️", "Remediação generativa", "A IA escreve a correção", "Não só descreve o problema — entrega o artefato pronto (Groovy, mapeamento, filtro OData) para colar e aplicar.", "De \"explica\" para \"resolve\" em segundos."],
-  ["💬", "ChatOps por WhatsApp", "Opere o SAP por mensagem", "\"Reprocessa os IDocs do cliente X\" pelo WhatsApp/Telegram — a IA entende, age e pede aprovação para o que mexe no SAP.", "Operação na palma da mão, sem abrir o painel."],
-  ["📉", "Perda silenciosa de negócio", "Radar de receita", "Alerta quando o volume cai muito abaixo do normal — mesmo com tudo verde tecnicamente. Captura a receita parando antes de virar reclamação.", "Vê o prejuízo que o monitor técnico não vê."],
-  ["🧨", "Pré-voo de mudança", "Blast radius antes do deploy", "Antes do transport ir pra PRD, mostra o raio de impacto (interfaces, processos, R$) e o score de risco — com plano de teste.", "Acaba com a surpresa pós-upgrade."],
-  ["⏪", "Time machine de incidente", "Replay + 'e se?'", "Reconstrói a linha do tempo do incidente e mostra quanto seria economizado com detecção mais rápida.", "Prova de ROI irrefutável."],
-  ["🛡️", "Auditoria & Compliance", "SoD automático", "Trilha de mudanças e remediações + checagem de segregação de função, com evidências prontas pro auditor.", "Compliance sem montar planilha."],
-  ["🤝", "Parceiros EDI", "Quem manda dado ruim", "Ranqueia parceiros por frequência de erro — pra cobrar o fornecedor certo, não a sua TI.", "Munição pra cobrar o parceiro."],
-  ["💵", "FinOps de BTP", "Custo de nuvem por IFlow", "Liga volume ao consumo do BTP e flagra o IFlow desgovernado queimando crédito.", "Fim da surpresa na fatura do BTP."],
-];
-
 
 function InterestModal({ open, onClose, t }: { open: boolean; onClose: () => void; t: LandingContent["interest"] }) {
   const [f, setF] = useState({ name: "", email: "", phone: "", company: "", role: "", employees: "", message: "" });
@@ -351,7 +326,7 @@ export default function LandingPage() {
   const [annual, setAnnual] = useState(false);
   const [interest, setInterest] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [feature, setFeature] = useState<{ icon: string; name: string; tagline: string; accent: string } | null>(null);
+  const [feature, setFeature] = useState<{ key: string; icon: string; name: string; tagline: string; accent: string } | null>(null);
   const { lang } = useLang();
   const L = pick(LANDING, lang);
 
@@ -519,7 +494,7 @@ export default function LandingPage() {
             <Reveal>
               <div className="bg-[#1a1527] border border-white/[0.08] rounded-2xl p-4 h-full">
                 <p className="text-xs text-[#9b95ad] mb-3">{L.produto.dash}</p>
-                <div className="flex items-end gap-3 mb-3"><span className="text-4xl font-extrabold slk-grad">92</span><span className="text-xs text-[#9b95ad] mb-1">health médio</span></div>
+                <div className="flex items-end gap-3 mb-3"><span className="text-4xl font-extrabold slk-grad">92</span><span className="text-xs text-[#9b95ad] mb-1">{L.produto.healthAvg}</span></div>
                 {[["Agro Nordeste", 96, "#34d399"], ["Têxtil Sul", 78, "#fbbf24"], ["Metalúrgica BR", 61, "#f87171"]].map(([n, v, c]) => (
                   <div key={n as string} className="flex items-center gap-2 mb-2"><span className="text-xs text-[#c9c5d6] w-28 truncate">{n}</span><div className="flex-1 h-2 rounded-full bg-white/[0.06] overflow-hidden"><div className="h-full rounded-full" style={{ width: `${v}%`, background: c as string }} /></div><span className="text-[11px] text-[#9b95ad] w-7 text-right">{v}</span></div>
                 ))}
@@ -534,7 +509,7 @@ export default function LandingPage() {
                     <div key={a as string} className="flex items-center justify-between bg-[#0f0b1a] rounded-lg px-2.5 py-1.5"><span className="text-[#e2e0ea]">{a} <span className="text-[#6b6580] font-mono">{b}</span></span><span className={`px-1.5 py-0.5 rounded ${c as string}`}>●</span></div>
                   ))}
                 </div>
-                <div className="mt-3 text-[11px] text-emerald-300">✓ Remediação com aprovação · trava de produção</div>
+                <div className="mt-3 text-[11px] text-emerald-300">{L.produto.cockpitApproval}</div>
               </div>
             </Reveal>
             {/* Impacto R$ */}
@@ -604,19 +579,19 @@ export default function LandingPage() {
           <h2 className="text-2xl sm:text-3xl font-bold mb-2">{L.plataforma.title}</h2>
           <p className="text-[#9b95ad] mb-8">{L.plataforma.sub}</p>
           <div className="space-y-5">
-            {GROUPS.map(([title, accent, feats]) => (
-              <div key={title as string} className="bg-[#1a1527] border border-white/[0.08] rounded-2xl p-5 sm:p-6">
+            {L.groups.map((g) => (
+              <div key={g.title} className="bg-[#1a1527] border border-white/[0.08] rounded-2xl p-5 sm:p-6">
                 <div className="flex items-center gap-2 mb-4">
-                  <span className="w-2.5 h-2.5 rounded-full" style={{ background: accent as string }} />
-                  <h3 className="font-bold text-lg" style={{ color: accent as string }}>{title as string}</h3>
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ background: g.accent }} />
+                  <h3 className="font-bold text-lg" style={{ color: g.accent }}>{g.title}</h3>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                  {(feats as string[][]).map((f) => (
-                    <button key={f[1]} onClick={() => setFeature({ icon: f[0], name: f[1], tagline: f[2], accent: accent as string })} className="slk-tilt text-left bg-[#0f0b1a] rounded-xl p-4 border border-white/[0.05] hover:border-white/[0.2] hover:bg-white/[0.02] group cursor-pointer">
-                      <div className="text-2xl mb-1.5">{f[0]}</div>
-                      <p className="font-semibold text-sm">{f[1]}</p>
-                      <p className="text-xs text-[#9b95ad] mt-1 leading-relaxed">{f[2]}</p>
-                      <p className="text-[11px] mt-2 font-medium opacity-0 group-hover:opacity-100 transition" style={{ color: accent as string }}>Ver detalhes, simulador e como implementar →</p>
+                  {g.feats.map((f) => (
+                    <button key={f.key} onClick={() => setFeature({ key: f.key, icon: f.icon, name: f.name, tagline: f.tagline, accent: g.accent })} className="slk-tilt text-left bg-[#0f0b1a] rounded-xl p-4 border border-white/[0.05] hover:border-white/[0.2] hover:bg-white/[0.02] group cursor-pointer">
+                      <div className="text-2xl mb-1.5">{f.icon}</div>
+                      <p className="font-semibold text-sm">{f.name}</p>
+                      <p className="text-xs text-[#9b95ad] mt-1 leading-relaxed">{f.tagline}</p>
+                      <p className="text-[11px] mt-2 font-medium opacity-0 group-hover:opacity-100 transition" style={{ color: g.accent }}>{L.featHover}</p>
                     </button>
                   ))}
                 </div>
@@ -628,15 +603,15 @@ export default function LandingPage() {
         {/* S/4HANA Cloud — destaque */}
         <section id="s4" className="py-14 sm:py-16 border-t border-white/[0.06]">
           <div className="rounded-2xl p-6 sm:p-10 bg-gradient-to-br from-amber-500/10 via-purple-600/10 to-cyan-500/10 border border-amber-500/20">
-            <span className="inline-block px-3 py-1 rounded-full bg-amber-500/15 text-amber-300 text-xs font-bold mb-4">CARRO-CHEFE</span>
-            <h2 className="text-2xl sm:text-4xl font-bold">Pronto para o <span className="text-amber-300">S/4HANA Cloud</span></h2>
-            <p className="text-[#c9c5d6] max-w-3xl mt-3 leading-relaxed">A edição que a SAP empurra em todo mundo — sem GUI, upgrade forçado 2×/ano e API-first. O SAPLINK cobre exatamente o que falta, conectando por <b className="text-white">Communication Arrangement</b> (OAuth), sem instalar nada.</p>
+            <span className="inline-block px-3 py-1 rounded-full bg-amber-500/15 text-amber-300 text-xs font-bold mb-4">{L.s4.badge}</span>
+            <h2 className="text-2xl sm:text-4xl font-bold">{L.s4.titlePre} <span className="text-amber-300">S/4HANA Cloud</span></h2>
+            <p className="text-[#c9c5d6] max-w-3xl mt-3 leading-relaxed">{L.s4.sub}</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-6">
-              {[["🚀", "Radar de Upgrade", "O que vai quebrar no próximo release — mapeado ao que você usa."], ["🧼", "Clean Core Score", "A métrica que a própria SAP cobra, com plano de remediação."], ["🧾", "Fiscal DRC", "NF-e/SEFAZ: rejeição, contingência e reprocesso. Mata o mercado BR."], ["📨", "Event Mesh + CPI/AIF", "Dead-letter, lag e Message Processing Logs reais."]].map((c) => (
-                <div key={c[1]} className="bg-[#0f0b1a]/60 rounded-xl p-4 border border-white/[0.08]">
-                  <div className="text-2xl mb-1.5">{c[0]}</div>
-                  <p className="font-semibold text-sm text-amber-200">{c[1]}</p>
-                  <p className="text-xs text-[#9b95ad] mt-1 leading-relaxed">{c[2]}</p>
+              {L.s4.cards.map((c) => (
+                <div key={c.title} className="bg-[#0f0b1a]/60 rounded-xl p-4 border border-white/[0.08]">
+                  <div className="text-2xl mb-1.5">{c.icon}</div>
+                  <p className="font-semibold text-sm text-amber-200">{c.title}</p>
+                  <p className="text-xs text-[#9b95ad] mt-1 leading-relaxed">{c.desc}</p>
                 </div>
               ))}
             </div>
@@ -645,28 +620,28 @@ export default function LandingPage() {
 
         {/* Inovação — diferenciais únicos (no ar) */}
         <section id="inovacao" className="py-14 sm:py-16 border-t border-white/[0.06]">
-          <span className="inline-block px-3 py-1 rounded-full bg-purple-500/15 text-purple-300 text-xs font-bold mb-4">🦄 EXCLUSIVO · NO AR</span>
-          <h2 className="text-2xl sm:text-4xl font-bold mb-2">O que não existe em nenhum outro sistema</h2>
-          <p className="text-[#9b95ad] mb-8 max-w-3xl">Treze diferenciais que viram moat: efeito de rede, dado cross-camada que só nós temos, autonomia, reconciliação, IA que escreve a correção, operação por WhatsApp, pré-voo de mudança, time machine, auditoria, FinOps e a linguagem do CFO. Clique pra explorar com simulador.</p>
+          <span className="inline-block px-3 py-1 rounded-full bg-purple-500/15 text-purple-300 text-xs font-bold mb-4">{L.innovHead.badge}</span>
+          <h2 className="text-2xl sm:text-4xl font-bold mb-2">{L.innovHead.title}</h2>
+          <p className="text-[#9b95ad] mb-8 max-w-3xl">{L.innovHead.sub}</p>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {INNOVATIONS.map((g) => (
-              <button key={g[1]} onClick={() => setFeature({ icon: g[0], name: g[1], tagline: g[2], accent: "#a78bfa" })} className="slk-tilt text-left bg-gradient-to-br from-purple-600/10 to-cyan-500/[0.06] border border-purple-500/25 rounded-2xl p-6 hover:border-purple-500/60 group cursor-pointer">
+            {L.innovations.map((g) => (
+              <button key={g.key} onClick={() => setFeature({ key: g.key, icon: g.icon, name: g.name, tagline: g.tagline, accent: "#a78bfa" })} className="slk-tilt text-left bg-gradient-to-br from-purple-600/10 to-cyan-500/[0.06] border border-purple-500/25 rounded-2xl p-6 hover:border-purple-500/60 group cursor-pointer">
                 <div className="flex items-center gap-3 mb-2">
-                  <span className="text-3xl">{g[0]}</span>
+                  <span className="text-3xl">{g.icon}</span>
                   <div>
-                    <p className="font-bold text-lg">{g[1]}</p>
-                    <p className="text-xs text-cyan-300">{g[2]}</p>
+                    <p className="font-bold text-lg">{g.name}</p>
+                    <p className="text-xs text-cyan-300">{g.tagline}</p>
                   </div>
                 </div>
-                <p className="text-sm text-[#c9c5d6] leading-relaxed">{g[3]}</p>
-                <p className="text-sm text-emerald-300 mt-3 flex items-center gap-1.5"><span>📈</span>{g[4]}</p>
-                <p className="text-[11px] mt-3 text-purple-300 opacity-0 group-hover:opacity-100 transition">Abrir detalhes + simulador →</p>
+                <p className="text-sm text-[#c9c5d6] leading-relaxed">{g.desc}</p>
+                <p className="text-sm text-emerald-300 mt-3 flex items-center gap-1.5"><span>📈</span>{g.benefit}</p>
+                <p className="text-[11px] mt-3 text-purple-300 opacity-0 group-hover:opacity-100 transition">{L.innovHead.hover}</p>
               </button>
             ))}
           </div>
           <div className="mt-8 text-center">
             <Link href="/funcionalidades" className="inline-block px-6 py-3 rounded-lg bg-white/[0.08] text-[#e2e0ea] font-semibold hover:bg-white/[0.14] transition">
-              Ver todas as funcionalidades em detalhe, com exemplos e ganhos →
+              {L.innovHead.more}
             </Link>
           </div>
         </section>

@@ -2,6 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { getBilling, getPlans, checkoutPlan, updateAddons, payInvoice, setAutoRenew, payNow, billingPortal } from "@/lib/api";
+import { useLang } from "@/i18n/I18n";
+import { T } from "./i18n";
+
+type Tr = (typeof T)[keyof typeof T];
 
 interface Plan {
   key: string;
@@ -48,25 +52,36 @@ interface Billing {
   invoices: Invoice[];
 }
 
-const STATUS = {
-  TRIALING: { label: "Em teste", cls: "bg-amber-500/20 text-amber-400" },
-  ACTIVE: { label: "Ativa", cls: "bg-emerald-500/20 text-emerald-400" },
-  PAST_DUE: { label: "Pagamento pendente", cls: "bg-amber-500/20 text-amber-400" },
-  SUSPENDED: { label: "Suspensa", cls: "bg-rose-500/20 text-rose-400" },
-  CANCELED: { label: "Cancelada", cls: "bg-rose-500/20 text-rose-400" },
-  NONE: { label: "Sem assinatura", cls: "bg-white/10 text-[#9b95ad]" },
-} as Record<string, { label: string; cls: string }>;
+const STATUS_CLS: Record<string, string> = {
+  TRIALING: "bg-amber-500/20 text-amber-400",
+  ACTIVE: "bg-emerald-500/20 text-emerald-400",
+  PAST_DUE: "bg-amber-500/20 text-amber-400",
+  SUSPENDED: "bg-rose-500/20 text-rose-400",
+  CANCELED: "bg-rose-500/20 text-rose-400",
+  NONE: "bg-white/10 text-[#9b95ad]",
+};
+
+function statusLabel(status: string, t: Tr): string {
+  switch (status) {
+    case "TRIALING": return t.statusTrialing;
+    case "ACTIVE": return t.statusActive;
+    case "PAST_DUE": return t.statusPastDue;
+    case "SUSPENDED": return t.statusSuspended;
+    case "CANCELED": return t.statusCanceled;
+    default: return t.statusNone;
+  }
+}
 
 function brl(cents: number) {
   return (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-function printInvoice(inv: Invoice, b: Billing) {
+function printInvoice(inv: Invoice, b: Billing, t: Tr) {
   const w = window.open("", "_blank", "width=820,height=920");
   if (!w) return;
-  const date = new Date(inv.paidAt || inv.createdAt).toLocaleDateString("pt-BR");
-  const statusLabel = inv.status === "PAID" ? "PAGA" : inv.status === "OPEN" ? "EM ABERTO" : "FALHOU";
-  w.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Fatura ${inv.id.slice(0, 8).toUpperCase()}</title>
+  const date = new Date(inv.paidAt || inv.createdAt).toLocaleDateString(t.dateLocale);
+  const stLabel = inv.status === "PAID" ? t.pdfStatusPaid : inv.status === "OPEN" ? t.pdfStatusOpen : t.pdfStatusFailed;
+  w.document.write(`<!doctype html><html lang="${t.pdfHtmlLang}"><head><meta charset="utf-8"><title>${t.pdfInvoice} ${inv.id.slice(0, 8).toUpperCase()}</title>
   <style>
     body{font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#1a1a2e;max-width:680px;margin:32px auto;padding:0 24px}
     .head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #7c3aed;padding-bottom:16px}
@@ -80,18 +95,18 @@ function printInvoice(inv: Invoice, b: Billing) {
     .foot{margin-top:40px;color:#999;font-size:12px;border-top:1px solid #eee;padding-top:12px}
   </style></head><body>
     <div class="head">
-      <div><div class="brand"><svg width="24" height="24" viewBox="0 0 64 64"><rect x="6" y="6" width="52" height="52" rx="15" fill="none" stroke="#7c3aed" stroke-width="5"/><path d="M14 33 H25 L30 22 L36 44 L40 33 H50" fill="none" stroke="#7c3aed" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="50" cy="33" r="4.5" fill="#22d3ee"/></svg>SAPLINK</div><div class="muted">Monitoramento de integrações SAP</div></div>
-      <div style="text-align:right"><div style="font-weight:700">FATURA</div><div class="muted">Nº ${inv.id.slice(0, 8).toUpperCase()}</div><div class="muted">${date}</div></div>
+      <div><div class="brand"><svg width="24" height="24" viewBox="0 0 64 64"><rect x="6" y="6" width="52" height="52" rx="15" fill="none" stroke="#7c3aed" stroke-width="5"/><path d="M14 33 H25 L30 22 L36 44 L40 33 H50" fill="none" stroke="#7c3aed" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="50" cy="33" r="4.5" fill="#22d3ee"/></svg>SAPLINK</div><div class="muted">${t.pdfTagline}</div></div>
+      <div style="text-align:right"><div style="font-weight:700">${t.pdfInvoice}</div><div class="muted">${t.pdfNumber} ${inv.id.slice(0, 8).toUpperCase()}</div><div class="muted">${date}</div></div>
     </div>
-    <h2>Cobrado de</h2>
+    <h2>${t.pdfBilledTo}</h2>
     <div>${b.consultancyName || "—"}</div>
     <div class="muted">${b.consultancyCnpj || ""}</div>
-    <h2>Itens</h2>
-    <table><thead><tr><th>Descrição</th><th style="text-align:right">Valor</th></tr></thead>
-    <tbody><tr><td>Assinatura SAPLINK${b.plan ? " — Plano " + b.plan.name : ""}</td><td style="text-align:right">${brl(inv.amountCents)}</td></tr></tbody></table>
-    <div class="total">Total: ${brl(inv.amountCents)}</div>
-    <p style="margin-top:8px">Status: <span class="badge">${statusLabel}</span></p>
-    <div class="foot">SAPLINK · Documento gerado eletronicamente. Não possui valor fiscal.</div>
+    <h2>${t.pdfItems}</h2>
+    <table><thead><tr><th>${t.pdfDescription}</th><th style="text-align:right">${t.pdfValue}</th></tr></thead>
+    <tbody><tr><td>${t.pdfSubscriptionItem(b.plan ? b.plan.name : null)}</td><td style="text-align:right">${brl(inv.amountCents)}</td></tr></tbody></table>
+    <div class="total">${t.pdfTotal}: ${brl(inv.amountCents)}</div>
+    <p style="margin-top:8px">${t.pdfStatusLabel}: <span class="badge">${stLabel}</span></p>
+    <div class="foot">${t.pdfFooter}</div>
     <script>window.onload=function(){window.print()}</script>
   </body></html>`);
   w.document.close();
@@ -114,6 +129,8 @@ function UsageBar({ label, used, limit }: { label: string; used: number; limit: 
 }
 
 export default function BillingPage() {
+  const { lang } = useLang();
+  const t = T[lang];
   const [b, setB] = useState<Billing | null>(null);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
@@ -133,7 +150,7 @@ export default function BillingPage() {
       setXUsr(bill.extras?.users ?? 0);
       setError("");
     } catch {
-      setError("Erro ao carregar dados de cobrança.");
+      setError(t.loadError);
     } finally {
       setLoading(false);
     }
@@ -157,7 +174,7 @@ export default function BillingPage() {
       if (r?.status === "redirect" && r?.url) { window.location.href = r.url; return; }
       await load();
     } catch (e: any) {
-      setError(e?.response?.data?.error || "Não foi possível iniciar o pagamento.");
+      setError(e?.response?.data?.error || t.checkoutError);
     } finally { setBusy(""); }
   }
 
@@ -169,7 +186,7 @@ export default function BillingPage() {
       if (r?.status === "redirect" && r?.url) { window.location.href = r.url; return; }
       await load();
     } catch (e: any) {
-      setError(e?.response?.data?.error || "Não foi possível gerar o pagamento.");
+      setError(e?.response?.data?.error || t.payInvoiceError);
     } finally { setBusy(""); }
   }
 
@@ -185,7 +202,7 @@ export default function BillingPage() {
       await setAutoRenew(next);
       await load();
     } catch (e: any) {
-      setError(e?.response?.data?.error || "Não foi possível alterar a renovação.");
+      setError(e?.response?.data?.error || t.autoRenewError);
     } finally { setBusy(""); }
   }
 
@@ -197,7 +214,7 @@ export default function BillingPage() {
       if (r?.status === "redirect" && r?.url) { window.location.href = r.url; return; }
       await load();
     } catch (e: any) {
-      setError(e?.response?.data?.error || "Não foi possível abrir o pagamento.");
+      setError(e?.response?.data?.error || t.payNowError);
     } finally { setBusy(""); }
   }
 
@@ -208,7 +225,7 @@ export default function BillingPage() {
       const r = await billingPortal();
       if (r?.status === "redirect" && r?.url) { window.location.href = r.url; return; }
     } catch (e: any) {
-      setError(e?.response?.data?.error || "Não foi possível abrir o portal de cobrança.");
+      setError(e?.response?.data?.error || t.portalError);
     } finally { setBusy(""); }
   }
 
@@ -219,14 +236,15 @@ export default function BillingPage() {
       await updateAddons({ extraIntegrations: xInt, extraUsers: xUsr });
       await load();
     } catch (e: any) {
-      setError(e?.response?.data?.error || "Não foi possível atualizar os add-ons.");
+      setError(e?.response?.data?.error || t.addonsError);
     } finally { setBusy(""); }
   }
 
-  if (loading) return <div className="text-[#9b95ad]">Carregando...</div>;
-  if (!b) return <div className="text-rose-400">{error || "Erro ao carregar."}</div>;
+  if (loading) return <div className="text-[#9b95ad]">{t.loading}</div>;
+  if (!b) return <div className="text-rose-400">{error || t.loadErrorShort}</div>;
 
-  const st = STATUS[b.status] || STATUS.NONE;
+  const stCls = STATUS_CLS[b.status] || STATUS_CLS.NONE;
+  const stLabel = statusLabel(b.status, t);
   const suspended = !b.allowed;
   const addonInt = b.addonPrices?.integrationCents ?? b.plan?.addonIntegrationCents ?? 0;
   const addonUsr = b.addonPrices?.userCents ?? b.plan?.addonUserCents ?? 0;
@@ -235,17 +253,17 @@ export default function BillingPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Cobrança</h1>
+      <h1 className="text-2xl font-bold">{t.title}</h1>
       {justPaid && (
         <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-sm rounded-lg p-3">
-          ✓ Pagamento recebido! A assinatura é ativada assim que o gateway confirmar (alguns segundos).
+          {t.paidBanner}
         </div>
       )}
       {error && <div className="bg-rose-500/10 border border-rose-500/30 text-rose-400 text-sm rounded-lg p-3">{error}</div>}
 
       {suspended && (
         <div className="bg-rose-500/10 border border-rose-500/30 rounded-xl p-4 text-rose-300">
-          <strong>Assinatura inativa.</strong> {b.reason} Escolha um plano abaixo para reativar o acesso.
+          <strong>{t.suspendedTitle}</strong> {b.reason} {t.suspendedHint}
         </div>
       )}
 
@@ -253,38 +271,38 @@ export default function BillingPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="bg-[#1a1527] rounded-xl p-6 border border-white/[0.08] lg:col-span-2">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Assinatura</h2>
-            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${st.cls}`}>{st.label}</span>
+            <h2 className="text-lg font-semibold">{t.subscription}</h2>
+            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${stCls}`}>{stLabel}</span>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-5">
-            <div><p className="text-xs text-[#9b95ad]">Plano</p><p className="font-semibold mt-0.5">{b.plan?.name || "—"}</p></div>
-            <div><p className="text-xs text-[#9b95ad]">Mensalidade</p><p className="font-semibold mt-0.5">{b.monthlyCents ? brl(b.monthlyCents) : "—"}</p></div>
-            <div><p className="text-xs text-[#9b95ad]">Próxima cobrança</p><p className="font-semibold mt-0.5">{b.currentPeriodEnd ? new Date(b.currentPeriodEnd).toLocaleDateString("pt-BR") : b.trialEndsAt ? `Teste até ${new Date(b.trialEndsAt).toLocaleDateString("pt-BR")}` : "—"}</p></div>
-            <div><p className="text-xs text-[#9b95ad]">Add-ons</p><p className="font-semibold mt-0.5">{b.extras.integrations} int · {b.extras.users} user</p></div>
+            <div><p className="text-xs text-[#9b95ad]">{t.plan}</p><p className="font-semibold mt-0.5">{b.plan?.name || "—"}</p></div>
+            <div><p className="text-xs text-[#9b95ad]">{t.monthly}</p><p className="font-semibold mt-0.5">{b.monthlyCents ? brl(b.monthlyCents) : "—"}</p></div>
+            <div><p className="text-xs text-[#9b95ad]">{t.nextCharge}</p><p className="font-semibold mt-0.5">{b.currentPeriodEnd ? new Date(b.currentPeriodEnd).toLocaleDateString(t.dateLocale) : b.trialEndsAt ? t.trialUntil(new Date(b.trialEndsAt).toLocaleDateString(t.dateLocale)) : "—"}</p></div>
+            <div><p className="text-xs text-[#9b95ad]">{t.addons}</p><p className="font-semibold mt-0.5">{t.addonsSummary(b.extras.integrations, b.extras.users)}</p></div>
           </div>
           {b.plan && (
             <div className="bg-[#0f0b1a] rounded-lg px-4 py-3 mb-4 space-y-3">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-sm font-medium flex items-center gap-2">Cobrança automática {b.autoRenew && b.hasRecurringMethod && <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300">cartão ✓</span>}</p>
+                  <p className="text-sm font-medium flex items-center gap-2">{t.autoBilling} {b.autoRenew && b.hasRecurringMethod && <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300">{t.cardTag}</span>}</p>
                   <p className="text-xs text-[#9b95ad]">
                     {b.autoRenew
-                      ? (b.hasRecurringMethod ? "Cobra sozinho no cartão cadastrado todo mês." : "Ative para cadastrar e validar o cartão no Stripe.")
-                      : "Você paga manualmente cada fatura."}
+                      ? (b.hasRecurringMethod ? t.autoBillingOnWithCard : t.autoBillingOnNoCard)
+                      : t.autoBillingOff}
                   </p>
                 </div>
                 <button
                   onClick={() => toggleAutoRenew(!b.autoRenew)}
                   disabled={busy === "autorenew"}
                   className={`relative w-12 h-6 rounded-full transition cursor-pointer disabled:opacity-50 shrink-0 ${b.autoRenew ? "bg-emerald-500" : "bg-white/[0.15]"}`}
-                  title={b.autoRenew ? "Desligar cobrança automática" : "Ligar e cadastrar cartão"}
+                  title={b.autoRenew ? t.turnOffAutoBilling : t.turnOnAddCard}
                 >
                   <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${b.autoRenew ? "translate-x-6" : ""}`} />
                 </button>
               </div>
               <div className="flex items-center justify-between gap-3 border-t border-white/[0.06] pt-3 flex-wrap">
                 <p className="text-xs text-[#9b95ad]">
-                  {b.openInvoice ? <>Fatura em aberto: <b className="text-[#e2e0ea]">{brl(b.openInvoice.amountCents)}</b></> : "Pague a mensalidade atual quando quiser — na hora, sem esperar a data."}
+                  {b.openInvoice ? <>{t.openInvoiceLabel} <b className="text-[#e2e0ea]">{brl(b.openInvoice.amountCents)}</b></> : t.payAnytimeHint}
                 </p>
                 <div className="flex items-center gap-2 shrink-0">
                   {b.gateway === "stripe" && (
@@ -292,9 +310,9 @@ export default function BillingPage() {
                       onClick={onManageCard}
                       disabled={busy === "portal"}
                       className="text-sm px-4 py-2 rounded-lg bg-white/[0.08] text-[#e2e0ea] hover:bg-white/[0.14] font-semibold disabled:opacity-50 cursor-pointer"
-                      title="Adicionar ou trocar o cartão no Stripe"
+                      title={t.manageCardTitle}
                     >
-                      {busy === "portal" ? "Abrindo…" : "💳 Gerenciar cartão"}
+                      {busy === "portal" ? t.opening : t.manageCard}
                     </button>
                   )}
                   <button
@@ -302,7 +320,7 @@ export default function BillingPage() {
                     disabled={busy === "paynow"}
                     className="text-sm px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-cyan-500 text-white font-semibold disabled:opacity-50 cursor-pointer"
                   >
-                    {busy === "paynow" ? "Abrindo…" : "⚡ Pagar agora"}
+                    {busy === "paynow" ? t.opening : t.payNow}
                   </button>
                 </div>
               </div>
@@ -310,21 +328,21 @@ export default function BillingPage() {
           )}
           {b.effectiveLimits && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <UsageBar label="Clientes" used={b.usage.clients} limit={b.effectiveLimits.clients} />
-              <UsageBar label="Integrações" used={b.usage.integrations} limit={b.effectiveLimits.integrations} />
-              <UsageBar label="Usuários" used={b.usage.users} limit={b.effectiveLimits.users} />
-              <UsageBar label="Diagnósticos IA (mês)" used={b.usage.aiDiagnostics} limit={b.effectiveLimits.aiDiagnostics} />
+              <UsageBar label={t.usageClients} used={b.usage.clients} limit={b.effectiveLimits.clients} />
+              <UsageBar label={t.usageIntegrations} used={b.usage.integrations} limit={b.effectiveLimits.integrations} />
+              <UsageBar label={t.usageUsers} used={b.usage.users} limit={b.effectiveLimits.users} />
+              <UsageBar label={t.usageAiDiagnostics} used={b.usage.aiDiagnostics} limit={b.effectiveLimits.aiDiagnostics} />
             </div>
           )}
         </div>
 
         {/* Dashboard de gastos */}
         <div className="bg-[#1a1527] rounded-xl p-6 border border-white/[0.08]">
-          <h2 className="text-lg font-semibold mb-1">Gastos</h2>
+          <h2 className="text-lg font-semibold mb-1">{t.spending}</h2>
           <p className="text-2xl font-bold text-emerald-400">{brl(b.spending.totalPaidCents)}</p>
-          <p className="text-xs text-[#9b95ad] mb-4">total pago</p>
+          <p className="text-xs text-[#9b95ad] mb-4">{t.totalPaid}</p>
           <div className="flex items-end gap-1.5 h-24">
-            {b.spending.series.length === 0 && <p className="text-xs text-[#9b95ad]">Sem faturas pagas ainda.</p>}
+            {b.spending.series.length === 0 && <p className="text-xs text-[#9b95ad]">{t.noPaidInvoices}</p>}
             {b.spending.series.map((s) => (
               <div key={s.month} className="flex-1 flex flex-col items-center gap-1" title={`${s.month}: ${brl(s.cents)}`}>
                 <div className="w-full bg-gradient-to-t from-purple-600 to-cyan-500 rounded-t" style={{ height: `${Math.max(4, (s.cents / maxSeries) * 80)}px` }} />
@@ -338,17 +356,17 @@ export default function BillingPage() {
       {/* Add-ons (só com plano ativo) */}
       {b.plan && (
         <div className="bg-[#1a1527] rounded-xl p-6 border border-white/[0.08]">
-          <h2 className="text-lg font-semibold mb-1">Add-ons</h2>
-          <p className="text-sm text-[#9b95ad] mb-4">Estourou o limite do plano? Adicione capacidade sem trocar de plano.</p>
+          <h2 className="text-lg font-semibold mb-1">{t.addonsTitle}</h2>
+          <p className="text-sm text-[#9b95ad] mb-4">{t.addonsSubtitle}</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {[
-              { label: "Integrações extras", price: addonInt, val: xInt, set: setXInt, base: b.plan.maxIntegrations },
-              { label: "Usuários extras", price: addonUsr, val: xUsr, set: setXUsr, base: b.plan.maxUsers },
+              { label: t.extraIntegrations, price: addonInt, val: xInt, set: setXInt, base: b.plan.maxIntegrations },
+              { label: t.extraUsers, price: addonUsr, val: xUsr, set: setXUsr, base: b.plan.maxUsers },
             ].map((a) => (
               <div key={a.label} className="bg-[#0f0b1a] rounded-lg p-4 flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium">{a.label}</p>
-                  <p className="text-xs text-[#9b95ad]">{brl(a.price)}/mês cada · plano inclui {a.base}</p>
+                  <p className="text-xs text-[#9b95ad]">{t.addonPriceEach(brl(a.price), a.base)}</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <button onClick={() => a.set(Math.max(0, a.val - 1))} className="w-8 h-8 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] cursor-pointer">−</button>
@@ -359,13 +377,13 @@ export default function BillingPage() {
             ))}
           </div>
           <div className="flex items-center justify-between mt-4">
-            <p className="text-sm text-[#9b95ad]">Custo dos add-ons: <span className="text-[#e2e0ea] font-semibold">{brl(addonDelta)}/mês</span></p>
+            <p className="text-sm text-[#9b95ad]">{t.addonsCost} <span className="text-[#e2e0ea] font-semibold">{t.perMonth(brl(addonDelta))}</span></p>
             <button
               disabled={busy === "addons" || (xInt === b.extras.integrations && xUsr === b.extras.users)}
               onClick={saveAddons}
               className="px-5 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-cyan-500 text-white text-sm font-semibold disabled:opacity-40 cursor-pointer"
             >
-              {busy === "addons" ? "Salvando..." : "Salvar add-ons"}
+              {busy === "addons" ? t.saving : t.saveAddons}
             </button>
           </div>
         </div>
@@ -374,49 +392,47 @@ export default function BillingPage() {
       {/* Planos */}
       <div>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-          <h2 className="text-lg font-semibold">Planos</h2>
+          <h2 className="text-lg font-semibold">{t.plans}</h2>
           <div className="inline-flex rounded-lg bg-[#1a1527] border border-white/[0.08] p-1 text-sm">
             <button
               onClick={() => setMode("auto")}
               className={`px-3 py-1.5 rounded-md transition cursor-pointer ${mode === "auto" ? "bg-gradient-to-r from-purple-600 to-cyan-500 text-white" : "text-[#9b95ad] hover:text-white"}`}
             >
-              ⟳ Assinar recorrente
+              {t.subscribeRecurring}
             </button>
             <button
               onClick={() => setMode("now")}
               className={`px-3 py-1.5 rounded-md transition cursor-pointer ${mode === "now" ? "bg-gradient-to-r from-purple-600 to-cyan-500 text-white" : "text-[#9b95ad] hover:text-white"}`}
             >
-              ⚡ Pagar avulso
+              {t.payOneTime}
             </button>
           </div>
         </div>
         <p className="text-xs text-[#9b95ad] -mt-2 mb-4">
-          {mode === "auto"
-            ? "Assinatura recorrente — cadastra o cartão no Stripe e cobra automático todo mês."
-            : "Pagamento avulso — paga a mensalidade na hora, sem renovação automática."}
+          {mode === "auto" ? t.modeAutoHint : t.modeNowHint}
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
           {plans.map((p) => {
             const current = b.plan?.key === p.key && b.allowed;
             return (
               <div key={p.key} className={`relative bg-[#1a1527] rounded-xl p-5 border flex flex-col ${p.highlight ? "border-purple-500/60 shadow-[0_0_25px_rgba(124,58,237,0.15)]" : "border-white/[0.08]"}`}>
-                {p.highlight && <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full text-[10px] font-bold bg-gradient-to-r from-purple-600 to-cyan-500 text-white">MAIS POPULAR</span>}
+                {p.highlight && <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full text-[10px] font-bold bg-gradient-to-r from-purple-600 to-cyan-500 text-white">{t.mostPopular}</span>}
                 <h3 className="text-lg font-semibold">{p.name}</h3>
-                <p className="text-2xl font-bold mt-1">{brl(p.priceCents)}<span className="text-sm font-normal text-[#9b95ad]">/mês</span></p>
+                <p className="text-2xl font-bold mt-1">{brl(p.priceCents)}<span className="text-sm font-normal text-[#9b95ad]">{t.monthSuffix}</span></p>
                 {p.description && <p className="text-xs text-[#9b95ad] mt-2 min-h-[32px]">{p.description}</p>}
                 <ul className="text-sm text-[#c9c5d6] mt-4 space-y-1.5 flex-1">
-                  <li>✓ {p.maxClients >= 999 ? "Clientes ilimitados" : `${p.maxClients} clientes`}</li>
-                  <li>✓ {p.maxIntegrations >= 999 ? "Integrações ilimitadas" : `${p.maxIntegrations} integrações`}</li>
-                  <li>✓ {p.maxAiDiagnosticsPerMonth} diagnósticos IA/mês</li>
-                  <li>✓ {p.maxUsers} usuários</li>
-                  <li className="text-xs text-[#9b95ad] pt-1">add-on: {brl(p.addonIntegrationCents || 0)}/int · {brl(p.addonUserCents || 0)}/user</li>
+                  <li>✓ {p.maxClients >= 999 ? t.unlimitedClients : t.clientsN(p.maxClients)}</li>
+                  <li>✓ {p.maxIntegrations >= 999 ? t.unlimitedIntegrations : t.integrationsN(p.maxIntegrations)}</li>
+                  <li>✓ {t.aiDiagnosticsN(p.maxAiDiagnosticsPerMonth)}</li>
+                  <li>✓ {t.usersN(p.maxUsers)}</li>
+                  <li className="text-xs text-[#9b95ad] pt-1">{t.addonLine(brl(p.addonIntegrationCents || 0), brl(p.addonUserCents || 0))}</li>
                 </ul>
                 <button
                   disabled={busy === p.key || current}
                   onClick={() => onCheckout(p.key)}
                   className={`mt-5 w-full py-2.5 rounded-lg text-sm font-semibold disabled:opacity-40 cursor-pointer ${p.highlight ? "bg-gradient-to-r from-purple-600 to-cyan-500 text-white" : "bg-white/[0.08] text-[#e2e0ea] hover:bg-white/[0.14]"}`}
                 >
-                  {busy === p.key ? "Processando..." : current ? "Plano atual" : b.plan ? "Mudar para este" : "Assinar"}
+                  {busy === p.key ? t.processing : current ? t.currentPlan : b.plan ? t.switchToThis : t.subscribe}
                 </button>
               </div>
             );
@@ -426,27 +442,27 @@ export default function BillingPage() {
 
       {/* Histórico de faturas */}
       <div className="bg-[#1a1527] rounded-xl border border-white/[0.08] overflow-hidden">
-        <h2 className="text-lg font-semibold p-6 pb-3">Histórico de faturas</h2>
+        <h2 className="text-lg font-semibold p-6 pb-3">{t.invoiceHistory}</h2>
         {b.invoices.length === 0 ? (
-          <p className="px-6 pb-6 text-sm text-[#9b95ad]">Nenhuma fatura ainda.</p>
+          <p className="px-6 pb-6 text-sm text-[#9b95ad]">{t.noInvoices}</p>
         ) : (
           <div className="overflow-x-auto"><table className="w-full text-sm min-w-[520px]">
             <thead>
               <tr className="text-[#9b95ad] text-xs uppercase tracking-wider border-b border-white/[0.06]">
-                <th className="text-left px-6 py-2">Data</th>
-                <th className="text-left px-6 py-2">Valor</th>
-                <th className="text-left px-6 py-2">Status</th>
-                <th className="text-right px-6 py-2">PDF</th>
+                <th className="text-left px-6 py-2">{t.colDate}</th>
+                <th className="text-left px-6 py-2">{t.colAmount}</th>
+                <th className="text-left px-6 py-2">{t.colStatus}</th>
+                <th className="text-right px-6 py-2">{t.colPdf}</th>
               </tr>
             </thead>
             <tbody>
               {b.invoices.map((inv) => (
                 <tr key={inv.id} className="border-b border-white/[0.04] hover:bg-white/[0.02]">
-                  <td className="px-6 py-3">{new Date(inv.paidAt || inv.createdAt).toLocaleDateString("pt-BR")}</td>
+                  <td className="px-6 py-3">{new Date(inv.paidAt || inv.createdAt).toLocaleDateString(t.dateLocale)}</td>
                   <td className="px-6 py-3 font-medium">{brl(inv.amountCents)}</td>
                   <td className="px-6 py-3">
                     <span className={`px-2 py-0.5 rounded-full text-xs ${inv.status === "PAID" ? "bg-emerald-500/20 text-emerald-400" : inv.status === "OPEN" ? "bg-amber-500/20 text-amber-400" : "bg-rose-500/20 text-rose-400"}`}>
-                      {inv.status === "PAID" ? "Paga" : inv.status === "OPEN" ? "Em aberto" : "Falhou"}
+                      {inv.status === "PAID" ? t.invPaid : inv.status === "OPEN" ? t.invOpen : t.invFailed}
                     </span>
                   </td>
                   <td className="px-6 py-3 text-right whitespace-nowrap">
@@ -456,10 +472,10 @@ export default function BillingPage() {
                         disabled={busy === "inv-" + inv.id}
                         className="text-emerald-400 hover:text-emerald-300 text-xs font-semibold mr-4 cursor-pointer disabled:opacity-50"
                       >
-                        {busy === "inv-" + inv.id ? "..." : "Pagar agora"}
+                        {busy === "inv-" + inv.id ? "..." : t.payInvoiceNow}
                       </button>
                     )}
-                    <button onClick={() => printInvoice(inv, b)} className="text-purple-400 hover:text-purple-300 text-xs font-medium cursor-pointer">PDF</button>
+                    <button onClick={() => printInvoice(inv, b, t)} className="text-purple-400 hover:text-purple-300 text-xs font-medium cursor-pointer">{t.colPdf}</button>
                   </td>
                 </tr>
               ))}
@@ -469,7 +485,7 @@ export default function BillingPage() {
       </div>
 
       <p className="text-xs text-[#9b95ad]">
-        Pagamento via Asaas (PIX, boleto, cartão) quando configurado. Sem gateway, o ambiente de teste ativa o plano direto.
+        {t.gatewayNote}
       </p>
     </div>
   );

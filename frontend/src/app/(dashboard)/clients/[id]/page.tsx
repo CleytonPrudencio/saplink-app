@@ -12,6 +12,8 @@ import {
 } from "@/lib/api";
 import HealthScoreRing from "@/components/HealthScoreRing";
 import { Modal } from "@/components/Modal";
+import { useLang } from "@/i18n/I18n";
+import { T } from "./i18n";
 
 // Tipos monitorados pelo Agente on-premise (sem endpoint HTTP direto)
 const AGENT_TYPES = new Set(["RFC", "IDOC", "BAPI", "SOAP", "FILE", "DATABASE"]);
@@ -59,6 +61,8 @@ export default function ClientDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const { lang } = useLang();
+  const t = T[lang];
   const router = useRouter();
   const [client, setClient] = useState<ClientDetail | null>(null);
   const [integrations, setIntegrations] = useState<Integration[]>([]);
@@ -95,12 +99,12 @@ export default function ClientDetailPage({
     `docker run -d --name saplink-agent --restart unless-stopped \\\n  -e SAPLINK_URL=${agentUrl} \\\n  -e AGENT_TOKEN=${token} \\\n  -e SAP_MODE=mock \\\n  saplink/agent:latest`;
 
   function agentFreshness(int: Integration): { label: string; color: string } {
-    if (!int.agentConfigured) return { label: "Agente não instalado", color: "text-[#9b95ad]" };
-    if (!int.lastAgentReportAt) return { label: "Aguardando 1ª leitura do agente", color: "text-amber-400" };
+    if (!int.agentConfigured) return { label: t.agentNotInstalled, color: "text-[#9b95ad]" };
+    if (!int.lastAgentReportAt) return { label: t.agentAwaitingFirst, color: "text-amber-400" };
     const ageMs = Date.now() - new Date(int.lastAgentReportAt).getTime();
-    if (ageMs > 180000) return { label: `Agente offline (última leitura há ${Math.round(ageMs / 60000)} min)`, color: "text-rose-400" };
+    if (ageMs > 180000) return { label: t.agentOffline(Math.round(ageMs / 60000)), color: "text-rose-400" };
     const s = Math.round(ageMs / 1000);
-    return { label: `Agente ativo · última leitura há ${s < 60 ? s + "s" : Math.round(s / 60) + " min"}`, color: "text-emerald-400" };
+    return { label: s < 60 ? t.agentActiveSec(s) : t.agentActiveMin(Math.round(s / 60)), color: "text-emerald-400" };
   }
 
   useEffect(() => {
@@ -117,7 +121,7 @@ export default function ClientDetailPage({
         setAlerts(Array.isArray(alertData) ? alertData : alertData.data || []);
         setDiagnostics(Array.isArray(diagData) ? diagData : diagData.data || []);
       } catch {
-        setError("Erro ao carregar dados do cliente.");
+        setError(t.loadError);
       } finally {
         setLoading(false);
       }
@@ -136,9 +140,9 @@ export default function ClientDetailPage({
     }
   }
 
-  if (loading) return <div className="text-[#9b95ad]">Carregando...</div>;
+  if (loading) return <div className="text-[#9b95ad]">{t.loading}</div>;
   if (error) return <div className="text-rose-400">{error}</div>;
-  if (!client) return <div className="text-[#9b95ad]">Cliente nao encontrado.</div>;
+  if (!client) return <div className="text-[#9b95ad]">{t.notFound}</div>;
 
   function statusBadge(status: string) {
     const s = status?.toUpperCase();
@@ -158,9 +162,9 @@ export default function ClientDetailPage({
   }
 
   const tabs: { key: Tab; label: string }[] = [
-    { key: "integrations", label: "Integracoes" },
-    { key: "alerts", label: "Alertas" },
-    { key: "diagnostics", label: "Diagnosticos" },
+    { key: "integrations", label: t.tabIntegrations },
+    { key: "alerts", label: t.tabAlerts },
+    { key: "diagnostics", label: t.tabDiagnostics },
   ];
 
   return (
@@ -171,8 +175,8 @@ export default function ClientDetailPage({
         <div>
           <h1 className="text-2xl font-bold">{client.name}</h1>
           <div className="flex gap-4 mt-1 text-sm text-[#9b95ad]">
-            <span>{client.integrationCount || integrations.length} integrações</span>
-            <span>{client.alertCount || alerts.length} alertas</span>
+            <span>{t.integrationsCount(client.integrationCount || integrations.length)}</span>
+            <span>{t.alertsCount(client.alertCount || alerts.length)}</span>
           </div>
         </div>
       </div>
@@ -221,15 +225,15 @@ export default function ClientDetailPage({
               {/* Métricas */}
               <div className="grid grid-cols-3 gap-3 text-sm">
                 <div>
-                  <p className="text-[#9b95ad]">Latência</p>
+                  <p className="text-[#9b95ad]">{t.metricLatency}</p>
                   <p className={`font-medium ${(int.latency ?? 0) > 500 ? 'text-amber-400' : ''}`}>{int.latency ?? "-"} ms</p>
                 </div>
                 <div>
-                  <p className="text-[#9b95ad]">Taxa de Erro</p>
+                  <p className="text-[#9b95ad]">{t.metricErrorRate}</p>
                   <p className={`font-medium ${(int.errorRate ?? 0) > 5 ? 'text-rose-400' : ''}`}>{int.errorRate ?? 0}%</p>
                 </div>
                 <div>
-                  <p className="text-[#9b95ad]">Uptime</p>
+                  <p className="text-[#9b95ad]">{t.metricUptime}</p>
                   <div className="mt-1">
                     <div className="w-full bg-white/[0.08] rounded-full h-2">
                       <div
@@ -250,7 +254,7 @@ export default function ClientDetailPage({
                     <div className="flex items-center gap-2 min-w-0">
                       <span>🛰️</span>
                       <div className="min-w-0">
-                        <p className="text-xs font-medium text-[#e2e0ea]">Monitorado por Agente on-premise</p>
+                        <p className="text-xs font-medium text-[#e2e0ea]">{t.agentMonitored}</p>
                         <p className={`text-xs ${fresh.color} truncate`}>{fresh.label}</p>
                       </div>
                     </div>
@@ -258,7 +262,7 @@ export default function ClientDetailPage({
                       onClick={() => openAgent(int)}
                       className="shrink-0 px-3 py-1.5 text-xs font-medium bg-purple-500/15 text-purple-300 rounded-lg hover:bg-purple-500/25 transition cursor-pointer"
                     >
-                      {int.agentConfigured ? "Novo token / instruções" : "Instalar agente"}
+                      {int.agentConfigured ? t.agentNewToken : t.agentInstall}
                     </button>
                   </div>
                 );
@@ -270,7 +274,7 @@ export default function ClientDetailPage({
                   <div className="flex items-center gap-2 mb-3">
                     <span className="text-rose-400 text-sm">⚠️</span>
                     <span className="text-sm font-semibold text-rose-400">
-                      {isError ? 'Integração com erro — ação necessária' : 'Integração offline'}
+                      {isError ? t.integrationErrorTitle : t.integrationOfflineTitle}
                     </span>
                   </div>
 
@@ -282,8 +286,8 @@ export default function ClientDetailPage({
                     >
                       <span className="w-6 h-6 rounded-full bg-rose-500/20 text-rose-400 text-xs font-bold flex items-center justify-center flex-shrink-0">1</span>
                       <div>
-                        <p className="text-sm font-medium text-rose-300">Ver alertas relacionados</p>
-                        <p className="text-xs text-[#9b95ad]">Confira os alertas gerados por esta integração</p>
+                        <p className="text-sm font-medium text-rose-300">{t.step1Title}</p>
+                        <p className="text-xs text-[#9b95ad]">{t.step1Desc}</p>
                       </div>
                     </button>
 
@@ -294,8 +298,8 @@ export default function ClientDetailPage({
                     >
                       <span className="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 text-xs font-bold flex items-center justify-center flex-shrink-0">2</span>
                       <div>
-                        <p className="text-sm font-medium text-purple-300">Diagnosticar com IA</p>
-                        <p className="text-xs text-[#9b95ad]">A IA analisa o erro e sugere causa raiz + correção</p>
+                        <p className="text-sm font-medium text-purple-300">{t.step2Title}</p>
+                        <p className="text-xs text-[#9b95ad]">{t.step2Desc}</p>
                       </div>
                     </a>
 
@@ -303,8 +307,8 @@ export default function ClientDetailPage({
                     <div className="flex items-center gap-3 p-3 rounded-lg bg-cyan-500/10 border border-cyan-500/20">
                       <span className="w-6 h-6 rounded-full bg-cyan-500/20 text-cyan-400 text-xs font-bold flex items-center justify-center flex-shrink-0">3</span>
                       <div>
-                        <p className="text-sm font-medium text-cyan-300">Resolver e monitorar</p>
-                        <p className="text-xs text-[#9b95ad]">Após corrigir, o sistema detecta automaticamente a recuperação</p>
+                        <p className="text-sm font-medium text-cyan-300">{t.step3Title}</p>
+                        <p className="text-xs text-[#9b95ad]">{t.step3Desc}</p>
                       </div>
                     </div>
                   </div>
@@ -317,25 +321,25 @@ export default function ClientDetailPage({
 
                 // Taxa de erro
                 if (((int.errorRate ?? 0)) > 50) {
-                  issues.push({ severity: 'CRÍTICO', color: 'rose', icon: '🔴', title: 'Taxa de erro crítica', detail: `${int.errorRate}% dos requests estão falhando. Isso indica um problema grave que precisa de atenção imediata.`, action: 'Diagnosticar com IA agora' });
+                  issues.push({ severity: t.sevCritical, color: 'rose', icon: '🔴', title: t.issueErrorCriticalTitle, detail: t.issueErrorCritical(int.errorRate ?? 0), action: t.issueErrorCriticalAction });
                 } else if (((int.errorRate ?? 0)) > 20) {
-                  issues.push({ severity: 'ALTO', color: 'orange', icon: '🟠', title: 'Taxa de erro elevada', detail: `${int.errorRate}% de erros. Pode indicar configuração incorreta de campos ou timeout em BAPIs.`, action: 'Verificar mapeamento de campos' });
+                  issues.push({ severity: t.sevHigh, color: 'orange', icon: '🟠', title: t.issueErrorHighTitle, detail: t.issueErrorHigh(int.errorRate ?? 0), action: t.issueErrorHighAction });
                 } else if (((int.errorRate ?? 0)) > 5) {
-                  issues.push({ severity: 'MÉDIO', color: 'amber', icon: '🟡', title: 'Taxa de erro acima do normal', detail: `${int.errorRate}% de erros. Recomendado investigar antes que escale.`, action: 'Monitorar nas próximas horas' });
+                  issues.push({ severity: t.sevMedium, color: 'amber', icon: '🟡', title: t.issueErrorMediumTitle, detail: t.issueErrorMedium(int.errorRate ?? 0), action: t.issueErrorMediumAction });
                 }
 
                 // Latência
                 if (((int.latency ?? 0)) > 1000) {
-                  issues.push({ severity: 'ALTO', color: 'orange', icon: '🐌', title: 'Latência muito alta', detail: `${int.latency}ms de latência média. O normal é abaixo de 300ms. Pode haver gargalo na rede ou no servidor SAP.`, action: 'Verificar conexão RFC e rede' });
+                  issues.push({ severity: t.sevHigh, color: 'orange', icon: '🐌', title: t.issueLatencyHighTitle, detail: t.issueLatencyHigh(int.latency ?? 0), action: t.issueLatencyHighAction });
                 } else if (((int.latency ?? 0)) > 500) {
-                  issues.push({ severity: 'MÉDIO', color: 'amber', icon: '⏱️', title: 'Latência elevada', detail: `${int.latency}ms. Acima do ideal (300ms). Pode impactar a performance de integrações síncronas.`, action: 'Otimizar queries ou aumentar timeout' });
+                  issues.push({ severity: t.sevMedium, color: 'amber', icon: '⏱️', title: t.issueLatencyMediumTitle, detail: t.issueLatencyMedium(int.latency ?? 0), action: t.issueLatencyMediumAction });
                 }
 
                 // Uptime
                 if (((int.uptime ?? 0)) < 90) {
-                  issues.push({ severity: 'ALTO', color: 'orange', icon: '📉', title: 'Uptime abaixo do SLA', detail: `${int.uptime}% de disponibilidade. A meta mínima é 95%. Verifique estabilidade do servidor.`, action: 'Revisar infraestrutura' });
+                  issues.push({ severity: t.sevHigh, color: 'orange', icon: '📉', title: t.issueUptimeHighTitle, detail: t.issueUptimeHigh(int.uptime ?? 0), action: t.issueUptimeHighAction });
                 } else if (((int.uptime ?? 0)) < 95) {
-                  issues.push({ severity: 'MÉDIO', color: 'amber', icon: '📊', title: 'Uptime precisa melhorar', detail: `${int.uptime}% de disponibilidade. Está próximo do limite aceitável (95%).`, action: 'Acompanhar tendência' });
+                  issues.push({ severity: t.sevMedium, color: 'amber', icon: '📊', title: t.issueUptimeMediumTitle, detail: t.issueUptimeMedium(int.uptime ?? 0), action: t.issueUptimeMediumAction });
                 }
 
                 if (issues.length === 0) return null;
@@ -363,7 +367,7 @@ export default function ClientDetailPage({
             </div>
           );})}
           {integrations.length === 0 && (
-            <p className="text-[#9b95ad] text-sm">Nenhuma integração encontrada.</p>
+            <p className="text-[#9b95ad] text-sm">{t.noIntegrations}</p>
           )}
         </div>
       )}
@@ -386,7 +390,7 @@ export default function ClientDetailPage({
               <div className="flex-1 min-w-0">
                 <p className="text-sm">{alert.message}</p>
                 <p className="text-xs text-[#9b95ad] mt-0.5">
-                  {new Date(alert.createdAt).toLocaleString("pt-BR")}
+                  {new Date(alert.createdAt).toLocaleString(lang === "pt" ? "pt-BR" : lang === "es" ? "es" : "en-US")}
                 </p>
               </div>
               {alert.status !== "RESOLVED" && (
@@ -394,16 +398,16 @@ export default function ClientDetailPage({
                   onClick={() => handleResolve(alert.id)}
                   className="px-3 py-1.5 text-xs font-medium bg-emerald-500/20 text-emerald-400 rounded-lg hover:bg-emerald-500/30 transition-colors shrink-0 cursor-pointer"
                 >
-                  Resolver
+                  {t.resolve}
                 </button>
               )}
               {alert.status === "RESOLVED" && (
-                <span className="text-xs text-emerald-400 shrink-0">Resolvido</span>
+                <span className="text-xs text-emerald-400 shrink-0">{t.resolved}</span>
               )}
             </div>
           ))}
           {alerts.length === 0 && (
-            <p className="text-[#9b95ad] text-sm">Nenhum alerta para este cliente.</p>
+            <p className="text-[#9b95ad] text-sm">{t.noAlerts}</p>
           )}
         </div>
       )}
@@ -415,7 +419,7 @@ export default function ClientDetailPage({
             onClick={() => router.push(`/diagnostics?clientId=${id}`)}
             className="px-4 py-2 bg-gradient-to-r from-purple-600 to-cyan-500 text-white font-medium rounded-lg hover:opacity-90 transition-opacity text-sm cursor-pointer"
           >
-            Novo Diagnostico
+            {t.newDiagnostic}
           </button>
           <div className="space-y-3">
             {diagnostics.map((diag) => (
@@ -428,55 +432,53 @@ export default function ClientDetailPage({
                   {diag.response}
                 </p>
                 <p className="text-xs text-[#9b95ad] mt-2">
-                  {new Date(diag.createdAt).toLocaleString("pt-BR")}
+                  {new Date(diag.createdAt).toLocaleString(lang === "pt" ? "pt-BR" : lang === "es" ? "es" : "en-US")}
                 </p>
               </div>
             ))}
             {diagnostics.length === 0 && (
-              <p className="text-[#9b95ad] text-sm">Nenhum diagnostico realizado.</p>
+              <p className="text-[#9b95ad] text-sm">{t.noDiagnostics}</p>
             )}
           </div>
         </div>
       )}
 
       {/* Modal: enrollment do Agente on-premise */}
-      <Modal open={!!agentModal} onClose={() => setAgentModal(null)} title="Agente on-premise" size="lg">
+      <Modal open={!!agentModal} onClose={() => setAgentModal(null)} title={t.modalTitle} size="lg">
         {agentModal && (
           <div className="space-y-4 text-sm">
             <p className="text-[#9b95ad]">
-              <span className="text-[#e2e0ea] font-medium">{agentModal.name}</span> ({agentModal.type}) é monitorada por um
-              agente que roda na rede do cliente e fala com o SAP localmente — só tráfego de saída (HTTPS), sem abrir porta.
+              <span className="text-[#e2e0ea] font-medium">{agentModal.name}</span>{t.modalIntroAfterName(agentModal.type)}
             </p>
 
             <div>
-              <p className="text-xs font-semibold text-[#9b95ad] uppercase tracking-wider mb-1">1. Token desta integração</p>
+              <p className="text-xs font-semibold text-[#9b95ad] uppercase tracking-wider mb-1">{t.modalStep1Label}</p>
               {agentBusy ? (
-                <p className="text-[#9b95ad]">Gerando token...</p>
+                <p className="text-[#9b95ad]">{t.modalGeneratingToken}</p>
               ) : agentToken ? (
                 <>
                   <code className="block bg-[#0f0b1a] border border-purple-500/30 rounded-lg px-3 py-2 break-all text-purple-300">{agentToken}</code>
-                  <p className="text-xs text-amber-400 mt-1">⚠️ Mostrado uma única vez. Copie agora — não fica salvo em claro.</p>
+                  <p className="text-xs text-amber-400 mt-1">{t.modalTokenWarn}</p>
                 </>
               ) : (
-                <p className="text-rose-400">Não foi possível gerar o token.</p>
+                <p className="text-rose-400">{t.modalTokenError}</p>
               )}
             </div>
 
             {agentToken && (
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <p className="text-xs font-semibold text-[#9b95ad] uppercase tracking-wider">2. Rode o agente no servidor do cliente</p>
+                  <p className="text-xs font-semibold text-[#9b95ad] uppercase tracking-wider">{t.modalStep2Label}</p>
                   <button
                     onClick={() => { navigator.clipboard?.writeText(dockerCmd(agentToken)); setCopied(true); }}
                     className="text-xs text-purple-400 hover:text-purple-300 cursor-pointer"
                   >
-                    {copied ? "✓ copiado" : "copiar"}
+                    {copied ? t.copied : t.copy}
                   </button>
                 </div>
                 <pre className="bg-[#0f0b1a] border border-white/[0.08] rounded-lg p-3 text-xs text-[#e2e0ea] overflow-auto whitespace-pre">{dockerCmd(agentToken)}</pre>
                 <p className="text-xs text-[#9b95ad] mt-2">
-                  Para conexão RFC real, troque <code className="text-purple-300">SAP_MODE=mock</code> por <code className="text-purple-300">rfc</code> e
-                  informe host/sysnr/client/usuário (requer o SAP NW RFC SDK na imagem). Detalhes no README do agente.
+                  {t.modalRfcNoteBefore}<code className="text-purple-300">SAP_MODE=mock</code>{t.modalRfcNoteMiddle}<code className="text-purple-300">rfc</code>{t.modalRfcNoteAfter}
                 </p>
               </div>
             )}

@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import ExplainData from "@/components/ExplainData";
 import { getClients, getAlertStats, getAlerts } from "@/lib/api";
 import HealthScoreRing from "@/components/HealthScoreRing";
+import { useLang } from "@/i18n/I18n";
+import { T } from "./i18n";
 
 interface ClientRaw {
   id: string;
@@ -41,6 +43,8 @@ interface Alert {
 
 export default function DashboardPage() {
   const router = useRouter();
+  const { lang } = useLang();
+  const t = T[lang];
   const [clients, setClients] = useState<Client[]>([]);
   const [stats, setStats] = useState<AlertStats | null>(null);
   const [recentAlerts, setRecentAlerts] = useState<Alert[]>([]);
@@ -66,7 +70,7 @@ export default function DashboardPage() {
         setStats(statsData);
         setRecentAlerts(Array.isArray(alertsData) ? alertsData.slice(0, 5) : alertsData.data?.slice(0, 5) || []);
       } catch {
-        setError("Erro ao carregar dados do dashboard.");
+        setError(t.loadError);
       } finally {
         setLoading(false);
       }
@@ -75,7 +79,7 @@ export default function DashboardPage() {
   }, []);
 
   if (loading) {
-    return <div className="text-[#9b95ad] text-lg">Carregando...</div>;
+    return <div className="text-[#9b95ad] text-lg">{t.loading}</div>;
   }
 
   if (error) {
@@ -107,17 +111,17 @@ export default function DashboardPage() {
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <ExplainData screen="Dashboard da carteira" data={{ alertas: stats, clientes: clients.map((c: any) => ({ nome: c.name, health: c.healthScore })), alertasRecentes: recentAlerts.slice(0, 8) }} label="Resuma minha carteira (IA)" />
+        <h1 className="text-2xl font-bold">{t.title}</h1>
+        <ExplainData screen="Dashboard da carteira" data={{ alertas: stats, clientes: clients.map((c: any) => ({ nome: c.name, health: c.healthScore })), alertasRecentes: recentAlerts.slice(0, 8) }} label={t.explainLabel} />
       </div>
 
       {/* Stats Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: "Total Clientes", value: clients.length, icon: "\uD83D\uDC65" },
-          { label: "Alertas Ativos", value: stats?.active ?? 0, icon: "\uD83D\uDD14" },
-          { label: "Score Medio", value: avgScore, icon: "\uD83D\uDCCA" },
-          { label: "Integracoes Ativas", value: totalIntegrations, icon: "\u26A1" },
+          { label: t.totalClients, value: clients.length, icon: "\uD83D\uDC65" },
+          { label: t.activeAlerts, value: stats?.active ?? 0, icon: "\uD83D\uDD14" },
+          { label: t.avgScore, value: avgScore, icon: "\uD83D\uDCCA" },
+          { label: t.activeIntegrations, value: totalIntegrations, icon: "\u26A1" },
         ].map((stat) => (
           <div
             key={stat.label}
@@ -136,7 +140,7 @@ export default function DashboardPage() {
 
       {/* Client Cards */}
       <div>
-        <h2 className="text-lg font-semibold mb-4">Clientes</h2>
+        <h2 className="text-lg font-semibold mb-4">{t.clients}</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {clients.map((client) => (
             <div
@@ -151,8 +155,8 @@ export default function DashboardPage() {
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold truncate">{client.name}</h3>
                   <div className="flex gap-4 mt-1 text-sm text-[#9b95ad]">
-                    <span>{client.integrationCount || 0} integracoes</span>
-                    <span>{client.alertCount || 0} alertas</span>
+                    <span>{client.integrationCount || 0} {t.integrations}</span>
+                    <span>{client.alertCount || 0} {t.alerts}</span>
                   </div>
                 </div>
               </div>
@@ -160,13 +164,13 @@ export default function DashboardPage() {
           ))}
         </div>
         {clients.length === 0 && (
-          <p className="text-[#9b95ad] text-sm">Nenhum cliente cadastrado.</p>
+          <p className="text-[#9b95ad] text-sm">{t.noClients}</p>
         )}
       </div>
 
       {/* Recent Alerts */}
       <div>
-        <h2 className="text-lg font-semibold mb-4">Alertas Recentes</h2>
+        <h2 className="text-lg font-semibold mb-4">{t.recentAlerts}</h2>
         <div className="space-y-3">
           {recentAlerts.map((alert) => (
             <div
@@ -194,7 +198,7 @@ export default function DashboardPage() {
             </div>
           ))}
           {recentAlerts.length === 0 && (
-            <p className="text-[#9b95ad] text-sm">Nenhum alerta recente.</p>
+            <p className="text-[#9b95ad] text-sm">{t.noRecentAlerts}</p>
           )}
         </div>
       </div>

@@ -12,6 +12,8 @@ import {
   autoFixIntegration,
 } from "@/lib/api";
 import { AiReport } from "@/components/AiReport";
+import { useLang } from "@/i18n/I18n";
+import { T } from "./i18n";
 
 interface FixChange { field: string; label: string; from: string; to: string }
 interface SapNoteHint {
@@ -58,6 +60,8 @@ interface DiagnosticEntry {
 }
 
 function DiagnosticsContent() {
+  const { lang } = useLang();
+  const t = T[lang];
   const searchParams = useSearchParams();
   const initialClientId = searchParams.get("clientId") || "";
   const integrationId = searchParams.get("integrationId") || "";
@@ -89,7 +93,7 @@ function DiagnosticsContent() {
     try {
       setIntDiag(await diagnoseIntegration(integrationId));
     } catch (e: any) {
-      setIntDiagError(e?.response?.data?.error || "Não foi possível diagnosticar a integração.");
+      setIntDiagError(e?.response?.data?.error || t.errCannotDiagnose);
     } finally {
       setIntDiagLoading(false);
     }
@@ -105,7 +109,7 @@ function DiagnosticsContent() {
       // Reanalisa para refletir o novo estado pós-correção
       try { setIntDiag(await diagnoseIntegration(integrationId)); } catch { /* mantém o atual */ }
     } catch (e: any) {
-      setIntDiagError(e?.response?.data?.error || "Não foi possível aplicar a correção.");
+      setIntDiagError(e?.response?.data?.error || t.errCannotFix);
     } finally {
       setFixing(false);
     }
@@ -126,7 +130,7 @@ function DiagnosticsContent() {
         setClients(Array.isArray(clientsData) ? clientsData : clientsData.data || []);
         setPresets(Array.isArray(presetsData) ? presetsData : presetsData.data || []);
       } catch {
-        setError("Erro ao carregar dados.");
+        setError(t.errLoadData);
       } finally {
         setLoading(false);
       }
@@ -156,13 +160,13 @@ function DiagnosticsContent() {
       const job = await createDiagnostic({ clientId: selectedClient, query: query.trim() });
       id = job.id;
     } catch (err: any) {
-      setError(err?.response?.data?.error || "Não foi possível iniciar o diagnóstico.");
+      setError(err?.response?.data?.error || t.errCannotStart);
       setAnalyzing(false);
       return;
     }
 
     if (!id) {
-      setError("Não foi possível iniciar o diagnóstico (resposta inválida do servidor).");
+      setError(t.errInvalidResponse);
       setAnalyzing(false);
       return;
     }
@@ -180,18 +184,18 @@ function DiagnosticsContent() {
           setResponse(d.response);
           done = true;
         } else if (d.status === "FAILED") {
-          setError(d.response || "A IA não conseguiu gerar o diagnóstico. Tente novamente.");
+          setError(d.response || t.errAiFailed);
           done = true;
         }
       } catch {
         consecutiveErrors++;
         if (consecutiveErrors >= 5) {
-          setError("Conexão instável ao acompanhar o diagnóstico — ele continua processando e aparecerá no histórico em instantes.");
+          setError(t.errUnstable);
           done = true;
         }
       }
     }
-    if (!done) setError("O diagnóstico está demorando mais que o esperado — aparecerá no histórico em instantes.");
+    if (!done) setError(t.errTooLong);
 
     try {
       const hist = await getDiagnosticHistory(selectedClient);
@@ -202,11 +206,11 @@ function DiagnosticsContent() {
     setAnalyzing(false);
   }
 
-  if (loading) return <div className="text-[#9b95ad]">Carregando...</div>;
+  if (loading) return <div className="text-[#9b95ad]">{t.loading}</div>;
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Diagnostico IA</h1>
+      <h1 className="text-2xl font-bold">{t.pageTitle}</h1>
 
       {error && (
         <div className="bg-rose-500/10 border border-rose-500/30 text-rose-400 text-sm rounded-lg p-3">
@@ -221,7 +225,7 @@ function DiagnosticsContent() {
             <div className="flex items-center gap-2">
               <span className="text-purple-400">🤖</span>
               <h2 className="font-semibold">
-                Diagnóstico automático{intDiag ? `: ${intDiag.integration.name}` : ""}
+                {intDiag ? t.autoDiagWithName(intDiag.integration.name) : t.autoDiagTitle}
               </h2>
             </div>
             <button
@@ -229,7 +233,7 @@ function DiagnosticsContent() {
               disabled={intDiagLoading || fixing}
               className="text-xs text-purple-400 hover:text-purple-300 disabled:opacity-50 cursor-pointer"
             >
-              ↻ Reanalisar
+              {t.reanalyze}
             </button>
           </div>
 
@@ -241,7 +245,7 @@ function DiagnosticsContent() {
             {intDiagLoading && (
               <div className="flex items-center gap-3 text-[#9b95ad] text-sm">
                 <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
-                A IA está testando a integração e analisando o erro...
+                {t.aiTesting}
               </div>
             )}
 
@@ -257,18 +261,18 @@ function DiagnosticsContent() {
                 </div>
 
                 <div>
-                  <p className="text-xs font-semibold text-purple-400 uppercase tracking-wider mb-1">Causa raiz</p>
+                  <p className="text-xs font-semibold text-purple-400 uppercase tracking-wider mb-1">{t.rootCause}</p>
                   <p className="text-sm text-[#e2e0ea] leading-relaxed">{intDiag.rootCause}</p>
                 </div>
 
                 <div>
-                  <p className="text-xs font-semibold text-cyan-400 uppercase tracking-wider mb-1">Recomendação</p>
+                  <p className="text-xs font-semibold text-cyan-400 uppercase tracking-wider mb-1">{t.recommendation}</p>
                   <p className="text-sm text-[#e2e0ea] leading-relaxed">{intDiag.recommendation}</p>
                 </div>
 
                 {intDiag.steps.length > 0 && (
                   <div>
-                    <p className="text-xs font-semibold text-[#9b95ad] uppercase tracking-wider mb-1">Passos</p>
+                    <p className="text-xs font-semibold text-[#9b95ad] uppercase tracking-wider mb-1">{t.steps}</p>
                     <ol className="list-decimal list-inside text-sm text-[#e2e0ea] space-y-1">
                       {intDiag.steps.map((s, i) => <li key={i}>{s}</li>)}
                     </ol>
@@ -279,7 +283,7 @@ function DiagnosticsContent() {
                 {intDiag.sapNotes && intDiag.sapNotes.length > 0 && (
                   <div>
                     <p className="text-xs font-semibold text-amber-400 uppercase tracking-wider mb-2">
-                      SAP Notes sugeridas
+                      {t.sapNotesSuggested}
                     </p>
                     <div className="space-y-2">
                       {intDiag.sapNotes.map((n, i) => (
@@ -298,13 +302,13 @@ function DiagnosticsContent() {
                           )}
                           <a href={n.searchUrl} target="_blank" rel="noopener noreferrer"
                             className="text-xs font-semibold text-amber-300 hover:text-amber-200 inline-flex items-center gap-1">
-                            Buscar a Note no suporte SAP ↗
+                            {t.searchNote}
                           </a>
                         </div>
                       ))}
                     </div>
                     <p className="text-[11px] text-[#9b95ad] mt-2">
-                      Sugestões por área/sintoma — confirme a Note/KBA aplicável no SAP ONE Support Launchpad.
+                      {t.sapNotesFooter}
                     </p>
                   </div>
                 )}
@@ -312,7 +316,7 @@ function DiagnosticsContent() {
                 {/* Ação de correção */}
                 {intDiag.autoFix.available ? (
                   <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4">
-                    <p className="text-sm font-medium text-purple-300 mb-1">Correção automática disponível</p>
+                    <p className="text-sm font-medium text-purple-300 mb-1">{t.autoFixAvailable}</p>
                     <p className="text-sm text-[#e2e0ea] mb-3">{intDiag.autoFix.summary}</p>
                     <button
                       onClick={runAutoFix}
@@ -320,13 +324,13 @@ function DiagnosticsContent() {
                       className="px-5 py-2.5 bg-gradient-to-r from-purple-600 to-cyan-500 text-white font-semibold rounded-lg hover:opacity-90 transition disabled:opacity-50 cursor-pointer inline-flex items-center gap-2"
                     >
                       {fixing && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
-                      {fixing ? "Aplicando correção..." : "✨ IA corrige"}
+                      {fixing ? t.applyingFix : t.aiFixes}
                     </button>
                   </div>
                 ) : (
                   <div className="bg-white/[0.04] border border-white/[0.08] rounded-lg p-4">
                     <p className="text-sm text-[#9b95ad]">
-                      <span className="font-medium text-[#e2e0ea]">Sem correção automática.</span> {intDiag.autoFix.reason}
+                      <span className="font-medium text-[#e2e0ea]">{t.noAutoFix}</span> {intDiag.autoFix.reason}
                     </p>
                   </div>
                 )}
@@ -335,9 +339,9 @@ function DiagnosticsContent() {
                 {fixResult && (
                   <div className={`rounded-lg p-4 border ${fixResult.recovered ? "bg-emerald-500/10 border-emerald-500/30" : "bg-amber-500/10 border-amber-500/30"}`}>
                     <p className={`text-sm font-semibold mb-2 ${fixResult.recovered ? "text-emerald-400" : "text-amber-400"}`}>
-                      {fixResult.recovered ? "✓ Correção aplicada — integração recuperada" : "Correção aplicada — ainda não recuperou"}
+                      {fixResult.recovered ? t.fixRecovered : t.fixNotRecovered}
                     </p>
-                    <p className="text-xs font-semibold text-[#9b95ad] uppercase tracking-wider mb-1">O que foi alterado</p>
+                    <p className="text-xs font-semibold text-[#9b95ad] uppercase tracking-wider mb-1">{t.whatChanged}</p>
                     <ul className="text-sm text-[#e2e0ea] space-y-1 mb-3">
                       {fixResult.changes.map((c, i) => (
                         <li key={i} className="flex flex-wrap items-center gap-2">
@@ -348,18 +352,18 @@ function DiagnosticsContent() {
                         </li>
                       ))}
                     </ul>
-                    <p className="text-xs font-semibold text-[#9b95ad] uppercase tracking-wider mb-1">Onde</p>
-                    <p className="text-sm text-[#e2e0ea] mb-3">Cadastro da integração <span className="font-medium">{intDiag.integration.name}</span> ({intDiag.integration.type})</p>
+                    <p className="text-xs font-semibold text-[#9b95ad] uppercase tracking-wider mb-1">{t.where}</p>
+                    <p className="text-sm text-[#e2e0ea] mb-3">{t.integrationRegistry(intDiag.integration.name, intDiag.integration.type)}</p>
                     <div className="grid grid-cols-2 gap-3 text-sm">
                       <div className="bg-[#0f0b1a] rounded-lg p-3">
-                        <p className="text-xs text-[#9b95ad] mb-1">Antes</p>
-                        <p>Status: <span className="font-medium text-rose-400">{fixResult.before.status}</span></p>
-                        <p>Uptime: {fixResult.before.uptime}%</p>
+                        <p className="text-xs text-[#9b95ad] mb-1">{t.before}</p>
+                        <p>{t.statusLabel}: <span className="font-medium text-rose-400">{fixResult.before.status}</span></p>
+                        <p>{t.uptimeLabel}: {fixResult.before.uptime}%</p>
                       </div>
                       <div className="bg-[#0f0b1a] rounded-lg p-3">
-                        <p className="text-xs text-[#9b95ad] mb-1">Depois</p>
-                        <p>Status: <span className={`font-medium ${fixResult.after.status === "ACTIVE" ? "text-emerald-400" : "text-amber-400"}`}>{fixResult.after.status}</span></p>
-                        <p>Uptime: {fixResult.after.uptime}%</p>
+                        <p className="text-xs text-[#9b95ad] mb-1">{t.after}</p>
+                        <p>{t.statusLabel}: <span className={`font-medium ${fixResult.after.status === "ACTIVE" ? "text-emerald-400" : "text-amber-400"}`}>{fixResult.after.status}</span></p>
+                        <p>{t.uptimeLabel}: {fixResult.after.uptime}%</p>
                       </div>
                     </div>
                   </div>
@@ -373,7 +377,7 @@ function DiagnosticsContent() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Presets */}
         <div>
-          <h2 className="text-lg font-semibold mb-4">Presets</h2>
+          <h2 className="text-lg font-semibold mb-4">{t.presets}</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {presets.map((preset) => (
               <button
@@ -386,7 +390,7 @@ function DiagnosticsContent() {
               </button>
             ))}
             {presets.length === 0 && (
-              <p className="text-[#9b95ad] text-sm">Nenhum preset disponivel.</p>
+              <p className="text-[#9b95ad] text-sm">{t.noPresets}</p>
             )}
           </div>
         </div>
@@ -395,14 +399,14 @@ function DiagnosticsContent() {
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-[#9b95ad] mb-1.5">
-              Cliente
+              {t.client}
             </label>
             <select
               value={selectedClient}
               onChange={(e) => setSelectedClient(e.target.value)}
               className="w-full px-4 py-2.5 bg-[#1a1527] border border-white/[0.08] rounded-lg text-[#e2e0ea] focus:outline-none focus:border-purple-500/50"
             >
-              <option value="">Selecione um cliente</option>
+              <option value="">{t.selectClient}</option>
               {clients.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
@@ -413,14 +417,14 @@ function DiagnosticsContent() {
 
           <div>
             <label className="block text-sm font-medium text-[#9b95ad] mb-1.5">
-              Consulta
+              {t.queryLabel}
             </label>
             <textarea
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               rows={5}
               className="w-full px-4 py-2.5 bg-[#1a1527] border border-white/[0.08] rounded-lg text-[#e2e0ea] placeholder-[#9b95ad]/50 focus:outline-none focus:border-purple-500/50 resize-none"
-              placeholder="Descreva o que deseja analisar..."
+              placeholder={t.queryPlaceholder}
             />
           </div>
 
@@ -429,7 +433,7 @@ function DiagnosticsContent() {
             disabled={analyzing || !selectedClient || !query.trim()}
             className="px-6 py-2.5 bg-gradient-to-r from-purple-600 to-cyan-500 text-white font-semibold rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 cursor-pointer"
           >
-            {analyzing ? "Analisando..." : "Analisar"}
+            {analyzing ? t.analyzing : t.analyze}
           </button>
         </div>
       </div>
@@ -438,21 +442,21 @@ function DiagnosticsContent() {
       {(response || analyzing) && (
         analyzing ? (
           <div className="bg-[#1a1527] rounded-xl p-6 border border-white/[0.08]">
-            <h3 className="text-sm font-semibold text-[#9b95ad] mb-3">Resultado</h3>
+            <h3 className="text-sm font-semibold text-[#9b95ad] mb-3">{t.resultTitle}</h3>
             <div className="flex items-center gap-3 text-[#9b95ad]">
               <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
-              A IA está analisando o ambiente... isso pode levar até ~2 min. Pode continuar usando o sistema.
+              {t.analyzingEnv}
             </div>
           </div>
         ) : (
-          <AiReport text={response} title="Diagnóstico do ambiente SAP" meta={[{ label: "Gerado em", value: new Date().toLocaleString("pt-BR") }]} />
+          <AiReport text={response} title={t.reportTitle} meta={[{ label: t.generatedAt, value: new Date().toLocaleString("pt-BR") }]} />
         )
       )}
 
       {/* History */}
       {selectedClient && history.length > 0 && (
         <div>
-          <h2 className="text-lg font-semibold mb-4">Historico de Diagnosticos</h2>
+          <h2 className="text-lg font-semibold mb-4">{t.historyTitle}</h2>
           <div className="space-y-3">
             {history.map((entry) => {
               const isExpanded = expandedEntry === entry.id;
@@ -471,13 +475,13 @@ function DiagnosticsContent() {
                   </div>
                   <div className="flex items-center gap-3 mt-2">
                     <span className="text-xs text-[#9b95ad]">{new Date(entry.createdAt).toLocaleString("pt-BR")}</span>
-                    {!isExpanded && <span className="text-xs text-purple-400">Clique para ver detalhes</span>}
+                    {!isExpanded && <span className="text-xs text-purple-400">{t.clickForDetails}</span>}
                   </div>
                 </button>
                 {isExpanded && (
                   <div className="px-4 pb-4 border-t border-white/[0.05]">
                     <div className="mt-4">
-                      <AiReport text={entry.response} title="Diagnóstico do ambiente SAP" subtitle={entry.query} meta={[{ label: "Gerado em", value: new Date(entry.createdAt).toLocaleString("pt-BR") }]} />
+                      <AiReport text={entry.response} title={t.reportTitle} subtitle={entry.query} meta={[{ label: t.generatedAt, value: new Date(entry.createdAt).toLocaleString("pt-BR") }]} />
                     </div>
                   </div>
                 )}

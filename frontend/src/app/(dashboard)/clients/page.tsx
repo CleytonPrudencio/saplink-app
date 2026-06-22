@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import ExplainData from "@/components/ExplainData";
 import { getClients, createClient, deleteClient, getPortalStatus, enableClientPortal, disableClientPortal } from "@/lib/api";
 import HealthScoreRing from "@/components/HealthScoreRing";
+import { useLang } from "@/i18n/I18n";
+import { T } from "./i18n";
 
 interface Client {
   id: string;
@@ -16,6 +18,8 @@ interface Client {
 
 export default function ClientsPage() {
   const router = useRouter();
+  const { lang } = useLang();
+  const t = T[lang];
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -52,7 +56,7 @@ export default function ClientsPage() {
       setClients(Array.isArray(data) ? data : data.data || []);
       setError("");
     } catch {
-      setError("Erro ao carregar clientes.");
+      setError(t.loadError);
     } finally {
       setLoading(false);
     }
@@ -73,19 +77,19 @@ export default function ClientsPage() {
       setShowForm(false);
       await load();
     } catch (err: any) {
-      setFormError(err?.response?.data?.error || "Não foi possível criar o cliente.");
+      setFormError(err?.response?.data?.error || t.createError);
     } finally {
       setSaving(false);
     }
   }
 
   async function onDelete(id: string, clientName: string) {
-    if (!window.confirm(`Excluir o cliente "${clientName}"? Esta ação não pode ser desfeita.`)) return;
+    if (!window.confirm(t.confirmDelete(clientName))) return;
     try {
       await deleteClient(id);
       await load();
     } catch (err: any) {
-      alert(err?.response?.data?.error || "Não foi possível excluir.");
+      alert(err?.response?.data?.error || t.deleteError);
     }
   }
 
@@ -95,38 +99,38 @@ export default function ClientsPage() {
     return "border-l-rose-500";
   }
 
-  if (loading) return <div className="text-[#9b95ad]">Carregando...</div>;
+  if (loading) return <div className="text-[#9b95ad]">{t.loading}</div>;
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Clientes</h1>
+        <h1 className="text-2xl font-bold">{t.title}</h1>
         <button
           onClick={() => setShowForm((s) => !s)}
           className="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-cyan-400 text-white text-sm font-semibold"
         >
-          {showForm ? "Cancelar" : "+ Novo cliente"}
+          {showForm ? t.cancel : t.newClient}
         </button>
       </div>
-      <ExplainData screen="Carteira de clientes" data={{ clientes: clients.map((c: any) => ({ nome: c.name, health: c.healthScore, integracoes: c.integrationCount ?? c._count?.integrations, alertas: c.alertCount ?? c._count?.alerts })) }} label="Priorizar a carteira (IA)" />
+      <ExplainData screen="Carteira de clientes" data={{ clientes: clients.map((c: any) => ({ nome: c.name, health: c.healthScore, integracoes: c.integrationCount ?? c._count?.integrations, alertas: c.alertCount ?? c._count?.alerts })) }} label={t.explainLabel} />
 
       {error && <div className="text-rose-400">{error}</div>}
 
       {showForm && (
         <form onSubmit={onCreate} className="bg-[#1a1527] rounded-xl p-5 border border-white/[0.08] max-w-xl space-y-3">
           <div>
-            <label htmlFor="cli-name" className="block text-sm text-[#9b95ad] mb-1">Nome do cliente *</label>
+            <label htmlFor="cli-name" className="block text-sm text-[#9b95ad] mb-1">{t.nameLabel}</label>
             <input
               id="cli-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
               className="w-full bg-[#0f0b1a] border border-white/[0.1] rounded-lg px-3 py-2 text-sm"
-              placeholder="Ex.: Indústria Acme"
+              placeholder={t.namePlaceholder}
             />
           </div>
           <div>
-            <label htmlFor="cli-cnpj" className="block text-sm text-[#9b95ad] mb-1">CNPJ (opcional)</label>
+            <label htmlFor="cli-cnpj" className="block text-sm text-[#9b95ad] mb-1">{t.cnpjLabel}</label>
             <input
               id="cli-cnpj"
               value={cnpj}
@@ -141,7 +145,7 @@ export default function ClientsPage() {
             disabled={saving || !name.trim()}
             className="px-4 py-2 rounded-lg bg-purple-500 text-white text-sm font-semibold disabled:opacity-40"
           >
-            {saving ? "Salvando..." : "Criar cliente"}
+            {saving ? t.saving : t.createClient}
           </button>
         </form>
       )}
@@ -163,25 +167,25 @@ export default function ClientsPage() {
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold truncate">{client.name}</h3>
                   <div className="flex gap-4 mt-1 text-sm text-[#9b95ad]">
-                    <span>{client.integrationCount || 0} integracoes</span>
-                    <span>{client.alertCount || 0} alertas</span>
+                    <span>{client.integrationCount || 0} {t.integrations}</span>
+                    <span>{client.alertCount || 0} {t.alerts}</span>
                   </div>
                 </div>
               </div>
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => openPortal(client.id)}
-                  aria-label={`Portal de ${client.name}`}
+                  aria-label={t.portalAria(client.name)}
                   className="text-[#9b95ad] hover:text-cyan-300 text-lg px-1"
-                  title="Portal do cliente"
+                  title={t.portalTitle}
                 >
                   🔗
                 </button>
                 <button
                   onClick={() => onDelete(client.id, client.name)}
-                  aria-label={`Excluir ${client.name}`}
+                  aria-label={t.deleteAria(client.name)}
                   className="text-[#9b95ad] hover:text-rose-400 text-lg px-1"
-                  title="Excluir cliente"
+                  title={t.deleteTitle}
                 >
                   ✕
                 </button>
@@ -191,20 +195,20 @@ export default function ClientsPage() {
             {activePortal === client.id && (
               <div className="mt-3 pt-3 border-t border-white/[0.06] text-sm">
                 {!portalInfo ? (
-                  <p className="text-[#9b95ad] text-xs">Carregando portal...</p>
+                  <p className="text-[#9b95ad] text-xs">{t.portalLoading}</p>
                 ) : portalInfo.enabled && portalInfo.url ? (
                   <div className="space-y-2">
-                    <p className="text-xs text-emerald-400">Portal ativo (read-only para o cliente).</p>
+                    <p className="text-xs text-emerald-400">{t.portalActive}</p>
                     <div className="flex gap-1">
                       <input readOnly value={portalInfo.url} className="flex-1 bg-[#0f0b1a] border border-white/[0.1] rounded-lg px-2 py-1 text-xs text-[#c9c5d6]" />
-                      <button onClick={() => { navigator.clipboard?.writeText(portalInfo.url!); setCopied(true); }} className="text-xs px-2 py-1 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] cursor-pointer">{copied ? "✓" : "Copiar"}</button>
+                      <button onClick={() => { navigator.clipboard?.writeText(portalInfo.url!); setCopied(true); }} className="text-xs px-2 py-1 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] cursor-pointer">{copied ? "✓" : t.copy}</button>
                     </div>
-                    <button onClick={() => togglePortal(client.id, false)} disabled={portalBusy} className="text-xs text-rose-300 hover:underline cursor-pointer disabled:opacity-40">Desativar portal</button>
+                    <button onClick={() => togglePortal(client.id, false)} disabled={portalBusy} className="text-xs text-rose-300 hover:underline cursor-pointer disabled:opacity-40">{t.disablePortal}</button>
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    <p className="text-xs text-[#9b95ad]">Gere um link público read-only com a saúde deste cliente (white-label).</p>
-                    <button onClick={() => togglePortal(client.id, true)} disabled={portalBusy} className="text-xs px-3 py-1.5 rounded-lg bg-purple-500/20 text-purple-200 hover:bg-purple-500/30 cursor-pointer disabled:opacity-40">{portalBusy ? "..." : "Ativar portal do cliente"}</button>
+                    <p className="text-xs text-[#9b95ad]">{t.portalPitch}</p>
+                    <button onClick={() => togglePortal(client.id, true)} disabled={portalBusy} className="text-xs px-3 py-1.5 rounded-lg bg-purple-500/20 text-purple-200 hover:bg-purple-500/30 cursor-pointer disabled:opacity-40">{portalBusy ? "..." : t.enablePortal}</button>
                   </div>
                 )}
               </div>
@@ -215,12 +219,12 @@ export default function ClientsPage() {
 
       {clients.length === 0 && !showForm && (
         <div className="text-center py-12">
-          <p className="text-[#9b95ad] mb-3">Nenhum cliente cadastrado ainda.</p>
+          <p className="text-[#9b95ad] mb-3">{t.noClients}</p>
           <button
             onClick={() => setShowForm(true)}
             className="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-cyan-400 text-white text-sm font-semibold"
           >
-            + Cadastrar primeiro cliente
+            {t.registerFirst}
           </button>
         </div>
       )}

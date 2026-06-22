@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { getMe, updateBranding, getUsers, createUser, deleteUser, getDigestStatus, toggleDigest, getDigestPreview, sendDigestNow } from "@/lib/api";
+import { useLang } from "@/i18n/I18n";
+import { T } from "./i18n";
 
 interface TeamUser {
   id: string;
@@ -27,6 +29,8 @@ interface User {
 }
 
 export default function SettingsPage() {
+  const { lang } = useLang();
+  const t = T[lang];
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -69,7 +73,7 @@ export default function SettingsPage() {
           getDigestStatus().then(setDigest).catch(() => {});
         }
       })
-      .catch(() => setError("Erro ao carregar dados do usuario."))
+      .catch(() => setError(t.loadError))
       .finally(() => setLoading(false));
   }, []);
 
@@ -79,23 +83,23 @@ export default function SettingsPage() {
     setUserMsg("");
     try {
       const created = await createUser({ name: nu.name.trim(), email: nu.email.trim(), role: nu.role });
-      setUserMsg(`Usuário criado. Senha temporária: ${created.tempPassword}`);
+      setUserMsg(t.userCreated(created.tempPassword));
       setNu({ name: "", email: "", role: "CONSULTANCY_USER" });
       await loadTeam();
     } catch (err: any) {
-      setUserMsg(err?.response?.data?.error || "Não foi possível criar o usuário.");
+      setUserMsg(err?.response?.data?.error || t.createUserError);
     } finally {
       setAddingUser(false);
     }
   }
 
   async function onRemoveUser(id: string, nm: string) {
-    if (!window.confirm(`Remover ${nm}?`)) return;
+    if (!window.confirm(t.removeConfirm(nm))) return;
     try {
       await deleteUser(id);
       await loadTeam();
     } catch (err: any) {
-      alert(err?.response?.data?.error || "Não foi possível remover.");
+      alert(err?.response?.data?.error || t.removeError);
     }
   }
 
@@ -115,9 +119,9 @@ export default function SettingsPage() {
     setPreview("");
     try {
       const r = await getDigestPreview();
-      setPreview(r.narrative || "(IA indisponível — o e-mail traz os números mesmo assim.)");
+      setPreview(r.narrative || t.previewUnavailable);
     } catch {
-      setPreview("Erro ao gerar prévia.");
+      setPreview(t.previewError);
     } finally {
       setPreviewBusy(false);
     }
@@ -130,12 +134,12 @@ export default function SettingsPage() {
       const r = await sendDigestNow();
       setDigestMsg(
         r.sent
-          ? `Enviado para: ${r.to.join(", ")}`
-          : r.reason || "Não enviado."
+          ? t.sentTo(r.to.join(", "))
+          : r.reason || t.notSent
       );
       getDigestStatus().then(setDigest).catch(() => {});
     } catch {
-      setDigestMsg("Erro ao enviar o digest.");
+      setDigestMsg(t.sendError);
     } finally {
       setDigestBusy(false);
     }
@@ -152,56 +156,56 @@ export default function SettingsPage() {
         logoUrl: logoUrl.trim() || null,
         primaryColor: primaryColor || null,
       });
-      setSavedMsg("Marca atualizada. Recarregue para ver no menu.");
+      setSavedMsg(t.brandSaved);
     } catch (err: any) {
-      setError(err?.response?.data?.error || "Não foi possível salvar a marca.");
+      setError(err?.response?.data?.error || t.brandSaveError);
     } finally {
       setSaving(false);
     }
   }
 
-  if (loading) return <div className="text-[#9b95ad]">Carregando...</div>;
-  if (!user) return <div className="text-rose-400">{error || "Erro."}</div>;
+  if (loading) return <div className="text-[#9b95ad]">{t.loading}</div>;
+  if (!user) return <div className="text-rose-400">{error || t.genericError}</div>;
 
   const isAdmin = user.role === "CONSULTANCY_ADMIN" || user.role === "PLATFORM_ADMIN";
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Configuracoes</h1>
+      <h1 className="text-2xl font-bold">{t.title}</h1>
       {error && <div className="text-rose-400">{error}</div>}
 
       <div className="bg-[#1a1527] rounded-xl p-6 border border-white/[0.08] max-w-2xl">
-        <h2 className="text-lg font-semibold mb-4">Perfil</h2>
+        <h2 className="text-lg font-semibold mb-4">{t.profile}</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div><p className="text-sm text-[#9b95ad]">Nome</p><p className="font-medium mt-0.5">{user.name}</p></div>
-          <div><p className="text-sm text-[#9b95ad]">Email</p><p className="font-medium mt-0.5">{user.email}</p></div>
-          <div><p className="text-sm text-[#9b95ad]">Consultoria</p><p className="font-medium mt-0.5">{user.consultancy?.name || "-"}</p></div>
-          <div><p className="text-sm text-[#9b95ad]">Papel</p><p className="font-medium mt-0.5">{user.role}</p></div>
+          <div><p className="text-sm text-[#9b95ad]">{t.name}</p><p className="font-medium mt-0.5">{user.name}</p></div>
+          <div><p className="text-sm text-[#9b95ad]">{t.email}</p><p className="font-medium mt-0.5">{user.email}</p></div>
+          <div><p className="text-sm text-[#9b95ad]">{t.consultancy}</p><p className="font-medium mt-0.5">{user.consultancy?.name || "-"}</p></div>
+          <div><p className="text-sm text-[#9b95ad]">{t.role}</p><p className="font-medium mt-0.5">{user.role}</p></div>
         </div>
       </div>
 
       {isAdmin && (
         <form onSubmit={onSaveBranding} className="bg-[#1a1527] rounded-xl p-6 border border-white/[0.08] max-w-2xl space-y-4">
-          <h2 className="text-lg font-semibold">Marca (white-label)</h2>
+          <h2 className="text-lg font-semibold">{t.branding}</h2>
           <div>
-            <label htmlFor="brand-name" className="block text-sm text-[#9b95ad] mb-1">Nome exibido</label>
+            <label htmlFor="brand-name" className="block text-sm text-[#9b95ad] mb-1">{t.displayName}</label>
             <input id="brand-name" value={name} onChange={(e) => setName(e.target.value)}
               className="w-full bg-[#0f0b1a] border border-white/[0.1] rounded-lg px-3 py-2 text-sm" />
           </div>
           <div>
-            <label htmlFor="brand-logo" className="block text-sm text-[#9b95ad] mb-1">URL do logo (PNG/SVG)</label>
+            <label htmlFor="brand-logo" className="block text-sm text-[#9b95ad] mb-1">{t.logoUrl}</label>
             <input id="brand-logo" value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} placeholder="https://..."
               className="w-full bg-[#0f0b1a] border border-white/[0.1] rounded-lg px-3 py-2 text-sm" />
           </div>
           <div>
-            <label htmlFor="brand-color" className="block text-sm text-[#9b95ad] mb-1">Cor primária</label>
+            <label htmlFor="brand-color" className="block text-sm text-[#9b95ad] mb-1">{t.primaryColor}</label>
             <input id="brand-color" type="color" value={primaryColor} onChange={(e) => setPrimaryColor(e.target.value)}
               className="h-10 w-20 bg-[#0f0b1a] border border-white/[0.1] rounded-lg" />
           </div>
           {savedMsg && <p className="text-emerald-400 text-sm">{savedMsg}</p>}
           <button type="submit" disabled={saving}
             className="px-4 py-2 rounded-lg bg-purple-500 text-white text-sm font-semibold disabled:opacity-40">
-            {saving ? "Salvando..." : "Salvar marca"}
+            {saving ? t.saving : t.saveBrand}
           </button>
         </form>
       )}
@@ -210,9 +214,9 @@ export default function SettingsPage() {
         <div className="bg-[#1a1527] rounded-xl p-6 border border-white/[0.08] max-w-2xl space-y-4">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h2 className="text-lg font-semibold">📬 Digest semanal por IA</h2>
+              <h2 className="text-lg font-semibold">{t.digestTitle}</h2>
               <p className="text-sm text-[#9b95ad] mt-1">
-                Toda semana, um resumo de saúde da carteira narrado pela IA é enviado por e-mail aos admins.
+                {t.digestDesc}
               </p>
             </div>
             <button onClick={onToggleDigest} role="switch" aria-checked={digest.weeklyDigest}
@@ -222,19 +226,19 @@ export default function SettingsPage() {
           </div>
 
           <div className="text-xs text-[#9b95ad] space-y-1">
-            <p>Último envio: {digest.lastDigestAt ? new Date(digest.lastDigestAt).toLocaleString("pt-BR") : "nunca"}</p>
-            {!digest.emailEnabled && <p className="text-amber-300">⚠️ E-mail não configurado (RESEND_API_KEY ausente) — o envio fica em modo log.</p>}
-            {!digest.aiEnabled && <p className="text-amber-300">⚠️ IA indisponível — o digest sai só com os números.</p>}
+            <p>{t.lastSent} {digest.lastDigestAt ? new Date(digest.lastDigestAt).toLocaleString("pt-BR") : t.never}</p>
+            {!digest.emailEnabled && <p className="text-amber-300">{t.emailNotConfigured}</p>}
+            {!digest.aiEnabled && <p className="text-amber-300">{t.aiUnavailable}</p>}
           </div>
 
           <div className="flex flex-wrap gap-2">
             <button onClick={onPreviewDigest} disabled={previewBusy}
               className="px-4 py-2 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-sm font-semibold disabled:opacity-40 cursor-pointer">
-              {previewBusy ? "Gerando..." : "Ver prévia da IA"}
+              {previewBusy ? t.previewing : t.previewAi}
             </button>
             <button onClick={onSendDigest} disabled={digestBusy}
               className="px-4 py-2 rounded-lg bg-purple-500 text-white text-sm font-semibold disabled:opacity-40 cursor-pointer">
-              {digestBusy ? "Enviando..." : "Enviar agora"}
+              {digestBusy ? t.sending : t.sendNow}
             </button>
           </div>
 
@@ -249,7 +253,7 @@ export default function SettingsPage() {
 
       {isAdmin && (
         <div className="bg-[#1a1527] rounded-xl p-6 border border-white/[0.08] max-w-2xl space-y-4">
-          <h2 className="text-lg font-semibold">Usuários da equipe</h2>
+          <h2 className="text-lg font-semibold">{t.teamUsers}</h2>
           <div className="space-y-2">
             {team.map((u) => (
               <div key={u.id} className="flex items-center justify-between bg-[#0f0b1a] rounded-lg px-3 py-2">
@@ -258,27 +262,27 @@ export default function SettingsPage() {
                   <p className="text-xs text-[#9b95ad]">{u.role}</p>
                 </div>
                 {u.id !== user.id && (
-                  <button onClick={() => onRemoveUser(u.id, u.name)} aria-label={`Remover ${u.name}`}
+                  <button onClick={() => onRemoveUser(u.id, u.name)} aria-label={t.removeUserAria(u.name)}
                     className="text-[#9b95ad] hover:text-rose-400 px-2">✕</button>
                 )}
               </div>
             ))}
-            {team.length === 0 && <p className="text-sm text-[#9b95ad]">Nenhum usuário ainda.</p>}
+            {team.length === 0 && <p className="text-sm text-[#9b95ad]">{t.noUsers}</p>}
           </div>
 
           <form onSubmit={onAddUser} className="grid grid-cols-1 sm:grid-cols-4 gap-2 pt-2 border-t border-white/[0.06]">
-            <input value={nu.name} onChange={(e) => setNu({ ...nu, name: e.target.value })} required placeholder="Nome"
+            <input value={nu.name} onChange={(e) => setNu({ ...nu, name: e.target.value })} required placeholder={t.namePlaceholder}
               className="bg-[#0f0b1a] border border-white/[0.1] rounded-lg px-3 py-2 text-sm" />
-            <input value={nu.email} onChange={(e) => setNu({ ...nu, email: e.target.value })} required type="email" placeholder="email@empresa.com"
+            <input value={nu.email} onChange={(e) => setNu({ ...nu, email: e.target.value })} required type="email" placeholder={t.emailPlaceholder}
               className="bg-[#0f0b1a] border border-white/[0.1] rounded-lg px-3 py-2 text-sm sm:col-span-1" />
             <select value={nu.role} onChange={(e) => setNu({ ...nu, role: e.target.value })}
               className="bg-[#0f0b1a] border border-white/[0.1] rounded-lg px-3 py-2 text-sm">
-              <option value="CONSULTANCY_USER">Usuário</option>
-              <option value="CONSULTANCY_ADMIN">Admin</option>
+              <option value="CONSULTANCY_USER">{t.roleUser}</option>
+              <option value="CONSULTANCY_ADMIN">{t.roleAdmin}</option>
             </select>
             <button type="submit" disabled={addingUser}
               className="px-3 py-2 rounded-lg bg-purple-500 text-white text-sm font-semibold disabled:opacity-40">
-              {addingUser ? "..." : "Adicionar"}
+              {addingUser ? t.adding : t.addUser}
             </button>
           </form>
           {userMsg && <p className="text-sm text-amber-300 break-all">{userMsg}</p>}

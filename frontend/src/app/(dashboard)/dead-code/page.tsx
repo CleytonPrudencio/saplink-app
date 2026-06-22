@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { getClients, getDeadCode, getDeadCodeStats } from "@/lib/api";
 import { usePaginate, Pagination } from "@/components/Pagination";
+import { useLang } from "@/i18n/I18n";
+import { T } from "./i18n";
 
 interface Client { id: string; name: string; }
 interface DeadCodeEntry {
@@ -11,40 +13,23 @@ interface DeadCodeEntry {
 }
 interface DeadCodeStatsData { total: number; retire: number; review: number; keep: number; }
 
-const recInfo: Record<string, { label: string; color: string; bgColor: string; borderColor: string; icon: string; title: string; description: string; action: string; risk: string }> = {
-  RETIRE: {
-    label: 'APOSENTAR', color: 'text-rose-400', bgColor: 'bg-rose-500/10', borderColor: 'border-rose-500/20',
-    icon: '🗑️', title: 'Recomendado aposentar',
-    description: 'Este objeto não é utilizado há muito tempo ou nunca foi executado em produção. Mantê-lo aumenta a complexidade do sistema e dificulta manutenção e migração.',
-    action: 'Mover para pacote de objetos inativos ($TMP) ou deletar após backup. Validar com equipe funcional antes de remover.',
-    risk: 'Risco baixo — objeto sem uso. Faça backup antes de remover por segurança.',
-  },
-  REVIEW: {
-    label: 'REVISAR', color: 'text-amber-400', bgColor: 'bg-amber-500/10', borderColor: 'border-amber-500/20',
-    icon: '🔍', title: 'Recomendado revisar',
-    description: 'Este objeto tem uso esporádico ou foi utilizado recentemente mas com baixa frequência. Pode estar sendo chamado por jobs noturnos ou processos pontuais.',
-    action: 'Investigar quem chama este objeto (SE24/SE37 → Where-Used). Se confirmado que é necessário, reclassificar como MANTER.',
-    risk: 'Risco médio — pode estar em uso por processos não óbvios. Não remover sem análise.',
-  },
-  KEEP: {
-    label: 'MANTER', color: 'text-emerald-400', bgColor: 'bg-emerald-500/10', borderColor: 'border-emerald-500/20',
-    icon: '✅', title: 'Manter em produção',
-    description: 'Este objeto é utilizado ativamente em produção. Faz parte dos processos operacionais do cliente e deve ser mantido.',
-    action: 'Nenhuma ação necessária. Documentar e incluir no escopo de testes de migração S/4HANA.',
-    risk: 'Sem risco — objeto ativo e necessário.',
-  },
-};
-
-const typeDescriptions: Record<string, string> = {
-  PROGRAM: 'Programa ABAP (report ou module pool)',
-  FUNCTION: 'Function Module (RFC ou local)',
-  CLASS: 'Classe ABAP (OO)',
-  INCLUDE: 'Include de código compartilhado',
-  FORM: 'Form routine (subrotina)',
-  ENHANCEMENT: 'Enhancement / User Exit',
+// Estilos visuais por recomendação (texto vem do dicionário i18n)
+const recStyle: Record<string, { color: string; bgColor: string; borderColor: string; icon: string }> = {
+  RETIRE: { color: 'text-rose-400', bgColor: 'bg-rose-500/10', borderColor: 'border-rose-500/20', icon: '🗑️' },
+  REVIEW: { color: 'text-amber-400', bgColor: 'bg-amber-500/10', borderColor: 'border-amber-500/20', icon: '🔍' },
+  KEEP: { color: 'text-emerald-400', bgColor: 'bg-emerald-500/10', borderColor: 'border-emerald-500/20', icon: '✅' },
 };
 
 export default function DeadCodePage() {
+  const { lang } = useLang();
+  const t = T[lang];
+  // junta estilo visual + textos traduzidos
+  const recInfo: Record<string, { label: string; color: string; bgColor: string; borderColor: string; icon: string; title: string; description: string; action: string; risk: string }> = {
+    RETIRE: { ...recStyle.RETIRE, ...t.rec.RETIRE },
+    REVIEW: { ...recStyle.REVIEW, ...t.rec.REVIEW },
+    KEEP: { ...recStyle.KEEP, ...t.rec.KEEP },
+  };
+  const typeDescriptions = t.typeDescriptions;
   const [clients, setClients] = useState<Client[]>([]);
   const [selectedClient, setSelectedClient] = useState("");
   const [entries, setEntries] = useState<DeadCodeEntry[]>([]);
@@ -58,7 +43,7 @@ export default function DeadCodePage() {
   useEffect(() => {
     getClients()
       .then((data) => setClients(Array.isArray(data) ? data : data.data || []))
-      .catch(() => setError("Erro ao carregar clientes."))
+      .catch(() => setError(t.loadClientsError))
       .finally(() => setLoading(false));
   }, []);
 
@@ -72,7 +57,7 @@ export default function DeadCodePage() {
         setEntries(Array.isArray(codeData) ? codeData : codeData.data || []);
         setStats(statsData);
       })
-      .catch(() => setError("Erro ao carregar dados."))
+      .catch(() => setError(t.loadDataError))
       .finally(() => setDataLoading(false));
   }, [selectedClient]);
 
@@ -82,40 +67,40 @@ export default function DeadCodePage() {
   function getType(entry: DeadCodeEntry) { return entry.objectType || entry.type || 'PROGRAM'; }
 
   function daysSinceLastUse(lastUsed: string | null): string {
-    if (!lastUsed) return 'Nunca utilizado';
+    if (!lastUsed) return t.neverUsed;
     const days = Math.floor((Date.now() - new Date(lastUsed).getTime()) / (1000 * 60 * 60 * 24));
-    if (days > 365) return `${Math.floor(days / 365)} anos sem uso`;
-    if (days > 30) return `${Math.floor(days / 30)} meses sem uso`;
-    return `${days} dias sem uso`;
+    if (days > 365) return t.yearsNoUse(Math.floor(days / 365));
+    if (days > 30) return t.monthsNoUse(Math.floor(days / 30));
+    return t.daysNoUse(days);
   }
 
-  if (loading) return <div className="text-[#9b95ad]">Carregando...</div>;
+  if (loading) return <div className="text-[#9b95ad]">{t.loading}</div>;
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Dead Code Scanner</h1>
-        <p className="text-sm text-[#9b95ad] mt-1">Identifique objetos ABAP inativos para limpeza e migração S/4HANA</p>
+        <h1 className="text-2xl font-bold">{t.title}</h1>
+        <p className="text-sm text-[#9b95ad] mt-1">{t.subtitle}</p>
       </div>
 
       {error && <div className="bg-rose-500/10 border border-rose-500/30 text-rose-400 text-sm rounded-lg p-3">{error}</div>}
 
       {/* Client Selector */}
       <select value={selectedClient} onChange={(e) => setSelectedClient(e.target.value)} className="px-4 py-2.5 bg-[#1a1527] border border-white/[0.08] rounded-lg text-[#e2e0ea] focus:outline-none focus:border-purple-500/50">
-        <option value="">Selecione um cliente</option>
+        <option value="">{t.selectClient}</option>
         {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
       </select>
 
-      {dataLoading && <div className="text-[#9b95ad]">Carregando...</div>}
+      {dataLoading && <div className="text-[#9b95ad]">{t.loading}</div>}
 
       {/* Stats */}
       {stats && !dataLoading && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[
-            { label: 'Total de Objetos', value: stats.total, color: 'text-[#e2e0ea]', sub: 'Analisados neste cliente' },
-            { label: 'Aposentar', value: stats.retire, color: 'text-rose-400', sub: 'Sem uso — podem ser removidos' },
-            { label: 'Revisar', value: stats.review, color: 'text-amber-400', sub: 'Uso esporádico — investigar' },
-            { label: 'Manter', value: stats.keep, color: 'text-emerald-400', sub: 'Em uso ativo — não remover' },
+            { label: t.statTotal, value: stats.total, color: 'text-[#e2e0ea]', sub: t.statTotalSub },
+            { label: t.statRetire, value: stats.retire, color: 'text-rose-400', sub: t.statRetireSub },
+            { label: t.statReview, value: stats.review, color: 'text-amber-400', sub: t.statReviewSub },
+            { label: t.statKeep, value: stats.keep, color: 'text-emerald-400', sub: t.statKeepSub },
           ].map((s) => (
             <div key={s.label} className="bg-[#1a1527] rounded-xl p-4 border border-white/[0.08]">
               <p className="text-xs text-[#9b95ad] uppercase tracking-wider">{s.label}</p>
@@ -130,10 +115,10 @@ export default function DeadCodePage() {
       {selectedClient && !dataLoading && entries.length > 0 && (
         <div className="flex gap-2">
           {[
-            { key: 'ALL', label: 'Todos' },
-            { key: 'RETIRE', label: '🗑️ Aposentar', color: 'text-rose-400' },
-            { key: 'REVIEW', label: '🔍 Revisar', color: 'text-amber-400' },
-            { key: 'KEEP', label: '✅ Manter', color: 'text-emerald-400' },
+            { key: 'ALL', label: t.filterAll },
+            { key: 'RETIRE', label: t.filterRetire, color: 'text-rose-400' },
+            { key: 'REVIEW', label: t.filterReview, color: 'text-amber-400' },
+            { key: 'KEEP', label: t.filterKeep, color: 'text-emerald-400' },
           ].map(f => (
             <button key={f.key} onClick={() => setFilterRec(f.key)} className={`px-4 py-2 rounded-lg text-sm font-medium transition cursor-pointer ${filterRec === f.key ? 'bg-purple-500/20 text-purple-400' : 'bg-[#1a1527] text-[#9b95ad] hover:text-white border border-white/[0.08]'}`}>
               {f.label}
@@ -161,7 +146,7 @@ export default function DeadCodePage() {
                     </div>
                     <div className="flex items-center gap-4 shrink-0 pl-1">
                       <span className="text-xs text-[#9b95ad]">{daysSinceLastUse(entry.lastUsed)}</span>
-                      <span className="text-xs text-[#9b95ad] whitespace-nowrap">{entry.usageCount} exec.</span>
+                      <span className="text-xs text-[#9b95ad] whitespace-nowrap">{entry.usageCount} {t.execShort}</span>
                       <span className="text-[#9b95ad]">{isExpanded ? '−' : '+'}</span>
                     </div>
                   </div>
@@ -174,13 +159,13 @@ export default function DeadCodePage() {
                       {/* Info do objeto */}
                       <div className="space-y-4">
                         <div>
-                          <h4 className="text-xs font-bold text-[#9b95ad] uppercase tracking-wider mb-2">Detalhes do Objeto</h4>
+                          <h4 className="text-xs font-bold text-[#9b95ad] uppercase tracking-wider mb-2">{t.detailsTitle}</h4>
                           <div className="bg-[#0f0b1a] rounded-lg p-4 space-y-2">
-                            <div className="flex justify-between"><span className="text-xs text-[#9b95ad]">Nome</span><span className="text-sm font-mono text-[#e2e0ea]">{entry.objectName}</span></div>
-                            <div className="flex justify-between"><span className="text-xs text-[#9b95ad]">Tipo</span><span className="text-sm text-[#e2e0ea]">{type} — {typeDescriptions[type] || 'Objeto ABAP customizado'}</span></div>
-                            <div className="flex justify-between"><span className="text-xs text-[#9b95ad]">Último uso</span><span className="text-sm text-[#e2e0ea]">{entry.lastUsed ? new Date(entry.lastUsed).toLocaleDateString('pt-BR') : 'Nunca executado'}</span></div>
-                            <div className="flex justify-between"><span className="text-xs text-[#9b95ad]">Execuções</span><span className="text-sm text-[#e2e0ea]">{entry.usageCount} vezes</span></div>
-                            <div className="flex justify-between"><span className="text-xs text-[#9b95ad]">Inatividade</span><span className="text-sm text-[#e2e0ea]">{daysSinceLastUse(entry.lastUsed)}</span></div>
+                            <div className="flex justify-between"><span className="text-xs text-[#9b95ad]">{t.fieldName}</span><span className="text-sm font-mono text-[#e2e0ea]">{entry.objectName}</span></div>
+                            <div className="flex justify-between"><span className="text-xs text-[#9b95ad]">{t.fieldType}</span><span className="text-sm text-[#e2e0ea]">{type} — {typeDescriptions[type] || t.customAbapObject}</span></div>
+                            <div className="flex justify-between"><span className="text-xs text-[#9b95ad]">{t.fieldLastUse}</span><span className="text-sm text-[#e2e0ea]">{entry.lastUsed ? new Date(entry.lastUsed).toLocaleDateString(lang === 'pt' ? 'pt-BR' : lang === 'es' ? 'es' : 'en-US') : t.neverExecuted}</span></div>
+                            <div className="flex justify-between"><span className="text-xs text-[#9b95ad]">{t.fieldExecutions}</span><span className="text-sm text-[#e2e0ea]">{t.executionsUnit(entry.usageCount)}</span></div>
+                            <div className="flex justify-between"><span className="text-xs text-[#9b95ad]">{t.fieldInactivity}</span><span className="text-sm text-[#e2e0ea]">{daysSinceLastUse(entry.lastUsed)}</span></div>
                           </div>
                         </div>
                       </div>
@@ -188,7 +173,7 @@ export default function DeadCodePage() {
                       {/* Recomendação */}
                       <div className="space-y-4">
                         <div>
-                          <h4 className="text-xs font-bold text-[#9b95ad] uppercase tracking-wider mb-2">Recomendação</h4>
+                          <h4 className="text-xs font-bold text-[#9b95ad] uppercase tracking-wider mb-2">{t.recommendationTitle}</h4>
                           <div className={`rounded-lg p-4 ${rec.bgColor} border ${rec.borderColor}`}>
                             <div className="flex items-center gap-2 mb-2">
                               <span className="text-lg">{rec.icon}</span>
@@ -199,14 +184,14 @@ export default function DeadCodePage() {
                         </div>
 
                         <div>
-                          <h4 className="text-xs font-bold text-[#9b95ad] uppercase tracking-wider mb-2">Ação Sugerida</h4>
+                          <h4 className="text-xs font-bold text-[#9b95ad] uppercase tracking-wider mb-2">{t.suggestedActionTitle}</h4>
                           <div className="bg-[#0f0b1a] rounded-lg p-4">
                             <p className="text-xs text-[#e2e0ea] leading-relaxed">💡 {rec.action}</p>
                           </div>
                         </div>
 
                         <div>
-                          <h4 className="text-xs font-bold text-[#9b95ad] uppercase tracking-wider mb-2">Risco</h4>
+                          <h4 className="text-xs font-bold text-[#9b95ad] uppercase tracking-wider mb-2">{t.riskTitle}</h4>
                           <div className="bg-[#0f0b1a] rounded-lg p-4">
                             <p className="text-xs text-[#9b95ad] leading-relaxed">⚖️ {rec.risk}</p>
                           </div>
@@ -217,10 +202,10 @@ export default function DeadCodePage() {
                     {/* Action buttons */}
                     <div className="flex gap-3 mt-4 pt-4 border-t border-white/[0.05]">
                       <a href={`/diagnostics?clientId=${selectedClient}`} className="px-4 py-2 rounded-lg bg-purple-500/15 border border-purple-500/20 text-purple-400 text-xs font-medium hover:bg-purple-500/20 transition">
-                        🤖 Analisar com IA
+                        {t.analyzeWithAi}
                       </a>
                       <button className="px-4 py-2 rounded-lg bg-white/5 border border-white/[0.08] text-[#9b95ad] text-xs font-medium hover:text-white transition cursor-pointer">
-                        📋 Copiar nome do objeto
+                        {t.copyObjectName}
                       </button>
                     </div>
                   </div>
@@ -233,13 +218,13 @@ export default function DeadCodePage() {
       )}
 
       {selectedClient && !dataLoading && entries.length === 0 && (
-        <p className="text-[#9b95ad] text-sm">Nenhum dead code encontrado para este cliente.</p>
+        <p className="text-[#9b95ad] text-sm">{t.noDeadCode}</p>
       )}
 
       {/* Legend */}
       {selectedClient && !dataLoading && entries.length > 0 && (
         <div className="bg-[#1a1527] rounded-xl p-5 border border-white/[0.08]">
-          <h3 className="text-sm font-semibold text-[#e2e0ea] mb-3">📖 Legenda das Recomendações</h3>
+          <h3 className="text-sm font-semibold text-[#e2e0ea] mb-3">{t.legendTitle}</h3>
           <div className="grid sm:grid-cols-3 gap-4">
             {Object.values(recInfo).map(r => (
               <div key={r.label} className={`rounded-lg p-3 ${r.bgColor} border ${r.borderColor}`}>

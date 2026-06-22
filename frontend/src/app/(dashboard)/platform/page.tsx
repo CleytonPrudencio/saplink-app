@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getConsultancies, suspendConsultancy, activateConsultancy, getPlatformStats } from "@/lib/api";
 import { useToast } from "@/components/Toast";
+import { useLang } from "@/i18n/I18n";
+import { T } from "./i18n";
 
 interface Stats {
   consultancies: number;
@@ -40,14 +42,6 @@ interface Consultancy {
   _count?: { users: number; clients: number };
 }
 
-const STATUS_LABEL: Record<string, string> = {
-  TRIALING: "Em teste",
-  ACTIVE: "Ativa",
-  PAST_DUE: "Pagamento pendente",
-  SUSPENDED: "Suspensa",
-  CANCELED: "Cancelada",
-};
-
 function statusColor(s?: string) {
   if (s === "ACTIVE" || s === "TRIALING") return "text-emerald-400 bg-emerald-500/10";
   if (s === "PAST_DUE") return "text-amber-400 bg-amber-500/10";
@@ -56,6 +50,8 @@ function statusColor(s?: string) {
 
 export default function PlatformPage() {
   const router = useRouter();
+  const { lang } = useLang();
+  const t = T[lang];
   const [list, setList] = useState<Consultancy[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -69,7 +65,7 @@ export default function PlatformPage() {
       setList(l);
       setStats(s);
     } catch {
-      notify("Erro ao carregar painel (precisa ser super-admin).", "error");
+      notify(t.loadError, "error");
     } finally {
       setLoading(false);
     }
@@ -80,14 +76,14 @@ export default function PlatformPage() {
   }, []);
 
   async function onSuspend(id: string, name: string) {
-    if (!window.confirm(`Suspender o acesso de "${name}"?`)) return;
+    if (!window.confirm(t.confirmSuspend(name))) return;
     setBusy(id);
     try {
       await suspendConsultancy(id);
-      notify("Acesso suspenso.", "success");
+      notify(t.suspended, "success");
       await load();
     } catch {
-      notify("Não foi possível suspender.", "error");
+      notify(t.suspendFail, "error");
     } finally {
       setBusy("");
     }
@@ -97,47 +93,47 @@ export default function PlatformPage() {
     setBusy(id);
     try {
       await activateConsultancy(id);
-      notify("Acesso reativado.", "success");
+      notify(t.reactivated, "success");
       await load();
     } catch {
-      notify("Não foi possível reativar.", "error");
+      notify(t.reactivateFail, "error");
     } finally {
       setBusy("");
     }
   }
 
-  if (loading) return <div className="text-[#9b95ad]">Carregando...</div>;
+  if (loading) return <div className="text-[#9b95ad]">{t.loading}</div>;
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Painel da plataforma</h1>
+        <h1 className="text-2xl font-bold">{t.title}</h1>
         <p className="text-sm text-[#9b95ad] mt-1">
-          Visão geral do negócio — consultorias, receita e uso. Clique numa linha para ver detalhes.
+          {t.subtitle}
         </p>
       </div>
 
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <KpiCard label="MRR (receita recorrente)" value={`R$ ${(stats.mrrCents / 100).toFixed(2)}`} hint={`${stats.active} ativas + ${stats.pastDue} pendentes`} />
-          <KpiCard label="Consultorias" value={stats.consultancies} hint={`${stats.trialing} em teste · ${stats.suspended} suspensas`} />
-          <KpiCard label="Usuários" value={stats.users} />
-          <KpiCard label="Clientes monitorados" value={stats.clients} hint={`${stats.integrations} integrações`} />
+          <KpiCard label={t.kpiMrr} value={`R$ ${(stats.mrrCents / 100).toFixed(2)}`} hint={t.kpiMrrHint(stats.active, stats.pastDue)} />
+          <KpiCard label={t.kpiConsultancies} value={stats.consultancies} hint={t.kpiConsultanciesHint(stats.trialing, stats.suspended)} />
+          <KpiCard label={t.kpiUsers} value={stats.users} />
+          <KpiCard label={t.kpiClients} value={stats.clients} hint={t.kpiClientsHint(stats.integrations)} />
         </div>
       )}
 
-      <h2 className="text-lg font-semibold pt-2">Consultorias</h2>
+      <h2 className="text-lg font-semibold pt-2">{t.consultancies}</h2>
 
       <div className="overflow-x-auto bg-[#1a1527] rounded-xl border border-white/[0.08]">
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-[#9b95ad] border-b border-white/[0.06]">
-              <th className="px-4 py-3">Consultoria</th>
-              <th className="px-4 py-3">Plano</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">Usuários</th>
-              <th className="px-4 py-3">Clientes</th>
-              <th className="px-4 py-3 text-right">Ação</th>
+              <th className="px-4 py-3">{t.colConsultancy}</th>
+              <th className="px-4 py-3">{t.colPlan}</th>
+              <th className="px-4 py-3">{t.colStatus}</th>
+              <th className="px-4 py-3">{t.colUsers}</th>
+              <th className="px-4 py-3">{t.colClients}</th>
+              <th className="px-4 py-3 text-right">{t.colAction}</th>
             </tr>
           </thead>
           <tbody>
@@ -154,7 +150,7 @@ export default function PlatformPage() {
                   <td className="px-4 py-3">{c.subscription?.plan?.name || c.subscription?.planKey || "-"}</td>
                   <td className="px-4 py-3">
                     <span className={`px-2 py-0.5 rounded-full text-xs ${statusColor(st)}`}>
-                      {STATUS_LABEL[st || ""] || st || "—"}
+                      {t.status[st as keyof typeof t.status] || st || "—"}
                     </span>
                   </td>
                   <td className="px-4 py-3">{c._count?.users ?? "-"}</td>
@@ -166,7 +162,7 @@ export default function PlatformPage() {
                         onClick={(e) => { e.stopPropagation(); onActivate(c.id); }}
                         className="px-3 py-1.5 rounded-lg bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25 disabled:opacity-40"
                       >
-                        Reativar
+                        {t.reactivate}
                       </button>
                     ) : (
                       <button
@@ -174,7 +170,7 @@ export default function PlatformPage() {
                         onClick={(e) => { e.stopPropagation(); onSuspend(c.id, c.name); }}
                         className="px-3 py-1.5 rounded-lg bg-rose-500/15 text-rose-300 hover:bg-rose-500/25 disabled:opacity-40"
                       >
-                        Suspender
+                        {t.suspend}
                       </button>
                     )}
                   </td>
@@ -183,7 +179,7 @@ export default function PlatformPage() {
             })}
             {list.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-[#9b95ad]">Nenhuma consultoria.</td>
+                <td colSpan={6} className="px-4 py-6 text-center text-[#9b95ad]">{t.empty}</td>
               </tr>
             )}
           </tbody>

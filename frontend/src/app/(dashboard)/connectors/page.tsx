@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { getConnectors, saveConnector, syncConnector, getMe } from "@/lib/api";
 import EnvLabel from "@/components/EnvLabel";
+import { useLang } from "@/i18n/I18n";
+import { T } from "./i18n";
 
 const META: Record<string, { label: string; icon: string }> = {
   ARIBA: { label: "SAP Ariba", icon: "🛒" },
@@ -24,6 +26,8 @@ export default function ConnectorsPage() {
   const [draft, setDraft] = useState<{ baseUrl: string; apiKey: string }>({ baseUrl: "", apiKey: "" });
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<Record<string, string>>({});
+  const { lang } = useLang();
+  const t = T[lang];
 
   useEffect(() => { getMe().then((u) => setIsAdmin(u.role === "CONSULTANCY_ADMIN" || u.role === "PLATFORM_ADMIN")).catch(() => {}); }, []);
   async function load() { try { setClients((await getConnectors()).clients); } finally { setLoading(false); } }
@@ -32,28 +36,28 @@ export default function ConnectorsPage() {
   async function save(clientId: string, product: string) {
     const key = `${clientId}:${product}`; setBusy(key); setMsg((m) => ({ ...m, [key]: "" }));
     try { await saveConnector(clientId, product, draft); setEdit(null); await load(); }
-    catch (e: any) { setMsg((m) => ({ ...m, [key]: e?.response?.data?.error || "Erro." })); }
+    catch (e: any) { setMsg((m) => ({ ...m, [key]: e?.response?.data?.error || t.error })); }
     finally { setBusy(null); }
   }
   async function doSync(clientId: string, product: string) {
     const key = `${clientId}:${product}`; setBusy(key + ":sync"); setMsg((m) => ({ ...m, [key]: "" }));
-    try { const r = await syncConnector(clientId, product); setMsg((m) => ({ ...m, [key]: `Sync: ${r.reachable}/${r.total} APIs alcançadas` })); await load(); }
-    catch (e: any) { setMsg((m) => ({ ...m, [key]: e?.response?.data?.error || "Erro no sync." })); }
+    try { const r = await syncConnector(clientId, product); setMsg((m) => ({ ...m, [key]: t.syncResult(r.reachable, r.total) })); await load(); }
+    catch (e: any) { setMsg((m) => ({ ...m, [key]: e?.response?.data?.error || t.syncError })); }
     finally { setBusy(null); }
   }
 
-  if (loading) return <div className="text-[#9b95ad]">Carregando...</div>;
+  if (loading) return <div className="text-[#9b95ad]">{t.loading}</div>;
 
   return (
     <div className="space-y-6">
       <div>
-        <div className="flex items-center gap-3 flex-wrap"><h1 className="text-2xl font-bold flex items-center gap-2">🔌 Conectores SAP Cloud</h1><EnvLabel prefix="Configurando" /></div>
-        <p className="text-[#9b95ad] text-sm mt-1">Conecte Ariba e SuccessFactors de cada cliente com a chave dele (igual ao S/4), <b>por ambiente</b>. As APIs alcançadas entram no inventário (Catálogo vivo).</p>
+        <div className="flex items-center gap-3 flex-wrap"><h1 className="text-2xl font-bold flex items-center gap-2">🔌 {t.title}</h1><EnvLabel prefix={t.envPrefix} /></div>
+        <p className="text-[#9b95ad] text-sm mt-1">{t.subtitle}</p>
       </div>
 
-      {!isAdmin && <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 text-sm text-amber-200">Apenas administradores conectam produtos.</div>}
+      {!isAdmin && <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 text-sm text-amber-200">{t.adminOnly}</div>}
 
-      {clients.length === 0 && <p className="text-[#9b95ad] text-sm">Cadastre clientes primeiro.</p>}
+      {clients.length === 0 && <p className="text-[#9b95ad] text-sm">{t.registerClientsFirst}</p>}
 
       {clients.map((c) => (
         <div key={c.clientId} className="bg-[#1a1527] border border-white/[0.08] rounded-xl p-4">
@@ -67,27 +71,27 @@ export default function ConnectorsPage() {
                     <span className="font-medium">{m.icon} {m.label}</span>
                     <span className={`text-xs ${statusCls[k.status]}`}>● {k.status}</span>
                   </div>
-                  <p className="text-xs text-[#6b6580] mt-1">{k.hasKey ? "Chave configurada" : "Sem chave"}{k.lastSyncAt ? ` · último sync ${new Date(k.lastSyncAt).toLocaleString("pt-BR")}` : ""}</p>
+                  <p className="text-xs text-[#6b6580] mt-1">{k.hasKey ? t.keyConfigured : t.noKey}{k.lastSyncAt ? t.lastSync(new Date(k.lastSyncAt).toLocaleString("pt-BR")) : ""}</p>
                   {k.lastResult?.results && (
                     <div className="mt-2 space-y-0.5">
                       {k.lastResult.results.map((r: any) => (
-                        <div key={r.apiName} className="text-xs flex justify-between"><span className="text-[#9b95ad]">{r.apiName}</span><span className={r.ok ? "text-emerald-300" : "text-rose-300"}>{r.ok ? (r.count != null ? `${r.count} reg.` : "OK") : `HTTP ${r.httpStatus || "—"}`}</span></div>
+                        <div key={r.apiName} className="text-xs flex justify-between"><span className="text-[#9b95ad]">{r.apiName}</span><span className={r.ok ? "text-emerald-300" : "text-rose-300"}>{r.ok ? (r.count != null ? t.records(r.count) : t.ok) : t.httpStatus(r.httpStatus || "—")}</span></div>
                       ))}
                     </div>
                   )}
                   {isAdmin && (edit === key ? (
                     <div className="mt-3 space-y-2">
                       <input value={draft.baseUrl} onChange={(e) => setDraft({ ...draft, baseUrl: e.target.value })} placeholder={k.baseUrl} className="w-full bg-[#1a1527] border border-white/[0.1] rounded px-2 py-1.5 text-xs font-mono" />
-                      <input type="password" value={draft.apiKey} onChange={(e) => setDraft({ ...draft, apiKey: e.target.value })} placeholder="API Key do cliente" className="w-full bg-[#1a1527] border border-white/[0.1] rounded px-2 py-1.5 text-xs" />
+                      <input type="password" value={draft.apiKey} onChange={(e) => setDraft({ ...draft, apiKey: e.target.value })} placeholder={t.apiKeyPlaceholder} className="w-full bg-[#1a1527] border border-white/[0.1] rounded px-2 py-1.5 text-xs" />
                       <div className="flex gap-2">
-                        <button onClick={() => save(c.clientId, k.product)} disabled={busy === key} className="text-xs px-3 py-1.5 rounded bg-purple-500 text-white cursor-pointer disabled:opacity-50">{busy === key ? "…" : "Salvar"}</button>
-                        <button onClick={() => setEdit(null)} className="text-xs px-3 py-1.5 rounded bg-white/[0.06] text-[#9b95ad] cursor-pointer">Cancelar</button>
+                        <button onClick={() => save(c.clientId, k.product)} disabled={busy === key} className="text-xs px-3 py-1.5 rounded bg-purple-500 text-white cursor-pointer disabled:opacity-50">{busy === key ? t.saving : t.save}</button>
+                        <button onClick={() => setEdit(null)} className="text-xs px-3 py-1.5 rounded bg-white/[0.06] text-[#9b95ad] cursor-pointer">{t.cancel}</button>
                       </div>
                     </div>
                   ) : (
                     <div className="mt-3 flex gap-2">
-                      <button onClick={() => { setEdit(key); setDraft({ baseUrl: k.baseUrl, apiKey: "" }); }} className="text-xs px-3 py-1.5 rounded bg-white/[0.06] text-[#e2e0ea] hover:bg-white/[0.1] cursor-pointer">{k.hasKey ? "Editar" : "Conectar"}</button>
-                      {k.hasKey && <button onClick={() => doSync(c.clientId, k.product)} disabled={busy === key + ":sync"} className="text-xs px-3 py-1.5 rounded bg-emerald-500/20 text-emerald-300 cursor-pointer disabled:opacity-50">{busy === key + ":sync" ? "Sincronizando…" : "Sincronizar"}</button>}
+                      <button onClick={() => { setEdit(key); setDraft({ baseUrl: k.baseUrl, apiKey: "" }); }} className="text-xs px-3 py-1.5 rounded bg-white/[0.06] text-[#e2e0ea] hover:bg-white/[0.1] cursor-pointer">{k.hasKey ? t.edit : t.connect}</button>
+                      {k.hasKey && <button onClick={() => doSync(c.clientId, k.product)} disabled={busy === key + ":sync"} className="text-xs px-3 py-1.5 rounded bg-emerald-500/20 text-emerald-300 cursor-pointer disabled:opacity-50">{busy === key + ":sync" ? t.syncing : t.sync}</button>}
                     </div>
                   ))}
                   {msg[key] && <p className="text-xs text-cyan-300 mt-2">{msg[key]}</p>}

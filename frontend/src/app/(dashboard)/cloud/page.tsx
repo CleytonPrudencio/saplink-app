@@ -5,6 +5,8 @@ import Link from "next/link";
 import { getCloud, diagnoseCloud, fixCloud, recommendRunbooks, type CloudItem } from "@/lib/api";
 import { AiReport } from "@/components/AiReport";
 import { usePaginate, Pagination } from "@/components/Pagination";
+import { useLang } from "@/i18n/I18n";
+import { T } from "./i18n";
 
 function statusCls(s?: string | null) {
   const u = (s || "").toUpperCase();
@@ -17,6 +19,8 @@ function statusCls(s?: string | null) {
 const isFail = (s?: string | null) => /FAIL|ERROR|ESCAL|RETRY/i.test(s || "");
 
 export default function CloudPage() {
+  const { lang } = useLang();
+  const t = T[lang];
   const [data, setData] = useState<{ items: CloudItem[]; summary: { total: number; failed: number; bySource: Record<string, number> } } | null>(null);
   const [filters, setFilters] = useState({ source: "", status: "", q: "" });
   const [loading, setLoading] = useState(true);
@@ -54,39 +58,39 @@ export default function CloudPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2">☁️ CPI & AIF</h1>
-        <p className="text-[#9b95ad] text-sm mt-1">Mensagens do SAP Cloud Integration (MPL/IFlows) e do Application Interface Framework.</p>
+        <h1 className="text-2xl font-bold flex items-center gap-2">☁️ {t.title}</h1>
+        <p className="text-[#9b95ad] text-sm mt-1">{t.subtitle}</p>
       </div>
 
       {s && (
         <div className="grid grid-cols-3 gap-3 max-w-md">
-          <Stat label="Mensagens" value={s.total} accent="text-[#e2e0ea]" />
-          <Stat label="CPI / AIF" value={`${s.bySource.CPI || 0} / ${s.bySource.AIF || 0}`} accent="text-cyan-300" />
-          <Stat label="Com falha" value={s.failed} accent={s.failed ? "text-rose-300" : "text-emerald-300"} />
+          <Stat label={t.statMessages} value={s.total} accent="text-[#e2e0ea]" />
+          <Stat label={t.statCpiAif} value={`${s.bySource.CPI || 0} / ${s.bySource.AIF || 0}`} accent="text-cyan-300" />
+          <Stat label={t.statFailed} value={s.failed} accent={s.failed ? "text-rose-300" : "text-emerald-300"} />
         </div>
       )}
 
       <div className="flex flex-wrap gap-2">
         <select value={filters.source} onChange={(e) => setFilters({ ...filters, source: e.target.value })} className="bg-[#1a1527] border border-white/[0.1] rounded-lg px-3 py-2 text-sm">
-          <option value="">Todas as fontes</option><option value="CPI">CPI</option><option value="AIF">AIF</option>
+          <option value="">{t.allSources}</option><option value="CPI">CPI</option><option value="AIF">AIF</option>
         </select>
         <select value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })} className="bg-[#1a1527] border border-white/[0.1] rounded-lg px-3 py-2 text-sm">
-          <option value="">Todos os status</option><option value="COMPLETED">Completo</option><option value="FAILED">Falha</option><option value="RETRY">Retry</option><option value="ESCALATED">Escalado</option>
+          <option value="">{t.allStatuses}</option><option value="COMPLETED">{t.statusCompleted}</option><option value="FAILED">{t.statusFailed}</option><option value="RETRY">{t.statusRetry}</option><option value="ESCALATED">{t.statusEscalated}</option>
         </select>
-        <input value={filters.q} onChange={(e) => setFilters({ ...filters, q: e.target.value })} placeholder="Buscar IFlow / interface / messageId" className="bg-[#1a1527] border border-white/[0.1] rounded-lg px-3 py-2 text-sm flex-1 min-w-[200px]" />
+        <input value={filters.q} onChange={(e) => setFilters({ ...filters, q: e.target.value })} placeholder={t.searchPlaceholder} className="bg-[#1a1527] border border-white/[0.1] rounded-lg px-3 py-2 text-sm flex-1 min-w-[200px]" />
       </div>
 
-      {loading ? <div className="text-[#9b95ad]">Carregando...</div> : !data || data.items.length === 0 ? (
+      {loading ? <div className="text-[#9b95ad]">{t.loading}</div> : !data || data.items.length === 0 ? (
         <div className="bg-[#1a1527] rounded-xl p-8 border border-white/[0.08] text-center text-[#9b95ad]">
-          Nenhuma mensagem CPI/AIF. Os dados vêm da descoberta do Agente (ou conector CPI/AIF).
+          {t.empty}
         </div>
       ) : (
         <div className="overflow-x-auto border border-white/[0.08] rounded-xl">
           <table className="w-full text-sm">
             <thead><tr className="text-left text-[#9b95ad] border-b border-white/[0.08] bg-white/[0.02]">
-              <th className="px-3 py-2 font-medium">Fonte</th><th className="px-3 py-2 font-medium">Artefato</th>
-              <th className="px-3 py-2 font-medium">Message ID</th><th className="px-3 py-2 font-medium">Status</th>
-              <th className="px-3 py-2 font-medium">Quando</th><th className="px-3 py-2 font-medium">IA</th>
+              <th className="px-3 py-2 font-medium">{t.colSource}</th><th className="px-3 py-2 font-medium">{t.colArtifact}</th>
+              <th className="px-3 py-2 font-medium">{t.colMessageId}</th><th className="px-3 py-2 font-medium">{t.colStatus}</th>
+              <th className="px-3 py-2 font-medium">{t.colWhen}</th><th className="px-3 py-2 font-medium">{t.colAi}</th>
             </tr></thead>
             <tbody>
               {pag.pageItems.map((i) => {
@@ -109,7 +113,7 @@ export default function CloudPage() {
                         onClick={() => (open[i.id] ? setOpen((o) => ({ ...o, [i.id]: false })) : runDiagnose(i))}
                         className="text-xs px-2 py-1 rounded-lg bg-violet-500/15 text-violet-300 hover:bg-violet-500/25 whitespace-nowrap"
                       >
-                        {d?.loading ? "Analisando…" : i.aiDiagnosis || d?.text ? (open[i.id] ? "Ocultar" : "Ver solução") : "Diagnosticar com IA"}
+                        {d?.loading ? t.analyzing : i.aiDiagnosis || d?.text ? (open[i.id] ? t.hide : t.viewSolution) : t.diagnoseWithAi}
                       </button>
                     ) : <span className="text-xs text-[#9b95ad]">—</span>}
                   </td>
@@ -118,36 +122,36 @@ export default function CloudPage() {
                   <tr className="border-b border-white/[0.04] bg-violet-500/[0.04]">
                     <td colSpan={6} className="px-4 py-3">
                       {d?.loading ? (
-                        <div className="text-sm text-violet-300">A IA está analisando a causa raiz e os passos de correção…</div>
+                        <div className="text-sm text-violet-300">{t.diagnoseRunning}</div>
                       ) : d?.err ? (
-                        <div className="text-sm text-rose-300">Não foi possível gerar o diagnóstico agora. Tente novamente.</div>
+                        <div className="text-sm text-rose-300">{t.diagnoseError}</div>
                       ) : (
                         <div className="space-y-3">
                           <AiReport
                             text={(d?.text || i.aiDiagnosis) as string}
-                            title="Diagnóstico de falha — CPI/AIF"
+                            title={t.diagnosisTitle}
                             subtitle={`${i.source} · ${i.artifact} · ${i.status || "FAILED"}`}
                             meta={[
-                              { label: "Artefato", value: i.artifact },
-                              ...((d?.at || i.aiDiagnosedAt) ? [{ label: "Gerado em", value: new Date((d?.at || i.aiDiagnosedAt)!).toLocaleString("pt-BR") }] : []),
+                              { label: t.artifactLabel, value: i.artifact },
+                              ...((d?.at || i.aiDiagnosedAt) ? [{ label: t.generatedAt, value: new Date((d?.at || i.aiDiagnosedAt)!).toLocaleString("pt-BR") }] : []),
                             ]}
                             onRefresh={() => runDiagnose(i, true)}
                             refreshing={d?.loading}
                           />
                           {(() => { const fx = fix[i.id]; const hasFix = fx?.text || i.aiFix; return (
                             !fx && !i.aiFix ? (
-                              <button onClick={() => runFix(i)} className="text-xs px-3 py-1.5 rounded-lg bg-cyan-500/15 text-cyan-200 hover:bg-cyan-500/25 cursor-pointer">⚙️ Gerar correção pronta (IA)</button>
+                              <button onClick={() => runFix(i)} className="text-xs px-3 py-1.5 rounded-lg bg-cyan-500/15 text-cyan-200 hover:bg-cyan-500/25 cursor-pointer">{t.generateFix}</button>
                             ) : fx?.loading ? (
-                              <div className="text-sm text-cyan-300">A IA está escrevendo a correção pronta…</div>
+                              <div className="text-sm text-cyan-300">{t.fixRunning}</div>
                             ) : fx?.err ? (
-                              <div className="text-sm text-rose-300">Não foi possível gerar a correção. Tente novamente.</div>
+                              <div className="text-sm text-rose-300">{t.fixError}</div>
                             ) : hasFix ? (
-                              <AiReport text={(fx?.text || i.aiFix) as string} title="Correção pronta (generativa)" subtitle="Artefato pronto para aplicar" onRefresh={() => runFix(i, true)} refreshing={fx?.loading} />
+                              <AiReport text={(fx?.text || i.aiFix) as string} title={t.fixTitle} subtitle={t.fixSubtitle} onRefresh={() => runFix(i, true)} refreshing={fx?.loading} />
                             ) : null
                           ); })()}
                           {rbs[i.id]?.length > 0 && (
                             <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/[0.05] p-3">
-                              <p className="text-xs font-semibold text-emerald-300 mb-2">🛒 Runbooks que resolvem isso</p>
+                              <p className="text-xs font-semibold text-emerald-300 mb-2">{t.runbooksTitle}</p>
                               <div className="space-y-1.5">
                                 {rbs[i.id].map((r: any) => (
                                   <Link key={r.id} href="/marketplace" className="flex items-center justify-between gap-2 bg-[#0f0b1a] rounded px-2.5 py-1.5 hover:bg-white/[0.04]">

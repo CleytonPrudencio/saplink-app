@@ -6,6 +6,8 @@ import { getAllIntegrations, testIntegration, deleteIntegration, syncIntegration
 import { Modal, Field, inputClass } from "@/components/Modal";
 import { useToast } from "@/components/Toast";
 import ExplainData from "@/components/ExplainData";
+import { useLang } from "@/i18n/I18n";
+import { T } from "./i18n";
 
 interface Integration {
   id: string;
@@ -43,11 +45,11 @@ interface TestResult {
   details?: Record<string, unknown>;
 }
 
-const statusConfig: Record<string, { label: string; color: string }> = {
-  ACTIVE: { label: "Ativa", color: "bg-emerald-500/20 text-emerald-400" },
-  ERROR: { label: "Erro", color: "bg-rose-500/20 text-rose-400" },
-  PENDING: { label: "Pendente", color: "bg-amber-500/20 text-amber-400" },
-  OFFLINE: { label: "Offline", color: "bg-gray-500/20 text-gray-400" },
+const statusConfig: Record<string, { labelKey: "badgeActive" | "badgeError" | "badgePending" | "badgeOffline"; color: string }> = {
+  ACTIVE: { labelKey: "badgeActive", color: "bg-emerald-500/20 text-emerald-400" },
+  ERROR: { labelKey: "badgeError", color: "bg-rose-500/20 text-rose-400" },
+  PENDING: { labelKey: "badgePending", color: "bg-amber-500/20 text-amber-400" },
+  OFFLINE: { labelKey: "badgeOffline", color: "bg-gray-500/20 text-gray-400" },
 };
 
 const typeColors: Record<string, string> = {
@@ -63,6 +65,8 @@ const typeColors: Record<string, string> = {
 
 export default function IntegrationsPage() {
   const router = useRouter();
+  const { lang } = useLang();
+  const t = T[lang];
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -92,10 +96,10 @@ export default function IntegrationsPage() {
     setSyncingId(id);
     try {
       const r = await syncIntegration(id);
-      notify(r?.probe?.ok ? "Sincronizado: integração no ar." : "Sincronizado: integração com falha/offline.", r?.probe?.ok ? "success" : "error");
+      notify(r?.probe?.ok ? t.syncOk : t.syncFail, r?.probe?.ok ? "success" : "error");
       await loadIntegrations();
     } catch (e: any) {
-      notify(e?.response?.data?.error || "Não foi possível sincronizar.", "error");
+      notify(e?.response?.data?.error || t.syncError, "error");
     } finally {
       setSyncingId(null);
     }
@@ -105,10 +109,10 @@ export default function IntegrationsPage() {
     setSyncingAll(true);
     try {
       const r = await syncAllIntegrations();
-      notify(`Sincronizadas ${r.synced} integração(ões) reais.`, "success");
+      notify(t.syncedCount(r.synced), "success");
       await loadIntegrations();
     } catch {
-      notify("Falha ao sincronizar.", "error");
+      notify(t.syncAllError, "error");
     } finally {
       setSyncingAll(false);
     }
@@ -126,11 +130,11 @@ export default function IntegrationsPage() {
     setSavingEdit(true);
     try {
       await updateIntegration(editing.id, { name: editForm.name, description: editForm.description, config: editForm.config });
-      notify("Integração atualizada.", "success");
+      notify(t.updated, "success");
       setEditing(null);
       await loadIntegrations();
     } catch (e: any) {
-      notify(e?.response?.data?.error || "Falha ao salvar.", "error");
+      notify(e?.response?.data?.error || t.saveError, "error");
     } finally {
       setSavingEdit(false);
     }
@@ -141,7 +145,7 @@ export default function IntegrationsPage() {
       const data = await getAllIntegrations();
       setIntegrations(Array.isArray(data) ? data : data.data || []);
     } catch {
-      setError("Erro ao carregar integracoes.");
+      setError(t.loadError);
     } finally {
       setLoading(false);
     }
@@ -154,7 +158,7 @@ export default function IntegrationsPage() {
       const result = await testIntegration(id);
       setTestResults((prev) => ({ ...prev, [id]: result }));
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Erro ao testar conexao";
+      const message = err instanceof Error ? err.message : t.connectionError;
       setTestResults((prev) => ({
         ...prev,
         [id]: { success: false, message, details: {} },
@@ -165,13 +169,13 @@ export default function IntegrationsPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Tem certeza que deseja excluir esta integracao?")) return;
+    if (!confirm(t.confirmDelete)) return;
     setDeletingId(id);
     try {
       await deleteIntegration(id);
       setIntegrations((prev) => prev.filter((i) => i.id !== id));
     } catch {
-      alert("Erro ao excluir integracao.");
+      alert(t.deleteError);
     } finally {
       setDeletingId(null);
     }
@@ -205,7 +209,7 @@ export default function IntegrationsPage() {
   const hasFilters = !!(search || filterClient || filterType || filterStatus || filterEnv);
   function clearFilters() { setSearch(""); setFilterClient(""); setFilterType(""); setFilterStatus(""); setFilterEnv(""); }
 
-  if (loading) return <div className="text-[#9b95ad]">Carregando...</div>;
+  if (loading) return <div className="text-[#9b95ad]">{t.loading}</div>;
   if (error) return <div className="text-rose-400">{error}</div>;
 
   return (
@@ -213,9 +217,9 @@ export default function IntegrationsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Integracoes</h1>
+          <h1 className="text-2xl font-bold">{t.title}</h1>
           <p className="text-[#9b95ad] text-sm mt-1">
-            Gerencie todas as integracoes SAP dos seus clientes
+            {t.subtitle}
           </p>
         </div>
         <div className="flex gap-2 shrink-0">
@@ -223,15 +227,15 @@ export default function IntegrationsPage() {
             onClick={handleSyncAll}
             disabled={syncingAll}
             className="px-4 py-2.5 bg-white/[0.06] text-[#e2e0ea] text-sm font-medium rounded-lg hover:bg-white/[0.12] transition-all cursor-pointer disabled:opacity-50"
-            title="Coleta dados reais das integrações OData/REST"
+            title={t.syncAllTooltip}
           >
-            {syncingAll ? "Sincronizando..." : "↻ Sincronizar tudo"}
+            {syncingAll ? t.syncingAll : t.syncAll}
           </button>
           <button
             onClick={() => router.push("/integrations/new")}
             className="px-5 py-2.5 bg-gradient-to-r from-purple-600 to-purple-500 text-white text-sm font-medium rounded-lg hover:from-purple-500 hover:to-purple-400 transition-all cursor-pointer"
           >
-            + Nova Integracao
+            {t.newIntegration}
           </button>
         </div>
       </div>
@@ -241,13 +245,13 @@ export default function IntegrationsPage() {
       {/* Stats Bar (clicáveis: filtram por status) */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: "Total", value: stats.total, color: "text-purple-400", status: "" },
-          { label: "Ativas", value: stats.active, color: "text-emerald-400", status: "ACTIVE" },
-          { label: "Com Erro", value: stats.error, color: "text-rose-400", status: "ERROR" },
-          { label: "Offline", value: stats.offline, color: "text-gray-400", status: "OFFLINE" },
+          { label: t.statTotal, value: stats.total, color: "text-purple-400", status: "" },
+          { label: t.statActive, value: stats.active, color: "text-emerald-400", status: "ACTIVE" },
+          { label: t.statError, value: stats.error, color: "text-rose-400", status: "ERROR" },
+          { label: t.statOffline, value: stats.offline, color: "text-gray-400", status: "OFFLINE" },
         ].map((stat) => (
           <button
-            key={stat.label}
+            key={stat.status || "total"}
             onClick={() => setFilterStatus(stat.status)}
             className={`text-left bg-[#1a1527] rounded-xl p-4 border transition cursor-pointer ${filterStatus === stat.status ? "border-purple-500/50" : "border-white/[0.08] hover:border-white/[0.2]"}`}
           >
@@ -264,40 +268,40 @@ export default function IntegrationsPage() {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por nome ou cliente..."
+            placeholder={t.searchPlaceholder}
             className="w-full pl-9 pr-3 py-2 bg-[#0f0b1a] border border-white/[0.1] rounded-lg text-sm focus:outline-none focus:border-purple-500/50"
           />
         </div>
         <select value={filterClient} onChange={(e) => setFilterClient(e.target.value)} className="px-3 py-2 bg-[#0f0b1a] border border-white/[0.1] rounded-lg text-sm focus:outline-none focus:border-purple-500/50">
-          <option value="">Todos os clientes</option>
+          <option value="">{t.allClients}</option>
           {clientOptions.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
         </select>
         <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="px-3 py-2 bg-[#0f0b1a] border border-white/[0.1] rounded-lg text-sm focus:outline-none focus:border-purple-500/50">
-          <option value="">Todos os tipos</option>
-          {typeOptions.map((t) => <option key={t} value={t}>{t.replace(/_/g, " ")}</option>)}
+          <option value="">{t.allTypes}</option>
+          {typeOptions.map((tp) => <option key={tp} value={tp}>{tp.replace(/_/g, " ")}</option>)}
         </select>
         <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="px-3 py-2 bg-[#0f0b1a] border border-white/[0.1] rounded-lg text-sm focus:outline-none focus:border-purple-500/50">
-          <option value="">Todos os status</option>
-          <option value="ACTIVE">Ativas</option>
-          <option value="ERROR">Com erro</option>
-          <option value="OFFLINE">Offline</option>
-          <option value="PENDING">Pendentes</option>
+          <option value="">{t.allStatuses}</option>
+          <option value="ACTIVE">{t.statusActive}</option>
+          <option value="ERROR">{t.statusError}</option>
+          <option value="OFFLINE">{t.statusOffline}</option>
+          <option value="PENDING">{t.statusPending}</option>
         </select>
         <select value={filterEnv} onChange={(e) => setFilterEnv(e.target.value)} className="px-3 py-2 bg-[#0f0b1a] border border-white/[0.1] rounded-lg text-sm focus:outline-none focus:border-purple-500/50">
-          <option value="">Todos os ambientes</option>
+          <option value="">{t.allEnvironments}</option>
           <option value="DEV">DEV</option>
           <option value="HML">HML</option>
           <option value="PRD">PRD</option>
         </select>
         {hasFilters && (
           <button onClick={clearFilters} className="px-3 py-2 text-sm text-[#9b95ad] hover:text-white rounded-lg hover:bg-white/[0.06] transition cursor-pointer shrink-0">
-            Limpar
+            {t.clear}
           </button>
         )}
       </div>
 
       {hasFilters && (
-        <p className="text-xs text-[#9b95ad] -mt-3">Mostrando {filtered.length} de {integrations.length} integrações</p>
+        <p className="text-xs text-[#9b95ad] -mt-3">{t.showing(filtered.length, integrations.length)}</p>
       )}
 
       {/* Integration Cards */}
@@ -324,7 +328,7 @@ export default function IntegrationsPage() {
                   {integ.type?.replace(/_/g, " ")}
                 </span>
                 {/* Environment Badge */}
-                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase shrink-0 ${envBadge(integ.environment)}`} title="Ambiente">
+                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase shrink-0 ${envBadge(integ.environment)}`} title={t.environmentTooltip}>
                   {integ.environment || "PRD"}
                 </span>
 
@@ -336,7 +340,7 @@ export default function IntegrationsPage() {
 
                 {/* Status Badge */}
                 <span className={`px-2.5 py-1 rounded-full text-xs font-semibold shrink-0 ${sc.color}`}>
-                  {sc.label}
+                  {t[sc.labelKey]}
                 </span>
 
                 {/* Metrics */}
@@ -352,15 +356,15 @@ export default function IntegrationsPage() {
                     onClick={() => handleSync(integ.id)}
                     disabled={syncingId === integ.id}
                     className="px-3 py-1.5 text-xs font-medium bg-cyan-500/20 text-cyan-300 rounded-lg hover:bg-cyan-500/30 transition-colors cursor-pointer disabled:opacity-50"
-                    title="Coleta dados reais (OData/REST)"
+                    title={t.syncTooltip}
                   >
-                    {syncingId === integ.id ? "..." : "Sincronizar"}
+                    {syncingId === integ.id ? "..." : t.sync}
                   </button>
                   <button
                     onClick={() => openEdit(integ)}
                     className="px-3 py-1.5 text-xs font-medium bg-white/[0.06] text-[#e2e0ea] rounded-lg hover:bg-white/[0.12] transition-colors cursor-pointer"
                   >
-                    Editar
+                    {t.edit}
                   </button>
                   <button
                     onClick={() => handleTest(integ.id)}
@@ -373,10 +377,10 @@ export default function IntegrationsPage() {
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                         </svg>
-                        Testando...
+                        {t.testing}
                       </span>
                     ) : (
-                      "Testar"
+                      t.test
                     )}
                   </button>
                   <button
@@ -384,7 +388,7 @@ export default function IntegrationsPage() {
                     disabled={deletingId === integ.id}
                     className="px-3 py-1.5 text-xs font-medium bg-rose-500/20 text-rose-400 rounded-lg hover:bg-rose-500/30 transition-colors cursor-pointer disabled:opacity-50"
                   >
-                    {deletingId === integ.id ? "..." : "Excluir"}
+                    {deletingId === integ.id ? "..." : t.delete}
                   </button>
                 </div>
 
@@ -406,9 +410,9 @@ export default function IntegrationsPage() {
                 }`}>
                   <div className="flex items-center gap-2">
                     {testResult.success ? (
-                      <span className="text-emerald-400 font-medium">Conexao OK</span>
+                      <span className="text-emerald-400 font-medium">{t.connectionOk}</span>
                     ) : (
-                      <span className="text-rose-400 font-medium">Erro na conexao</span>
+                      <span className="text-rose-400 font-medium">{t.connectionError}</span>
                     )}
                   </div>
                   <p className={`text-xs mt-1 ${testResult.success ? "text-emerald-400/70" : "text-rose-400/70"}`}>
@@ -431,19 +435,19 @@ export default function IntegrationsPage() {
                     {/* Info Grid */}
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                       <div className="bg-[#0f0b1a] rounded-lg p-3">
-                        <p className="text-[10px] text-[#9b95ad] uppercase tracking-wider">Tipo</p>
+                        <p className="text-[10px] text-[#9b95ad] uppercase tracking-wider">{t.detailType}</p>
                         <p className="text-sm font-semibold text-[#e2e0ea] mt-1">{integ.type}</p>
                       </div>
                       <div className="bg-[#0f0b1a] rounded-lg p-3">
-                        <p className="text-[10px] text-[#9b95ad] uppercase tracking-wider">Cliente</p>
+                        <p className="text-[10px] text-[#9b95ad] uppercase tracking-wider">{t.detailClient}</p>
                         <p className="text-sm font-semibold text-[#e2e0ea] mt-1">{integ.client?.name || '—'}</p>
                       </div>
                       <div className="bg-[#0f0b1a] rounded-lg p-3">
-                        <p className="text-[10px] text-[#9b95ad] uppercase tracking-wider">Alertas</p>
+                        <p className="text-[10px] text-[#9b95ad] uppercase tracking-wider">{t.detailAlerts}</p>
                         <p className="text-sm font-semibold text-[#e2e0ea] mt-1">{integ._count?.alerts ?? 0}</p>
                       </div>
                       <div className="bg-[#0f0b1a] rounded-lg p-3">
-                        <p className="text-[10px] text-[#9b95ad] uppercase tracking-wider">Atualizado</p>
+                        <p className="text-[10px] text-[#9b95ad] uppercase tracking-wider">{t.detailUpdated}</p>
                         <p className="text-sm font-semibold text-[#e2e0ea] mt-1">{new Date(integ.updatedAt || Date.now()).toLocaleDateString('pt-BR')}</p>
                       </div>
                     </div>
@@ -452,25 +456,25 @@ export default function IntegrationsPage() {
                     <div className="grid grid-cols-3 gap-3">
                       <div className="bg-[#0f0b1a] rounded-lg p-3 text-center">
                         <p className={`text-2xl font-bold ${(integ.latency ?? 0) > 500 ? 'text-amber-400' : 'text-[#e2e0ea]'}`}>{integ.latency ?? 0}ms</p>
-                        <p className="text-[10px] text-[#9b95ad] mt-1">Latência</p>
-                        <p className="text-[10px] text-[#9b95ad]">{(integ.latency ?? 0) <= 200 ? '✅ Excelente' : (integ.latency ?? 0) <= 500 ? '⚡ Normal' : '⚠️ Elevada'}</p>
+                        <p className="text-[10px] text-[#9b95ad] mt-1">{t.metricLatency}</p>
+                        <p className="text-[10px] text-[#9b95ad]">{(integ.latency ?? 0) <= 200 ? t.latencyExcellent : (integ.latency ?? 0) <= 500 ? t.latencyNormal : t.latencyHigh}</p>
                       </div>
                       <div className="bg-[#0f0b1a] rounded-lg p-3 text-center">
                         <p className={`text-2xl font-bold ${(integ.errorRate ?? 0) > 5 ? 'text-rose-400' : 'text-[#e2e0ea]'}`}>{integ.errorRate ?? 0}%</p>
-                        <p className="text-[10px] text-[#9b95ad] mt-1">Taxa de Erro</p>
-                        <p className="text-[10px] text-[#9b95ad]">{(integ.errorRate ?? 0) <= 1 ? '✅ Saudável' : (integ.errorRate ?? 0) <= 5 ? '⚡ Aceitável' : '🔴 Crítico'}</p>
+                        <p className="text-[10px] text-[#9b95ad] mt-1">{t.metricErrorRate}</p>
+                        <p className="text-[10px] text-[#9b95ad]">{(integ.errorRate ?? 0) <= 1 ? t.errorRateHealthy : (integ.errorRate ?? 0) <= 5 ? t.errorRateAcceptable : t.errorRateCritical}</p>
                       </div>
                       <div className="bg-[#0f0b1a] rounded-lg p-3 text-center">
                         <p className={`text-2xl font-bold ${(integ.uptime ?? 0) >= 95 ? 'text-emerald-400' : 'text-amber-400'}`}>{integ.uptime ?? 0}%</p>
-                        <p className="text-[10px] text-[#9b95ad] mt-1">Uptime</p>
-                        <p className="text-[10px] text-[#9b95ad]">{(integ.uptime ?? 0) >= 99 ? '✅ Excelente' : (integ.uptime ?? 0) >= 95 ? '⚡ Dentro do SLA' : '⚠️ Abaixo do SLA'}</p>
+                        <p className="text-[10px] text-[#9b95ad] mt-1">{t.metricUptime}</p>
+                        <p className="text-[10px] text-[#9b95ad]">{(integ.uptime ?? 0) >= 99 ? t.uptimeExcellent : (integ.uptime ?? 0) >= 95 ? t.uptimeWithinSla : t.uptimeBelowSla}</p>
                       </div>
                     </div>
 
                     {/* Description */}
                     {integ.description && (
                       <div className="bg-[#0f0b1a] rounded-lg p-3">
-                        <p className="text-[10px] text-[#9b95ad] uppercase tracking-wider mb-1">Descrição</p>
+                        <p className="text-[10px] text-[#9b95ad] uppercase tracking-wider mb-1">{t.detailDescription}</p>
                         <p className="text-sm text-[#e2e0ea]">{integ.description}</p>
                       </div>
                     )}
@@ -478,7 +482,7 @@ export default function IntegrationsPage() {
                     {/* Config */}
                     {integ.config && Object.keys(integ.config).length > 0 && (
                       <div className="bg-[#0f0b1a] rounded-lg p-3">
-                        <p className="text-[10px] text-[#9b95ad] uppercase tracking-wider mb-2">Configuração de Conexão</p>
+                        <p className="text-[10px] text-[#9b95ad] uppercase tracking-wider mb-2">{t.connectionConfig}</p>
                         <div className="space-y-1">
                           {Object.entries(integ.config).map(([key, val]) => (
                             <div key={key} className="flex gap-2 text-xs">
@@ -495,17 +499,17 @@ export default function IntegrationsPage() {
                     {/* No config message */}
                     {(!integ.config || Object.keys(integ.config).length === 0) && (
                       <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3">
-                        <p className="text-xs text-amber-400">⚠️ Esta integração não possui configuração de conexão. Foi criada como simulação.</p>
+                        <p className="text-xs text-amber-400">{t.noConfig}</p>
                       </div>
                     )}
 
                     {/* Actions */}
                     <div className="flex gap-3 pt-2">
                       <a href={`/diagnostics?clientId=${clientOf(integ).id}&integrationId=${integ.id}&auto=1`} className="px-4 py-2 rounded-lg bg-purple-500/15 border border-purple-500/20 text-purple-400 text-xs font-medium hover:bg-purple-500/20 transition">
-                        🤖 Diagnosticar com IA
+                        {t.diagnoseAi}
                       </a>
                       <a href={`/clients/${clientOf(integ).id}`} className="px-4 py-2 rounded-lg bg-white/5 border border-white/[0.08] text-[#9b95ad] text-xs font-medium hover:text-white transition">
-                        👁️ Ver cliente
+                        {t.viewClient}
                       </a>
                     </div>
                   </div>
@@ -517,53 +521,53 @@ export default function IntegrationsPage() {
 
         {filtered.length === 0 && integrations.length > 0 && (
           <div className="bg-[#1a1527] rounded-xl p-8 border border-white/[0.08] text-center">
-            <p className="text-[#9b95ad]">Nenhuma integração corresponde aos filtros.</p>
-            <button onClick={clearFilters} className="mt-3 px-4 py-2 text-sm text-purple-400 hover:text-purple-300 cursor-pointer">Limpar filtros</button>
+            <p className="text-[#9b95ad]">{t.noMatch}</p>
+            <button onClick={clearFilters} className="mt-3 px-4 py-2 text-sm text-purple-400 hover:text-purple-300 cursor-pointer">{t.clearFilters}</button>
           </div>
         )}
 
         {integrations.length === 0 && (
           <div className="bg-[#1a1527] rounded-xl p-8 border border-white/[0.08] text-center">
-            <p className="text-[#9b95ad]">Nenhuma integracao cadastrada.</p>
+            <p className="text-[#9b95ad]">{t.noneRegistered}</p>
             <button
               onClick={() => router.push("/integrations/new")}
               className="mt-4 px-5 py-2 bg-gradient-to-r from-purple-600 to-purple-500 text-white text-sm font-medium rounded-lg hover:from-purple-500 hover:to-purple-400 transition-all cursor-pointer"
             >
-              + Criar primeira integracao
+              {t.createFirst}
             </button>
           </div>
         )}
       </div>
 
       {/* Modal de edição */}
-      <Modal open={!!editing} onClose={() => setEditing(null)} title="Editar integração" size="lg">
+      <Modal open={!!editing} onClose={() => setEditing(null)} title={t.editTitle} size="lg">
         {editing && (
           <div className="space-y-4">
-            <Field label="Nome"><input className={inputClass} value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} /></Field>
-            <Field label="Descrição"><input className={inputClass} value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} /></Field>
+            <Field label={t.fieldName}><input className={inputClass} value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} /></Field>
+            <Field label={t.fieldDescription}><input className={inputClass} value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} /></Field>
             <div>
-              <p className="text-sm text-[#9b95ad] mb-2">Configuração de conexão</p>
+              <p className="text-sm text-[#9b95ad] mb-2">{t.editConnectionConfig}</p>
               <div className="space-y-2">
                 {Object.keys(editForm.config).map((k) => {
                   const sensitive = /pass|secret|apikey|api_key|authvalue|token/i.test(k);
                   return (
-                    <Field key={k} label={k + (sensitive ? " (deixe em branco p/ manter)" : "")}>
+                    <Field key={k} label={k + (sensitive ? t.keepBlankSuffix : "")}>
                       <input
                         className={inputClass}
                         type={sensitive ? "password" : "text"}
                         value={editForm.config[k]}
-                        placeholder={sensitive ? "•••••• (mantém o atual)" : ""}
+                        placeholder={sensitive ? t.keepCurrentPlaceholder : ""}
                         onChange={(e) => setEditForm({ ...editForm, config: { ...editForm.config, [k]: e.target.value } })}
                       />
                     </Field>
                   );
                 })}
-                {Object.keys(editForm.config).length === 0 && <p className="text-sm text-[#9b95ad]">Sem configuração.</p>}
+                {Object.keys(editForm.config).length === 0 && <p className="text-sm text-[#9b95ad]">{t.noConfigShort}</p>}
               </div>
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <button onClick={() => setEditing(null)} className="px-4 py-2 rounded-lg text-sm bg-white/[0.06]">Cancelar</button>
-              <button disabled={savingEdit} onClick={saveEdit} className="px-4 py-2 rounded-lg text-sm font-semibold bg-purple-500 text-white disabled:opacity-40">Salvar</button>
+              <button onClick={() => setEditing(null)} className="px-4 py-2 rounded-lg text-sm bg-white/[0.06]">{t.cancel}</button>
+              <button disabled={savingEdit} onClick={saveEdit} className="px-4 py-2 rounded-lg text-sm font-semibold bg-purple-500 text-white disabled:opacity-40">{t.save}</button>
             </div>
           </div>
         )}
