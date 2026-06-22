@@ -6,6 +6,11 @@ import { getConnectors, saveConnector, syncConnector, getMe } from "@/lib/api";
 const META: Record<string, { label: string; icon: string }> = {
   ARIBA: { label: "SAP Ariba", icon: "🛒" },
   SUCCESSFACTORS: { label: "SuccessFactors", icon: "👥" },
+  CONCUR: { label: "SAP Concur", icon: "✈️" },
+  FIELDGLASS: { label: "SAP Fieldglass", icon: "🧰" },
+  CX: { label: "SAP CX (Sales/Service)", icon: "🎧" },
+  COMMERCE: { label: "SAP Commerce", icon: "🛍️" },
+  APIM: { label: "API Management", icon: "🔗" },
 };
 const statusCls: Record<string, string> = { CONNECTED: "text-emerald-300", ERROR: "text-rose-300", PENDING: "text-[#9b95ad]" };
 

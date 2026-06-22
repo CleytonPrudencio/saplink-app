@@ -4,7 +4,7 @@ import { encryptValue, decryptValue } from '../lib/crypto';
 // Conectores SAP Cloud BYO (Ariba / SuccessFactors). Mesmo modelo do S/4: 1 chave por cliente,
 // sync ao vivo via SAP Business Accelerator Hub (sandbox, header APIKey) ou tenant do cliente.
 
-type Product = 'ARIBA' | 'SUCCESSFACTORS';
+type Product = 'ARIBA' | 'SUCCESSFACTORS' | 'CONCUR' | 'FIELDGLASS' | 'CX' | 'COMMERCE' | 'APIM';
 
 const DEFAULTS: Record<Product, { base: string; probes: { apiName: string; path: string; count: boolean }[] }> = {
   SUCCESSFACTORS: {
@@ -22,8 +22,45 @@ const DEFAULTS: Record<Product, { base: string; probes: { apiName: string; path:
       { apiName: 'Ariba_OperationalReporting', path: '/reporting/v4/prod/views', count: false },
     ],
   },
+  CONCUR: {
+    base: 'https://us.api.concursolutions.com',
+    probes: [
+      { apiName: 'Concur_Users', path: '/api/v3.0/common/users', count: false },
+      { apiName: 'Concur_Reports', path: '/api/v3.0/expense/reports', count: false },
+    ],
+  },
+  FIELDGLASS: {
+    base: 'https://api.fieldglass.net',
+    probes: [
+      { apiName: 'FG_Workers', path: '/api/v1/connectors/workerData', count: false },
+    ],
+  },
+  CX: {
+    // SAP Sales/Service Cloud (Cloud for Customer) — OData v2 do tenant do cliente.
+    base: 'https://my000000.crm.ondemand.com/sap/c4c/odata/v1/c4codataapi',
+    probes: [
+      { apiName: 'C4C_ServiceRequest', path: '/ServiceRequestCollection', count: true },
+      { apiName: 'C4C_Account', path: '/AccountCollection', count: true },
+    ],
+  },
+  COMMERCE: {
+    // SAP Commerce Cloud — OCC API do tenant do cliente.
+    base: 'https://api.commerce.cloud',
+    probes: [
+      { apiName: 'Commerce_Orders', path: '/occ/v2/electronics/orders', count: false },
+    ],
+  },
+  APIM: {
+    // SAP API Management (Integration Suite) — inventário de API proxies publicadas.
+    base: 'https://sandbox.api.sap.com',
+    probes: [
+      { apiName: 'APIM_Proxies', path: '/apiportal/api/1.0/Management.svc/APIProxies', count: false },
+    ],
+  },
 };
 
+export const PRODUCTS = Object.keys(DEFAULTS) as Product[];
+export function isProduct(p: string): p is Product { return (PRODUCTS as string[]).includes(p); }
 export function defaultBase(product: string) { return DEFAULTS[product as Product]?.base || ''; }
 
 export async function listConnectors(consultancyId: string) {
@@ -31,7 +68,7 @@ export async function listConnectors(consultancyId: string) {
   const conns = await prisma.cloudConnector.findMany({ where: { clientId: { in: clients.map((c) => c.id) } } });
   return clients.map((c) => ({
     clientId: c.id, client: c.name,
-    connectors: (['ARIBA', 'SUCCESSFACTORS'] as Product[]).map((p) => {
+    connectors: PRODUCTS.map((p) => {
       const x = conns.find((k) => k.clientId === c.id && k.product === p);
       return { product: p, baseUrl: x?.baseUrl || DEFAULTS[p].base, status: x?.status || 'PENDING', hasKey: !!x?.apiKey, lastSyncAt: x?.lastSyncAt || null, lastResult: x?.lastResult || null };
     }),
@@ -41,7 +78,7 @@ export async function listConnectors(consultancyId: string) {
 export async function saveConnector(consultancyId: string, clientId: string, product: string, input: { baseUrl?: string; apiKey?: string }) {
   const client = await prisma.client.findUnique({ where: { id: clientId } });
   if (!client || client.consultancyId !== consultancyId) return { error: 'NOT_FOUND' as const };
-  if (!['ARIBA', 'SUCCESSFACTORS'].includes(product)) return { error: 'INVALID' as const };
+  if (!isProduct(product)) return { error: 'INVALID' as const };
   const ex = await prisma.cloudConnector.findUnique({ where: { clientId_product: { clientId, product } } });
   const apiKey = input.apiKey ? encryptValue(input.apiKey) : ex?.apiKey;
   if (!apiKey) return { error: 'NO_KEY' as const };
