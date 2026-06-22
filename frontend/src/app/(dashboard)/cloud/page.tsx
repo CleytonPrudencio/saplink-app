@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, Fragment } from "react";
 import { getCloud, diagnoseCloud, fixCloud, type CloudItem } from "@/lib/api";
 import { AiReport } from "@/components/AiReport";
+import { usePaginate, Pagination } from "@/components/Pagination";
 
 function statusCls(s?: string | null) {
   const u = (s || "").toUpperCase();
@@ -44,6 +45,7 @@ export default function CloudPage() {
     catch { setFix((f) => ({ ...f, [it.id]: { loading: false, err: true } })); }
   }, []);
 
+  const pag = usePaginate<CloudItem>(data?.items || [], 20);
   const s = data?.summary;
 
   return (
@@ -84,7 +86,7 @@ export default function CloudPage() {
               <th className="px-3 py-2 font-medium">Quando</th><th className="px-3 py-2 font-medium">IA</th>
             </tr></thead>
             <tbody>
-              {data.items.map((i) => {
+              {pag.pageItems.map((i) => {
                 const d = diag[i.id];
                 const failed = isFail(i.status) && !i.resolved;
                 return (
@@ -149,6 +151,7 @@ export default function CloudPage() {
               ); })}
             </tbody>
           </table>
+          <div className="px-3 pb-3"><Pagination {...pag} /></div>
         </div>
       )}
     </div>

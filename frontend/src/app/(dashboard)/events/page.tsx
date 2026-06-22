@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { getS4Events } from "@/lib/api";
 import ExplainData from "@/components/ExplainData";
+import { usePaginate, Pagination } from "@/components/Pagination";
 
 const ST: Record<string, string> = {
   DELIVERED: "bg-emerald-500/15 text-emerald-300", DEAD_LETTER: "bg-rose-500/15 text-rose-300",
@@ -13,6 +14,7 @@ export default function EventsPage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   useEffect(() => { getS4Events().then(setData).catch(() => {}).finally(() => setLoading(false)); }, []);
+  const pag = usePaginate<any>(data?.items || [], 20);
   if (loading) return <div className="text-[#9b95ad]">Carregando...</div>;
   const s = data?.summary?.byStatus || {};
 
@@ -41,7 +43,7 @@ export default function EventsPage() {
             <th className="px-3 py-2 font-medium">Cliente</th><th className="px-3 py-2 font-medium">Quando</th>
           </tr></thead>
           <tbody>
-            {(data?.items || []).map((e: any, i: number) => (
+            {pag.pageItems.map((e: any, i: number) => (
               <tr key={i} className="border-b border-white/[0.04]">
                 <td className="px-3 py-2 font-mono text-xs text-[#e2e0ea]">{e.topic}</td>
                 <td className="px-3 py-2"><span className={`text-xs px-1.5 py-0.5 rounded ${ST[e.status] || ""}`}>{e.status}</span></td>
@@ -54,6 +56,7 @@ export default function EventsPage() {
             {(!data?.items || data.items.length === 0) && <tr><td colSpan={6} className="px-3 py-6 text-center text-[#9b95ad]">Sem eventos — conecte o Event Mesh do S/4HANA Cloud.</td></tr>}
           </tbody>
         </table>
+        <div className="px-3 pb-3"><Pagination {...pag} /></div>
       </div>
     </div>
   );

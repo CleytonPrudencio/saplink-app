@@ -3,12 +3,14 @@
 import { useEffect, useState } from "react";
 import { getFederated } from "@/lib/api";
 import ExplainData from "@/components/ExplainData";
+import { usePaginate, Pagination } from "@/components/Pagination";
 
 export default function FederatedPage() {
   const [data, setData] = useState<{ summary: { signatures: number; occurrences: number }; items: any[] } | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => { getFederated().then(setData).catch(() => {}).finally(() => setLoading(false)); }, []);
+  const pag = usePaginate<any>(data?.items || [], 15);
 
   return (
     <div className="space-y-6">
@@ -32,7 +34,7 @@ export default function FederatedPage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {data.items.map((s, i) => (
+          {pag.pageItems.map((s: any, i: number) => (
             <div key={i} className="bg-[#1a1527] rounded-xl p-4 border border-white/[0.08]">
               <div className="flex items-start justify-between gap-3 flex-wrap">
                 <div className="min-w-0">
@@ -54,6 +56,7 @@ export default function FederatedPage() {
               )}
             </div>
           ))}
+          <Pagination {...pag} />
         </div>
       )}
       <p className="text-xs text-[#6b6580]">Dados 100% anonimizados: as falhas são agrupadas por assinatura (sem ids/números) e os clientes contados por hash — nenhuma identidade é exposta entre tenants.</p>

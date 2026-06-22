@@ -3,11 +3,13 @@
 import { useEffect, useState } from "react";
 import { getAudit } from "@/lib/api";
 import ExplainData from "@/components/ExplainData";
+import { usePaginate, Pagination } from "@/components/Pagination";
 
 export default function AuditPage() {
   const [data, setData] = useState<{ summary: { changes: number; remediations: number; sodViolations: number }; ledger: any[] } | null>(null);
   const [loading, setLoading] = useState(true);
   useEffect(() => { getAudit().then(setData).catch(() => {}).finally(() => setLoading(false)); }, []);
+  const pag = usePaginate<any>(data?.ledger || [], 25);
 
   return (
     <div className="space-y-6">
@@ -35,7 +37,7 @@ export default function AuditPage() {
               <th className="px-3 py-2 font-medium">Quem</th><th className="px-3 py-2 font-medium">O quê</th><th className="px-3 py-2 font-medium">Cliente</th>
             </tr></thead>
             <tbody>
-              {data.ledger.map((e, i) => (
+              {pag.pageItems.map((e: any, i: number) => (
                 <tr key={i} className={`border-b border-white/[0.04] ${e.flag ? "bg-rose-500/[0.05]" : ""}`}>
                   <td className="px-3 py-2 text-xs text-[#9b95ad] whitespace-nowrap">{e.at ? new Date(e.at).toLocaleString("pt-BR") : "—"}</td>
                   <td className="px-3 py-2"><span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white/[0.06]">{e.kind}</span></td>
@@ -46,6 +48,7 @@ export default function AuditPage() {
               ))}
             </tbody>
           </table>
+          <div className="px-3 pb-3"><Pagination {...pag} /></div>
         </div>
       )}
     </div>

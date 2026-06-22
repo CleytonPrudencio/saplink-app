@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { getPartners } from "@/lib/api";
 import ExplainData from "@/components/ExplainData";
+import { usePaginate, Pagination } from "@/components/Pagination";
 
 function brl(c: number) { return (c / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }); }
 
@@ -11,6 +12,8 @@ export default function PartnersPage() {
   const [loading, setLoading] = useState(true);
   useEffect(() => { getPartners().then(setData).catch(() => {}).finally(() => setLoading(false)); }, []);
 
+  const pagP = usePaginate<any>(data?.partners || [], 15);
+  const pagF = usePaginate<any>(data?.finops?.flows || [], 15);
   if (loading) return <div className="text-[#9b95ad]">Carregando...</div>;
   const fin = data?.finops;
 
@@ -35,7 +38,7 @@ export default function PartnersPage() {
                 <th className="px-3 py-2 font-medium">Taxa de erro</th><th className="px-3 py-2 font-medium">% dos erros</th><th className="px-3 py-2 font-medium">Score</th>
               </tr></thead>
               <tbody>
-                {data.partners.map((p: any, i: number) => (
+                {pagP.pageItems.map((p: any, i: number) => (
                   <tr key={i} className="border-b border-white/[0.04]">
                     <td className="px-3 py-2 font-mono text-[#e2e0ea]">{p.partner}</td>
                     <td className="px-3 py-2 text-[#9b95ad]">{p.total}</td>
@@ -47,6 +50,7 @@ export default function PartnersPage() {
                 ))}
               </tbody>
             </table>
+            <div className="px-3 pb-3"><Pagination {...pagP} /></div>
           </div>
         )}
       </section>
@@ -67,7 +71,7 @@ export default function PartnersPage() {
                 <th className="px-3 py-2 font-medium text-right">Mensagens/30d</th><th className="px-3 py-2 font-medium text-right">Custo est./mês</th>
               </tr></thead>
               <tbody>
-                {fin.flows.map((f: any, i: number) => (
+                {pagF.pageItems.map((f: any, i: number) => (
                   <tr key={i} className="border-b border-white/[0.04]">
                     <td className="px-3 py-2"><span className="text-xs font-mono px-1.5 py-0.5 rounded bg-white/[0.06]">{f.source}</span></td>
                     <td className="px-3 py-2 text-[#e2e0ea]">{f.artifact}</td>
@@ -77,6 +81,7 @@ export default function PartnersPage() {
                 ))}
               </tbody>
             </table>
+            <div className="px-3 pb-3"><Pagination {...pagF} /></div>
           </div>
         )}
         <p className="text-xs text-[#6b6580] mt-2">Estimativa baseada no volume real × tarifa configurável (BTP_RATE_CENTS_PER_1K). Flagra IFlow desgovernado queimando crédito.</p>

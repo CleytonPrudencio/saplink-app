@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { getMe, getS4Fiscal, reprocessFiscal } from "@/lib/api";
 import ExplainData from "@/components/ExplainData";
+import { usePaginate, Pagination } from "@/components/Pagination";
 
 function brl(c: number) { return (c / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }); }
 const ST: Record<string, { label: string; cls: string }> = {
@@ -30,6 +31,7 @@ export default function FiscalPage() {
     try { await reprocessFiscal(id); await load(); } catch { /* ignore */ } finally { setBusy(""); }
   }
 
+  const pag = usePaginate<any>(data?.items || [], 20);
   if (loading) return <div className="text-[#9b95ad]">Carregando...</div>;
   const s = data?.summary || {};
 
@@ -57,7 +59,7 @@ export default function FiscalPage() {
             <th className="px-3 py-2 font-medium text-right">Ação</th>
           </tr></thead>
           <tbody>
-            {(data?.items || []).map((d: any) => (
+            {pag.pageItems.map((d: any) => (
               <tr key={d.id} className="border-b border-white/[0.04]">
                 <td className="px-3 py-2 font-mono text-[#c9c5d6]">{d.docType}</td>
                 <td className="px-3 py-2 font-mono text-[#e2e0ea]">{d.number}</td>
@@ -76,6 +78,7 @@ export default function FiscalPage() {
           </tbody>
         </table>
       </div>
+      <Pagination {...pag} />
     </div>
   );
 }

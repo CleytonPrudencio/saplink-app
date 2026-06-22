@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { getS4Upgrade, getS4Apis } from "@/lib/api";
 import ExplainData from "@/components/ExplainData";
+import { usePaginate, Pagination } from "@/components/Pagination";
 
 const IMPACT: Record<string, { label: string; cls: string }> = {
   BREAKING: { label: "Quebra", cls: "bg-rose-500/15 text-rose-300" },
@@ -20,6 +21,7 @@ export default function UpgradePage() {
     Promise.all([getS4Upgrade(), getS4Apis()]).then(([u, a]) => { setData(u); setApis(a); }).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
+  const pag = usePaginate<any>(data?.findings || [], 20);
   if (loading) return <div className="text-[#9b95ad]">Carregando...</div>;
   const s = data?.summary?.byImpact || {};
 
@@ -47,7 +49,7 @@ export default function UpgradePage() {
             <th className="px-3 py-2 font-medium">Objeto</th><th className="px-3 py-2 font-medium">Recomendação</th><th className="px-3 py-2 font-medium">Cliente</th>
           </tr></thead>
           <tbody>
-            {(data?.findings || []).map((f: any) => (
+            {pag.pageItems.map((f: any) => (
               <tr key={f.id} className="border-b border-white/[0.04]">
                 <td className="px-3 py-2"><span className={`text-xs px-1.5 py-0.5 rounded ${IMPACT[f.impact]?.cls || ""}`}>{IMPACT[f.impact]?.label || f.impact}</span></td>
                 <td className="px-3 py-2 text-[#9b95ad]">{f.area}</td>
@@ -59,6 +61,7 @@ export default function UpgradePage() {
             {(!data?.findings || data.findings.length === 0) && <tr><td colSpan={5} className="px-3 py-6 text-center text-[#9b95ad]">Sem achados — conecte o S/4HANA Cloud para o radar rodar.</td></tr>}
           </tbody>
         </table>
+        <div className="px-3 pb-3"><Pagination {...pag} /></div>
       </div>
 
       <div className="bg-[#1a1527] rounded-xl p-5 border border-white/[0.08]">

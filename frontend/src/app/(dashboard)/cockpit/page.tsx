@@ -7,6 +7,7 @@ import {
   type CockpitData, type SapItemView, type RemediationAction,
 } from "@/lib/api";
 import ExplainData from "@/components/ExplainData";
+import { usePaginate, Pagination } from "@/components/Pagination";
 
 interface Client { id: string; name: string }
 
@@ -87,6 +88,7 @@ export default function CockpitPage() {
   }, [load]);
 
   const s = data?.summary;
+  const pag = usePaginate<SapItemView>(data?.items || [], 20);
 
   return (
     <div className="space-y-6">
@@ -155,7 +157,7 @@ export default function CockpitPage() {
               </tr>
             </thead>
             <tbody>
-              {data.items.map((i: SapItemView) => (
+              {pag.pageItems.map((i: SapItemView) => (
                 <tr key={i.id} className="border-b border-white/[0.04] hover:bg-white/[0.02]">
                   <td className="px-3 py-2">
                     <span className="text-xs font-mono px-1.5 py-0.5 rounded bg-white/[0.06] text-[#c9c5d6]">{KIND_LABEL[i.kind] || i.kind}</span>
@@ -190,6 +192,7 @@ export default function CockpitPage() {
               ))}
             </tbody>
           </table>
+          <div className="px-3 pb-3"><Pagination {...pag} /></div>
         </div>
       )}
       {/* B2 — Remediação: fila de aprovação (admin) */}

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getClients, getDeadCode, getDeadCodeStats } from "@/lib/api";
+import { usePaginate, Pagination } from "@/components/Pagination";
 
 interface Client { id: string; name: string; }
 interface DeadCodeEntry {
@@ -76,6 +77,7 @@ export default function DeadCodePage() {
   }, [selectedClient]);
 
   const filtered = filterRec === "ALL" ? entries : entries.filter(e => e.recommendation?.toUpperCase() === filterRec);
+  const pag = usePaginate<any>(filtered, 15);
 
   function getType(entry: DeadCodeEntry) { return entry.objectType || entry.type || 'PROGRAM'; }
 
@@ -143,7 +145,7 @@ export default function DeadCodePage() {
       {/* Entries */}
       {selectedClient && !dataLoading && filtered.length > 0 && (
         <div className="space-y-3">
-          {filtered.map((entry) => {
+          {pag.pageItems.map((entry: any) => {
             const rec = recInfo[entry.recommendation?.toUpperCase()] || recInfo.RETIRE;
             const type = getType(entry);
             const isExpanded = expandedId === entry.id;
@@ -226,6 +228,7 @@ export default function DeadCodePage() {
               </div>
             );
           })}
+          <Pagination {...pag} />
         </div>
       )}
 

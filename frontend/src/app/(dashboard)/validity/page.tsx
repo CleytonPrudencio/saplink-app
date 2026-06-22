@@ -6,6 +6,7 @@ import {
   getAllIntegrations, type ValidityItem,
 } from "@/lib/api";
 import ExplainData from "@/components/ExplainData";
+import { usePaginate, Pagination } from "@/components/Pagination";
 
 interface IntegrationLite { id: string; name: string; type: string; client?: { name?: string } }
 
@@ -94,6 +95,7 @@ export default function ValidityPage() {
   }
 
   const counts = items.reduce((a: Record<string, number>, i) => { a[i.severity] = (a[i.severity] || 0) + 1; return a; }, {});
+  const pag = usePaginate<any>(items, 20);
 
   if (loading) return <div className="text-[#9b95ad]">Carregando...</div>;
 
@@ -135,7 +137,7 @@ export default function ValidityPage() {
         </div>
       ) : (
         <div className="space-y-2">
-          {items.map((i) => {
+          {pag.pageItems.map((i: any) => {
             const sev = SEV[i.severity];
             return (
               <div key={`${i.integrationId}-${i.kind}`} className={`rounded-xl border p-4 ${sev.cls}`}>
@@ -165,6 +167,7 @@ export default function ValidityPage() {
               </div>
             );
           })}
+          <Pagination {...pag} />
         </div>
       )}
 
