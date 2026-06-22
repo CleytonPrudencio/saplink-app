@@ -15,10 +15,10 @@ const brl = (c: number) => (c / 100).toLocaleString("pt-BR", { style: "currency"
 const NAV = [
   { id: "problema", label: "Problema" },
   { id: "cobertura", label: "Cobertura" },
-  { id: "como", label: "Como funciona" },
+  { id: "produto", label: "Por dentro" },
+  { id: "roi", label: "ROI" },
   { id: "plataforma", label: "Plataforma" },
-  { id: "inovacao", label: "Inovação" },
-  { id: "s4", label: "S/4HANA Cloud" },
+  { id: "comparativo", label: "Comparativo" },
   { id: "planos", label: "Planos" },
   { id: "faq", label: "FAQ" },
 ];
@@ -92,7 +92,44 @@ const FAQ = [
   ["Funciona com S/4HANA Cloud?", "Sim — é o nosso carro-chefe: Radar de Upgrade, Clean Core Score, Fiscal DRC, Event Mesh e CPI/AIF, via APIs liberadas."],
   ["Os dados ficam seguros?", "Credenciais cifradas em repouso, isolamento multi-tenant por consultoria, e nenhuma ação no SAP roda sem aprovação humana (com log)."],
   ["É white-label?", "Sim. Logo e cor da sua consultoria na interface, nos relatórios e no portal do cliente final."],
+  ["Separa DEV, homologação e produção?", "Sim. Cada integração tem ambiente (DEV/HML/PRD); dados, conexões, métricas e faturamento ficam isolados por ambiente. Em produção há trava extra: remediação e auto-heal exigem aprovação humana."],
+  ["Quanto tempo pra implantar?", "Dias, não meses. Conecta por Communication Arrangement (nuvem) ou o Agente Docker (on-prem) e os dados começam a aparecer no painel."],
+  ["E a LGPD?", "Conformidade LGPD: dados cifrados em repouso, isolamento por consultoria, e Termos + Política de Privacidade publicados. Você é o controlador; o SAPLINK é operador."],
+  ["Tem fidelidade?", "Permanência mínima de 3 meses. 1ª mensalidade grátis nos planos Business/Enterprise e 50% OFF no 1º mês do Pro."],
   ["Como vende para a minha consultoria?", "Como serviço mensal de monitoramento e governança por cliente — receita recorrente, retenção e prova de valor em R$."],
+];
+
+// Para quem é (ICP)
+const PERSONAS: [string, string, string][] = [
+  ["🏢", "Consultorias SAP", "Monitore a carteira inteira de clientes num painel, com sua marca."],
+  ["🛠️", "Times de AMS / Sustentação", "Menos apagar incêndio: detecção, diagnóstico e remediação com aprovação."],
+  ["🤝", "Parceiros & Integradores", "Prove valor em R$ ao cliente e aumente retenção e receita recorrente."],
+];
+
+// Comparativo (✓ tem · ~ parcial · ✗ não)
+const COMPARE_COLS = ["Planilha / manual", "Monitor genérico", "SAP Focused Run", "SAPLINK"];
+const COMPARE_ROWS: [string, string, string, string, string][] = [
+  ["Multi-cliente num painel", "✗", "~", "~", "✓"],
+  ["IDoc/RFC + CPI + S/4HANA Cloud juntos", "✗", "~", "~", "✓"],
+  ["IA: diagnóstico + correção pronta", "✗", "✗", "~", "✓"],
+  ["Remediação com aprovação + trava de PRD", "✗", "✗", "~", "✓"],
+  ["Prova de valor em R$ / SLA por cliente", "~", "✗", "~", "✓"],
+  ["Fiscal BR (NF-e, CT-e, SPED, eSocial)", "✗", "✗", "✗", "✓"],
+  ["Sem abrir portas / sem S-user", "✓", "~", "✗", "✓"],
+  ["White-label + portal do cliente", "✗", "✗", "✗", "✓"],
+  ["Pronto em dias", "✓", "~", "✗", "✓"],
+];
+
+// Sinais de confiança
+const TRUST: [string, string][] = [
+  ["🔒", "Sem abrir portas no cliente"],
+  ["🪪", "Sem S-user · sem add-on"],
+  ["🔑", "Credenciais cifradas (AES)"],
+  ["🧱", "Isolamento multi-tenant"],
+  ["✋", "Ação no SAP só com aprovação"],
+  ["🌎", "Conformidade LGPD"],
+  ["🟢", "Trava de produção (PRD)"],
+  ["🧪", "Ambientes DEV/HML/PRD"],
 ];
 
 function InterestModal({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -259,6 +296,38 @@ function LivePanel() {
   );
 }
 
+// Calculadora de ROI — usa os números do próprio visitante (estimativa honesta).
+function RoiCalc({ onInterest }: { onInterest: () => void }) {
+  const [hoursLost, setHoursLost] = useState(8);
+  const [costHr, setCostHr] = useState(3000);
+  const REDU = 0.7; // detecção+remediação rápida reduz ~70% do downtime
+  const loss = hoursLost * costHr;
+  const saved = Math.round(loss * REDU);
+  const Field = ({ label, value, set, min, max, step, fmt }: any) => (
+    <div>
+      <div className="flex justify-between text-sm mb-1"><span className="text-[#c9c5d6]">{label}</span><span className="font-semibold text-[#e2e0ea]">{fmt(value)}</span></div>
+      <input type="range" min={min} max={max} step={step} value={value} onChange={(e) => set(Number(e.target.value))} className="w-full accent-purple-500 cursor-pointer" />
+    </div>
+  );
+  return (
+    <div className="grid md:grid-cols-2 gap-6 items-center">
+      <div className="bg-[#1a1527] border border-white/[0.08] rounded-2xl p-6 space-y-5">
+        <Field label="Horas de parada não planejada / mês (carteira)" value={hoursLost} set={setHoursLost} min={1} max={80} step={1} fmt={(v: number) => `${v} h`} />
+        <Field label="Custo médio de parada por hora" value={costHr} set={setCostHr} min={200} max={50000} step={200} fmt={(v: number) => brl(v * 100)} />
+        <p className="text-xs text-[#6b6580]">Estimativa: detecção e remediação rápidas reduzem até <b className="text-[#9b95ad]">70%</b> do tempo de parada. Ajuste com os seus números.</p>
+      </div>
+      <div className="bg-gradient-to-br from-purple-600/15 to-cyan-500/10 border border-purple-500/30 rounded-2xl p-6 text-center">
+        <p className="text-xs text-[#9b95ad]">Você perde hoje, por mês</p>
+        <p className="text-2xl font-bold text-rose-300 line-through opacity-80">{brl(loss * 100)}</p>
+        <p className="text-xs text-[#9b95ad] mt-4">Economia estimada com o SAPLINK</p>
+        <p className="text-4xl sm:text-5xl font-extrabold slk-grad tabular-nums">{brl(saved * 100)}<span className="text-base font-normal text-[#9b95ad]">/mês</span></p>
+        <p className="text-sm text-emerald-300 mt-1">≈ {brl(saved * 12 * 100)}/ano</p>
+        <button onClick={onInterest} className="mt-5 w-full py-2.5 rounded-lg bg-gradient-to-r from-purple-600 to-cyan-500 text-white font-semibold cursor-pointer">Quero recuperar esse valor →</button>
+      </div>
+    </div>
+  );
+}
+
 export default function LandingPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
@@ -273,8 +342,23 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-transparent text-[#e2e0ea] overflow-x-hidden">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify({
+          "@context": "https://schema.org", "@type": "SoftwareApplication",
+          name: "SAPLINK", applicationCategory: "BusinessApplication", operatingSystem: "Web",
+          description: "Plataforma multi-cliente que monitora, prevê, corrige e prova valor em R$ nas integrações SAP — do IDoc ao S/4HANA Cloud.",
+          url: "https://saplink.com.br", offers: { "@type": "Offer", priceCurrency: "BRL" },
+          publisher: { "@type": "Organization", name: "SAPLINK", url: "https://saplink.com.br" },
+        }) }}
+      />
       <InterestModal open={interest} onClose={() => setInterest(false)} />
       <FeatureModal feature={feature} onClose={() => setFeature(null)} onInterest={() => setInterest(true)} />
+
+      {/* CTA flutuante persistente */}
+      <button onClick={() => setInterest(true)} className="fixed bottom-4 right-4 z-40 px-4 py-3 rounded-full bg-gradient-to-r from-purple-600 to-cyan-500 text-white text-sm font-semibold shadow-[0_8px_30px_rgba(124,58,237,0.45)] hover:opacity-90 transition cursor-pointer">
+        Tenho interesse →
+      </button>
 
       {/* Header */}
       <header className="sticky top-0 z-50 bg-[#0f0b1a] border-b border-white/[0.06]">
@@ -351,6 +435,20 @@ export default function LandingPage() {
         </section>
 
         {/* Cobertura SAP */}
+        {/* Para quem é */}
+        <section className="py-12 border-t border-white/[0.06]">
+          <p className="text-center text-xs font-bold uppercase tracking-wider text-[#6b6580] mb-6">Feito para</p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {PERSONAS.map(([ic, t, d]) => (
+              <div key={t} className="slk-tilt bg-[#1a1527] border border-white/[0.08] rounded-2xl p-5 text-center">
+                <div className="text-3xl mb-2">{ic}</div>
+                <p className="font-bold">{t}</p>
+                <p className="text-sm text-[#9b95ad] mt-1 leading-relaxed">{d}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
         <section id="cobertura" className="py-14 sm:py-16 border-t border-white/[0.06]">
           <div className="text-center max-w-3xl mx-auto">
             <span className="inline-block px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/25 text-cyan-300 text-xs font-bold mb-4">COBERTURA TOTAL</span>
@@ -379,6 +477,62 @@ export default function LandingPage() {
         </section>
 
         {/* Problema */}
+        {/* Por dentro do produto */}
+        <section id="produto" className="py-14 sm:py-16 border-t border-white/[0.06]">
+          <div className="text-center max-w-3xl mx-auto">
+            <span className="inline-block px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/25 text-purple-300 text-xs font-bold mb-4">POR DENTRO</span>
+            <h2 className="text-2xl sm:text-4xl font-bold">Veja o SAPLINK por dentro</h2>
+            <p className="text-[#9b95ad] mt-3">Painéis reais do produto — saúde da carteira, cockpit operacional e o impacto em R$.</p>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-9">
+            {/* Dashboard */}
+            <Reveal>
+              <div className="bg-[#1a1527] border border-white/[0.08] rounded-2xl p-4 h-full">
+                <p className="text-xs text-[#9b95ad] mb-3">📊 Dashboard · saúde da carteira</p>
+                <div className="flex items-end gap-3 mb-3"><span className="text-4xl font-extrabold slk-grad">92</span><span className="text-xs text-[#9b95ad] mb-1">health médio</span></div>
+                {[["Agro Nordeste", 96, "#34d399"], ["Têxtil Sul", 78, "#fbbf24"], ["Metalúrgica BR", 61, "#f87171"]].map(([n, v, c]) => (
+                  <div key={n as string} className="flex items-center gap-2 mb-2"><span className="text-xs text-[#c9c5d6] w-28 truncate">{n}</span><div className="flex-1 h-2 rounded-full bg-white/[0.06] overflow-hidden"><div className="h-full rounded-full" style={{ width: `${v}%`, background: c as string }} /></div><span className="text-[11px] text-[#9b95ad] w-7 text-right">{v}</span></div>
+                ))}
+              </div>
+            </Reveal>
+            {/* Cockpit */}
+            <Reveal delay={80}>
+              <div className="bg-[#1a1527] border border-white/[0.08] rounded-2xl p-4 h-full">
+                <p className="text-xs text-[#9b95ad] mb-3">🛰️ Cockpit · IDocs & filas</p>
+                <div className="space-y-1.5 text-xs">
+                  {[["IDoc 51", "ORDERS05", "bg-rose-500/15 text-rose-300"], ["qRFC SYSFAIL", "SMQ2", "bg-amber-500/15 text-amber-300"], ["tRFC", "SM58", "bg-amber-500/15 text-amber-300"], ["IDoc 53", "INVOIC02", "bg-emerald-500/15 text-emerald-300"]].map(([a, b, c]) => (
+                    <div key={a as string} className="flex items-center justify-between bg-[#0f0b1a] rounded-lg px-2.5 py-1.5"><span className="text-[#e2e0ea]">{a} <span className="text-[#6b6580] font-mono">{b}</span></span><span className={`px-1.5 py-0.5 rounded ${c as string}`}>●</span></div>
+                  ))}
+                </div>
+                <div className="mt-3 text-[11px] text-emerald-300">✓ Remediação com aprovação · trava de produção</div>
+              </div>
+            </Reveal>
+            {/* Impacto R$ */}
+            <Reveal delay={160}>
+              <div className="bg-[#1a1527] border border-white/[0.08] rounded-2xl p-4 h-full">
+                <p className="text-xs text-[#9b95ad] mb-3">💸 Impacto em R$ · ao vivo</p>
+                <div className="text-center py-2"><p className="text-xs text-[#9b95ad]">Dinheiro parado agora</p><p className="text-3xl font-extrabold text-amber-300">R$ 89,2k</p></div>
+                <div className="space-y-1.5 text-xs mt-1">
+                  {[["Faturamento (NF-e parada)", "R$ 52,0k"], ["Pedidos travados (CPI)", "R$ 24,7k"], ["Fiscal em risco (DRC)", "R$ 12,5k"]].map(([a, b]) => (
+                    <div key={a} className="flex justify-between bg-[#0f0b1a] rounded-lg px-2.5 py-1.5"><span className="text-[#c9c5d6]">{a}</span><span className="text-amber-300 font-semibold">{b}</span></div>
+                  ))}
+                </div>
+              </div>
+            </Reveal>
+          </div>
+          <p className="text-center text-xs text-[#6b6580] mt-4">Telas representativas da interface do produto.</p>
+        </section>
+
+        {/* Calculadora de ROI */}
+        <section id="roi" className="py-14 sm:py-16 border-t border-white/[0.06]">
+          <div className="text-center max-w-3xl mx-auto mb-9">
+            <span className="inline-block px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-300 text-xs font-bold mb-4">CALCULADORA</span>
+            <h2 className="text-2xl sm:text-4xl font-bold">Quanto a integração parada custa pra você?</h2>
+            <p className="text-[#9b95ad] mt-3">Ajuste com os seus números e veja a economia estimada — a linguagem que o CFO entende.</p>
+          </div>
+          <RoiCalc onInterest={() => setInterest(true)} />
+        </section>
+
         <section id="problema" className="py-14 sm:py-16 border-t border-white/[0.06]">
           <h2 className="text-2xl sm:text-3xl font-bold mb-3">O reativo custa cliente e margem</h2>
           <p className="text-[#9b95ad] max-w-3xl leading-relaxed">Integração SAP quebra em silêncio e o cliente descobre antes de você. O time vive apagando incêndio, sem visão única, e fica difícil provar o valor entregue. O SAPLINK inverte o jogo.</p>
@@ -487,6 +641,48 @@ export default function LandingPage() {
         </section>
 
         {/* Planos */}
+        {/* Comparativo */}
+        <section id="comparativo" className="py-14 sm:py-16 border-t border-white/[0.06]">
+          <h2 className="text-2xl sm:text-3xl font-bold mb-2">Por que SAPLINK e não o resto</h2>
+          <p className="text-[#9b95ad] mb-8">O concorrente cobre um pedaço. O SAPLINK cobre o conjunto — com IA e prova de valor.</p>
+          <div className="overflow-x-auto border border-white/[0.08] rounded-xl">
+            <table className="w-full text-sm min-w-[640px]">
+              <thead>
+                <tr className="text-[#9b95ad] border-b border-white/[0.08] bg-white/[0.02]">
+                  <th className="text-left px-4 py-3 font-medium">Capacidade</th>
+                  {COMPARE_COLS.map((c, i) => <th key={c} className={`px-3 py-3 font-semibold text-center ${i === COMPARE_COLS.length - 1 ? "text-cyan-300" : "text-[#9b95ad]"}`}>{c}</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {COMPARE_ROWS.map((r) => (
+                  <tr key={r[0]} className="border-b border-white/[0.04]">
+                    <td className="px-4 py-2.5 text-[#c9c5d6]">{r[0]}</td>
+                    {r.slice(1).map((v, i) => (
+                      <td key={i} className={`px-3 py-2.5 text-center text-lg ${i === 3 ? "bg-purple-500/[0.06]" : ""}`}>
+                        <span className={v === "✓" ? "text-emerald-400" : v === "~" ? "text-amber-400" : "text-[#4a4560]"}>{v}</span>
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="text-xs text-[#6b6580] mt-2">✓ tem · ~ parcial · ✗ não tem</p>
+        </section>
+
+        {/* Confiança / segurança */}
+        <section className="py-12 border-t border-white/[0.06]">
+          <h2 className="text-xl sm:text-2xl font-bold text-center mb-7">Seguro para o ambiente do seu cliente</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {TRUST.map(([ic, t]) => (
+              <div key={t} className="bg-[#1a1527] border border-white/[0.08] rounded-xl p-4 flex items-center gap-3">
+                <span className="text-xl shrink-0">{ic}</span><span className="text-sm text-[#c9c5d6] leading-tight">{t}</span>
+              </div>
+            ))}
+          </div>
+          <p className="text-center text-xs text-[#6b6580] mt-4">Veja <a href="/termos" className="text-purple-300 underline">Termos</a> · <a href="/privacidade" className="text-purple-300 underline">Privacidade (LGPD)</a> · <a href="/contrato" className="text-purple-300 underline">Contrato/SLA</a></p>
+        </section>
+
         <section id="planos" className="py-14 sm:py-16 border-t border-white/[0.06]">
           <h2 className="text-2xl sm:text-3xl font-bold mb-2">Planos</h2>
           <p className="text-[#9b95ad] mb-2">Add-ons de integração e usuário extra. Cobrança automática ou avulsa.</p>
