@@ -45,10 +45,12 @@ export default function TechBackground() {
     const LINK = 180, MOUSE_R = 220;
     const at = (pk: Packet, t: number) => { const a = nodes[pk.a], b = nodes[pk.b]; return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t }; };
 
-    let frame = 0; let last = 0; const FPS = 30, MIN_DT = 1000 / FPS;
+    let frame = 0; let last = 0; let running = false; let lastInteract = 0; const FPS = 30, MIN_DT = 1000 / FPS, IDLE = 4500;
     const draw = (ts?: number) => {
-      if (!reduce) raf = requestAnimationFrame(draw);
       const now = ts || 0;
+      // pausa quando ocioso (deixa a página "idle" → economiza bateria/CPU)
+      if (now - lastInteract > IDLE) { running = false; return; }
+      raf = requestAnimationFrame(draw);
       if (now - last < MIN_DT) return; // throttle ~30fps
       last = now;
       frame++;
@@ -120,16 +122,21 @@ export default function TechBackground() {
       }
     };
 
-    const onMove = (e: MouseEvent) => { mouse.x = e.clientX; mouse.y = e.clientY; mouse.on = true; };
+    // (re)inicia o loop ao interagir; pausa sozinho após IDLE de inatividade
+    const kick = () => { lastInteract = (typeof performance !== "undefined" ? performance.now() : 0); if (!running && !reduce && !document.hidden) { running = true; last = 0; raf = requestAnimationFrame(draw); } };
+    const onMove = (e: MouseEvent) => { mouse.x = e.clientX; mouse.y = e.clientY; mouse.on = true; kick(); };
     const onLeave = () => { mouse.on = false; };
+    const onScroll = () => kick();
+    const onVis = () => { if (document.hidden) { running = false; cancelAnimationFrame(raf); } else kick(); };
 
-    const onVis = () => { if (document.hidden) { cancelAnimationFrame(raf); } else if (!reduce) { last = 0; raf = requestAnimationFrame(draw); } };
-    if (reduce) draw(1e9); else raf = requestAnimationFrame(draw);
+    if (reduce) draw(1e9); else kick();
     window.addEventListener("resize", resize);
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseout", onLeave);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("touchstart", onScroll, { passive: true });
     document.addEventListener("visibilitychange", onVis);
-    return () => { cancelAnimationFrame(raf); window.removeEventListener("resize", resize); window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseout", onLeave); document.removeEventListener("visibilitychange", onVis); };
+    return () => { cancelAnimationFrame(raf); window.removeEventListener("resize", resize); window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseout", onLeave); window.removeEventListener("scroll", onScroll); window.removeEventListener("touchstart", onScroll); document.removeEventListener("visibilitychange", onVis); };
   }, []);
 
   // sem máscara vertical (evita a faixa de gradiente forte no topo) — canvas uniforme e sutil
