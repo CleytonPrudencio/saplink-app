@@ -328,9 +328,136 @@ function RoiCalc({ onInterest }: { onInterest: () => void }) {
   );
 }
 
+// Isca de lead: e-mail → baixa o deck de vendas (PDF)
+function LeadMagnet() {
+  const [email, setEmail] = useState("");
+  const [done, setDone] = useState(false);
+  const [sending, setSending] = useState(false);
+  async function go(e: React.FormEvent) {
+    e.preventDefault(); setSending(true);
+    try { await submitLead({ name: email.split("@")[0] || "Material", email, message: "Baixou o deck de vendas (lead magnet)" }); }
+    catch { /* mesmo se falhar o lead, libera o material */ }
+    finally { setSending(false); setDone(true); }
+  }
+  return (
+    <div className="rounded-2xl p-6 sm:p-8 bg-[#1a1527] border border-white/[0.08] grid md:grid-cols-2 gap-6 items-center">
+      <div>
+        <p className="text-xs font-bold uppercase tracking-wider text-emerald-300 mb-2">Material gratuito</p>
+        <h3 className="text-xl sm:text-2xl font-bold">Deck de vendas do SAPLINK (PDF)</h3>
+        <p className="text-sm text-[#9b95ad] mt-2 leading-relaxed">A visão completa pra apresentar internamente ou ao cliente: o que monitora, como gera receita recorrente e prova de valor em R$.</p>
+      </div>
+      {done ? (
+        <div className="text-center bg-[#0f0b1a] rounded-xl p-6 border border-emerald-500/20">
+          <p className="text-emerald-300 font-semibold mb-3">✓ Pronto! Seu material está liberado.</p>
+          <a href="/deck-saplink.pdf" target="_blank" rel="noreferrer" download className="inline-block px-5 py-2.5 rounded-lg bg-gradient-to-r from-purple-600 to-cyan-500 text-white text-sm font-semibold cursor-pointer">⬇ Baixar o deck (PDF)</a>
+        </div>
+      ) : (
+        <form onSubmit={go} className="flex flex-col sm:flex-row gap-2">
+          <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seu@email.com" className="flex-1 bg-[#0f0b1a] border border-white/[0.1] rounded-lg px-4 py-3 text-sm" />
+          <button type="submit" disabled={sending} className="px-5 py-3 rounded-lg bg-gradient-to-r from-purple-600 to-cyan-500 text-white text-sm font-semibold disabled:opacity-50 cursor-pointer whitespace-nowrap">{sending ? "Liberando…" : "Receber o material"}</button>
+        </form>
+      )}
+    </div>
+  );
+}
+
+// Barra de progresso de scroll (topo)
+function ScrollProgress() {
+  const [p, setP] = useState(0);
+  useEffect(() => {
+    const on = () => { const h = document.documentElement; const max = h.scrollHeight - h.clientHeight; setP(max > 0 ? (h.scrollTop / max) * 100 : 0); };
+    on(); window.addEventListener("scroll", on, { passive: true }); window.addEventListener("resize", on);
+    return () => { window.removeEventListener("scroll", on); window.removeEventListener("resize", on); };
+  }, []);
+  return <div className="fixed top-0 left-0 right-0 z-[55] h-0.5 pointer-events-none"><div className="h-full bg-gradient-to-r from-purple-500 via-cyan-400 to-emerald-400" style={{ width: `${p}%` }} /></div>;
+}
+
+// Demo interativa — clique e veja a IA agir (sem cadastro). Roteiro encenado.
+function TryDemo() {
+  const [lines, setLines] = useState<string[]>([]);
+  const [running, setRunning] = useState(false);
+  const SCRIPT = [
+    "🔎 Lendo o Message Processing Log do iFlow ‘Pedidos B2B’…",
+    "⚠️ Causa raiz: Sold-to party 0001234 não existe no S/4HANA.",
+    "🛠️ Correção: criar/checar o BP (XD01/BP) e reprocessar a mensagem.",
+    "📋 SAP Note provável: 2900000 — Sales Order replication error.",
+    "✅ Correção pronta pra aplicar (com aprovação · trava de produção).",
+  ];
+  function run() {
+    setRunning(true); setLines([]);
+    SCRIPT.forEach((l, i) => setTimeout(() => { setLines((p) => [...p, l]); if (i === SCRIPT.length - 1) setRunning(false); }, 600 * (i + 1)));
+  }
+  return (
+    <div className="bg-[#1a1527] border border-purple-500/25 rounded-2xl p-5 max-w-2xl mx-auto">
+      <div className="flex items-center justify-between gap-3 bg-[#0f0b1a] rounded-lg px-3 py-2.5 mb-3">
+        <span className="text-sm text-[#e2e0ea]">❌ CPI · Pedidos B2B — <span className="text-rose-300">FALHA</span> <span className="text-[#6b6580] font-mono text-xs">msg 9f2a…</span></span>
+        <button onClick={run} disabled={running} className="text-xs px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-cyan-500 text-white font-semibold disabled:opacity-50 cursor-pointer shrink-0">{running ? "Diagnosticando…" : "🤖 Diagnosticar"}</button>
+      </div>
+      <div className="min-h-[150px] space-y-1.5">
+        {lines.length === 0 && <p className="text-sm text-[#6b6580]">Clique em “Diagnosticar” e veja a IA achar a causa raiz e a correção — sem cadastro.</p>}
+        {lines.map((l, i) => <p key={i} className="text-sm text-[#c9c5d6]" style={{ animation: "slk-rise .4s ease" }}>{l}</p>)}
+      </div>
+    </div>
+  );
+}
+
+// Antes / Depois com régua arrastável
+function BeforeAfter() {
+  const [pos, setPos] = useState(50);
+  return (
+    <div className="relative max-w-3xl mx-auto select-none">
+      <div className="relative h-64 sm:h-72 rounded-2xl overflow-hidden border border-white/[0.1]">
+        {/* Depois (fundo) */}
+        <div className="absolute inset-0 bg-gradient-to-br from-purple-600/15 to-cyan-500/10 p-5">
+          <p className="text-xs font-bold text-cyan-300 mb-2">DEPOIS · com SAPLINK</p>
+          <p className="text-sm text-[#e2e0ea]">Radar único da carteira · alertas priorizados · IA diagnostica e corrige · R$ em risco ao vivo · SLA por cliente.</p>
+          <div className="mt-4 flex gap-2 flex-wrap">{["health 92", "0 portas abertas", "−70% downtime", "prova em R$"].map((t) => <span key={t} className="text-[11px] px-2 py-1 rounded-full bg-white/[0.08] text-emerald-200">{t}</span>)}</div>
+        </div>
+        {/* Antes (clipado) */}
+        <div className="absolute inset-0 bg-[#15101f] p-5" style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}>
+          <p className="text-xs font-bold text-rose-300 mb-2">ANTES · reativo</p>
+          <p className="text-sm text-[#9b95ad]">Planilha, transação por transação, cliente por cliente. IDoc travado descoberto tarde. Cliente liga antes de você ver.</p>
+          <div className="mt-4 flex gap-2 flex-wrap">{["sem visão única", "apaga incêndio", "valor invisível"].map((t) => <span key={t} className="text-[11px] px-2 py-1 rounded-full bg-white/[0.06] text-[#9b95ad]">{t}</span>)}</div>
+        </div>
+        {/* Linha */}
+        <div className="absolute top-0 bottom-0 w-0.5 bg-cyan-400/70" style={{ left: `${pos}%` }} />
+      </div>
+      <input type="range" min={0} max={100} value={pos} onChange={(e) => setPos(Number(e.target.value))} className="w-full mt-3 accent-cyan-400 cursor-pointer" aria-label="Arraste para comparar antes e depois" />
+      <p className="text-center text-xs text-[#6b6580] mt-1">← arraste para comparar →</p>
+    </div>
+  );
+}
+
+// Fluxo de dados animado
+function FlowDiagram() {
+  const nodes = [["🗄️", "SAP do cliente", "S/4 · ECC · CPI"], ["🔌", "Agente / Conector", "saída-only · OData"], ["◆", "SAPLINK", "IA · multi-cliente"], ["✅", "Ação & valor", "alerta · correção · R$"]];
+  return (
+    <div className="flex flex-col sm:flex-row items-stretch gap-2 sm:gap-1 max-w-5xl mx-auto">
+      {nodes.map((n, i) => (
+        <div key={n[1]} className="flex items-center gap-2 flex-1">
+          <div className="flex-1 bg-[#1a1527] border border-white/[0.1] rounded-xl p-4 text-center">
+            <div className="text-2xl mb-1">{n[0]}</div>
+            <p className="font-semibold text-sm">{n[1]}</p>
+            <p className="text-[11px] text-[#9b95ad] mt-0.5">{n[2]}</p>
+          </div>
+          {i < nodes.length - 1 && (
+            <div className="relative hidden sm:block w-10 h-6 shrink-0">
+              <div className="absolute top-1/2 left-0 right-1 h-px bg-white/[0.15]" />
+              <span className="slk-flowdot" style={{ background: "#a78bfa", animationDelay: `${i * 0.5}s` }} />
+              <span className="slk-flowdot" style={{ background: "#22d3ee", animationDelay: `${i * 0.5 + 1.3}s` }} />
+              <span className="absolute right-0 top-1/2 -translate-y-1/2 text-purple-400 text-xs">▸</span>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function LandingPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
+  const [annual, setAnnual] = useState(false);
   const [interest, setInterest] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [feature, setFeature] = useState<{ icon: string; name: string; tagline: string; accent: string } | null>(null);
@@ -352,6 +479,14 @@ export default function LandingPage() {
           publisher: { "@type": "Organization", name: "SAPLINK", url: "https://saplink.com.br" },
         }) }}
       />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify({
+          "@context": "https://schema.org", "@type": "FAQPage",
+          mainEntity: FAQ.map(([q, a]) => ({ "@type": "Question", name: q, acceptedAnswer: { "@type": "Answer", text: a } })),
+        }) }}
+      />
+      <ScrollProgress />
       <InterestModal open={interest} onClose={() => setInterest(false)} />
       <FeatureModal feature={feature} onClose={() => setFeature(null)} onInterest={() => setInterest(true)} />
 
@@ -394,7 +529,10 @@ export default function LandingPage() {
         .slk-marquee:hover { animation-play-state:paused; }
         .slk-tilt { transition:transform .25s ease, box-shadow .25s ease; }
         .slk-tilt:hover { transform:translateY(-4px); box-shadow:0 12px 40px rgba(124,58,237,.18); }
-        @media (prefers-reduced-motion: reduce){ .slk-grad,.slk-float,.slk-bar,.slk-marquee{animation:none!important} }
+        @keyframes slk-flow { 0%{left:-6%;opacity:0} 12%{opacity:1} 88%{opacity:1} 100%{left:104%;opacity:0} }
+        @keyframes slk-rise { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+        .slk-flowdot { position:absolute; top:50%; width:7px; height:7px; border-radius:9999px; margin-top:-3.5px; animation:slk-flow 2.6s linear infinite; }
+        @media (prefers-reduced-motion: reduce){ .slk-grad,.slk-float,.slk-bar,.slk-marquee,.slk-flowdot{animation:none!important} }
       `}</style>
 
       <main id="top" className="max-w-6xl mx-auto px-4 sm:px-5">
@@ -521,6 +659,12 @@ export default function LandingPage() {
             </Reveal>
           </div>
           <p className="text-center text-xs text-[#6b6580] mt-4">Telas representativas da interface do produto.</p>
+
+          <div className="mt-10">
+            <p className="text-center text-sm font-semibold text-[#e2e0ea] mb-1">Experimente a IA agora — sem cadastro</p>
+            <p className="text-center text-xs text-[#9b95ad] mb-5">Uma falha de CPI de exemplo. Clique e veja o diagnóstico + correção.</p>
+            <TryDemo />
+          </div>
         </section>
 
         {/* Calculadora de ROI */}
@@ -544,11 +688,14 @@ export default function LandingPage() {
               </div>
             ))}
           </div>
+          <div className="mt-10"><BeforeAfter /></div>
         </section>
 
         {/* Como funciona + fluxo */}
         <section id="como" className="py-14 sm:py-16 border-t border-white/[0.06]">
-          <h2 className="text-2xl sm:text-3xl font-bold mb-8">Como funciona</h2>
+          <h2 className="text-2xl sm:text-3xl font-bold mb-2">Como funciona</h2>
+          <p className="text-[#9b95ad] mb-8">Do SAP do cliente à ação — o dado flui só de saída, sem abrir portas.</p>
+          <div className="mb-10"><FlowDiagram /></div>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-10">
             {FLOW.map((s, i) => (
               <div key={s} className="flex items-center gap-3 flex-1">
@@ -680,19 +827,42 @@ export default function LandingPage() {
               </div>
             ))}
           </div>
-          <p className="text-center text-xs text-[#6b6580] mt-4">Veja <a href="/termos" className="text-purple-300 underline">Termos</a> · <a href="/privacidade" className="text-purple-300 underline">Privacidade (LGPD)</a> · <a href="/contrato" className="text-purple-300 underline">Contrato/SLA</a></p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
+            {[
+              ["🇧🇷 Dados no Brasil", "Hospedagem e dados sob LGPD; você é o controlador, o SAPLINK é operador."],
+              ["🔐 Acesso mínimo", "Conexão por APIs liberadas / Communication Arrangement. Sem S-user, sem add-on, sem porta de entrada."],
+              ["✋ Mudança no SAP só com aval", "Toda remediação é aprovar→executar→log. Em produção, confirmação extra (trava de PRD)."],
+            ].map(([t, d]) => (
+              <div key={t} className="bg-[#1a1527] border border-white/[0.08] rounded-xl p-5">
+                <p className="font-semibold text-[#e2e0ea]">{t}</p>
+                <p className="text-sm text-[#9b95ad] mt-1 leading-relaxed">{d}</p>
+              </div>
+            ))}
+          </div>
+          <p className="text-center text-xs text-[#6b6580] mt-5">Certificações SOC 2 / ISO 27001 no roadmap. · Veja <a href="/termos" className="text-purple-300 underline">Termos</a> · <a href="/privacidade" className="text-purple-300 underline">Privacidade (LGPD)</a> · <a href="/contrato" className="text-purple-300 underline">Contrato/SLA</a></p>
         </section>
 
         <section id="planos" className="py-14 sm:py-16 border-t border-white/[0.06]">
           <h2 className="text-2xl sm:text-3xl font-bold mb-2">Planos</h2>
           <p className="text-[#9b95ad] mb-2">Add-ons de integração e usuário extra. Cobrança automática ou avulsa.</p>
-          <p className="text-sm text-[#c9c5d6] mb-8">🎁 <b>1ª mensalidade grátis</b> nos planos Business e Enterprise · Pro com <b>50% OFF</b> no 1º mês · fidelidade mínima de 3 meses (veja o <Link href="/contrato" className="text-purple-300 underline">contrato</Link>).</p>
+          <p className="text-sm text-[#c9c5d6] mb-6">🎁 <b>1ª mensalidade grátis</b> nos planos Business e Enterprise · Pro com <b>50% OFF</b> no 1º mês · fidelidade mínima de 3 meses (veja o <Link href="/contrato" className="text-purple-300 underline">contrato</Link>).</p>
+          <div className="flex items-center justify-center gap-3 mb-8">
+            <span className={`text-sm ${!annual ? "text-white font-semibold" : "text-[#9b95ad]"}`}>Mensal</span>
+            <button onClick={() => setAnnual((v) => !v)} className={`relative w-12 h-6 rounded-full transition cursor-pointer ${annual ? "bg-emerald-500" : "bg-white/[0.15]"}`} aria-label="Alternar mensal/anual">
+              <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${annual ? "translate-x-6" : ""}`} />
+            </button>
+            <span className={`text-sm ${annual ? "text-white font-semibold" : "text-[#9b95ad]"}`}>Anual <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 ml-1">2 meses grátis</span></span>
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
             {plans.map((p) => (
               <div key={p.key} className={`relative bg-[#1a1527] rounded-xl p-5 border flex flex-col ${p.highlight ? "border-purple-500/60 shadow-[0_0_25px_rgba(124,58,237,0.15)]" : "border-white/[0.08]"}`}>
                 {p.highlight && <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full text-[10px] font-bold bg-gradient-to-r from-purple-600 to-cyan-500 text-white whitespace-nowrap">MAIS POPULAR</span>}
                 <h3 className="text-lg font-semibold">{p.name}</h3>
-                <p className="text-2xl font-bold mt-1">{brl(p.priceCents)}<span className="text-sm font-normal text-[#9b95ad]">/mês</span></p>
+                {annual ? (
+                  <p className="text-2xl font-bold mt-1">{brl(p.priceCents * 10)}<span className="text-sm font-normal text-[#9b95ad]">/ano</span><span className="block text-xs font-normal text-emerald-300 mt-0.5">≈ {brl(Math.round(p.priceCents * 10 / 12))}/mês · 2 meses grátis</span></p>
+                ) : (
+                  <p className="text-2xl font-bold mt-1">{brl(p.priceCents)}<span className="text-sm font-normal text-[#9b95ad]">/mês</span></p>
+                )}
                 {p.description && <p className="text-xs text-[#9b95ad] mt-2 min-h-[32px]">{p.description}</p>}
                 <ul className="text-sm text-[#c9c5d6] mt-4 space-y-1.5 flex-1">
                   <li>✓ {p.maxClients >= 999 ? "Clientes ilimitados" : `${p.maxClients} clientes`}</li>
@@ -721,6 +891,11 @@ export default function LandingPage() {
               </div>
             ))}
           </div>
+        </section>
+
+        {/* Lead magnet */}
+        <section className="py-12 border-t border-white/[0.06]">
+          <LeadMagnet />
         </section>
 
         {/* CTA final */}

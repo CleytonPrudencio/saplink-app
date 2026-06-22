@@ -129,14 +129,16 @@ export default function TechBackground() {
     const onScroll = () => kick();
     const onVis = () => { if (document.hidden) { running = false; cancelAnimationFrame(raf); } else kick(); };
 
-    if (reduce) draw(1e9); else kick();
+    // adia o início pra não competir com o LCP (melhor Core Web Vitals)
+    let bootT: ReturnType<typeof setTimeout> | null = null;
+    if (reduce) draw(1e9); else bootT = setTimeout(kick, 900);
     window.addEventListener("resize", resize);
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseout", onLeave);
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("touchstart", onScroll, { passive: true });
     document.addEventListener("visibilitychange", onVis);
-    return () => { cancelAnimationFrame(raf); window.removeEventListener("resize", resize); window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseout", onLeave); window.removeEventListener("scroll", onScroll); window.removeEventListener("touchstart", onScroll); document.removeEventListener("visibilitychange", onVis); };
+    return () => { if (bootT) clearTimeout(bootT); cancelAnimationFrame(raf); window.removeEventListener("resize", resize); window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseout", onLeave); window.removeEventListener("scroll", onScroll); window.removeEventListener("touchstart", onScroll); document.removeEventListener("visibilitychange", onVis); };
   }, []);
 
   // sem máscara vertical (evita a faixa de gradiente forte no topo) — canvas uniforme e sutil
