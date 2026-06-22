@@ -2,6 +2,58 @@
 
 interface Topic { icon: string; name: string; what: string; how: string; do: string }
 interface Chapter { title: string; color: string; intro: string; topics: Topic[] }
+interface SetupGuide { icon: string; name: string; intro: string; steps: string[]; fields: { label: string; value: string }[] }
+
+const REDIRECT_URI = "https://saplink.com.br/api/auth/sso/callback";
+
+const SSO_SETUP: SetupGuide[] = [
+  {
+    icon: "🟦", name: "Microsoft / Azure AD (Entra ID)",
+    intro: "Para clientes Microsoft 365 / Entra ID. Você precisa de acesso de admin ao tenant do cliente.",
+    steps: [
+      "Acesse portal.azure.com → Microsoft Entra ID → App registrations → New registration.",
+      "Dê um nome (ex.: SAPLINK). Em Redirect URI, escolha a plataforma Web e cole o callback abaixo. Clique Register.",
+      "Na visão geral do app, copie o Application (client) ID e o Directory (tenant) ID.",
+      "Vá em Certificates & secrets → New client secret → copie o Value (o campo Value, não o Secret ID).",
+      "Em API permissions, garanta openid, email e profile (Microsoft Graph, delegated) e dê Grant admin consent.",
+      "No SAPLINK (SSO corporativo): provedor Microsoft, cole Client ID e Client Secret, e monte o Issuer com o tenant. Habilite e salve.",
+    ],
+    fields: [
+      { label: "Redirect URI (cadastre como Web)", value: REDIRECT_URI },
+      { label: "Issuer", value: "https://login.microsoftonline.com/SEU_TENANT_ID/v2.0" },
+    ],
+  },
+  {
+    icon: "🟥", name: "Google Workspace",
+    intro: "Para clientes Google Workspace. Use uma conta admin do Google Cloud do cliente.",
+    steps: [
+      "Acesse console.cloud.google.com → APIs & Services → OAuth consent screen → tipo Internal → preencha os dados básicos.",
+      "Vá em Credentials → Create Credentials → OAuth client ID → Application type: Web application.",
+      "Em Authorized redirect URIs, adicione o callback abaixo. Clique Create.",
+      "Copie o Client ID e o Client Secret exibidos.",
+      "No SAPLINK (SSO corporativo): provedor Google, cole Client ID e Secret. O Issuer é fixo. Habilite e salve.",
+    ],
+    fields: [
+      { label: "Authorized redirect URI", value: REDIRECT_URI },
+      { label: "Issuer (fixo)", value: "https://accounts.google.com" },
+    ],
+  },
+  {
+    icon: "🟪", name: "Okta",
+    intro: "Para clientes que usam Okta como IdP. Use o Okta Admin Console do cliente.",
+    steps: [
+      "No Okta Admin Console → Applications → Create App Integration → OIDC - OpenID Connect → Web Application.",
+      "Em Sign-in redirect URIs, cole o callback abaixo. Em Assignments, defina os grupos/usuários que poderão entrar.",
+      "Após criar, copie o Client ID e o Client secret.",
+      "Pegue o Issuer em Security → API → Authorization Servers (copie o Issuer URI; normalmente termina em /oauth2/default).",
+      "No SAPLINK (SSO corporativo): provedor Okta, cole Client ID, Secret e o Issuer. Habilite e salve.",
+    ],
+    fields: [
+      { label: "Sign-in redirect URI", value: REDIRECT_URI },
+      { label: "Issuer (exemplo)", value: "https://SEU_DOMINIO.okta.com/oauth2/default" },
+    ],
+  },
+];
 
 const EBOOK: Chapter[] = [
   {
@@ -95,6 +147,47 @@ export default function GuiaPage() {
           </div>
         </section>
       ))}
+
+      {/* Configuração técnica — SSO + conectores */}
+      <section>
+        <h2 className="text-xl font-bold" style={{ color: "#c084fc" }}>7. Configuração técnica (admin)</h2>
+        <p className="text-sm text-[#9b95ad] mt-1 mb-4">Passo-a-passo para conectar o login corporativo (SSO) e os produtos SAP Cloud do cliente. Tudo é por cliente: cada um usa as próprias credenciais.</p>
+
+        <div className="bg-purple-500/[0.06] border border-purple-500/20 rounded-xl p-4 mb-4">
+          <h3 className="font-semibold text-[#e2e0ea] mb-1">🔐 SSO / Login corporativo</h3>
+          <p className="text-sm text-[#c9c5d6]">Escolha o provedor de identidade do cliente abaixo. Em todos, o segredo: cadastrar o <b>Redirect URI</b> do SAPLINK no IdP e colar Client ID, Client Secret e Issuer na tela <b>SSO corporativo</b>. Importante: o usuário precisa <b>já existir no SAPLINK com o mesmo e-mail</b> — o SSO autentica, não cria conta sozinho.</p>
+        </div>
+
+        <div className="space-y-3">
+          {SSO_SETUP.map((g) => (
+            <div key={g.name} className="bg-[#1a1527] border border-white/[0.08] rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-1"><span className="text-xl">{g.icon}</span><h3 className="font-semibold text-[#e2e0ea]">{g.name}</h3></div>
+              <p className="text-sm text-[#9b95ad] mb-3">{g.intro}</p>
+              <ol className="list-decimal list-inside space-y-1.5 text-sm text-[#c9c5d6] mb-3">
+                {g.steps.map((s, i) => <li key={i}>{s}</li>)}
+              </ol>
+              <div className="space-y-1.5">
+                {g.fields.map((f) => (
+                  <div key={f.label} className="bg-[#0f0b1a] border border-white/[0.08] rounded-lg px-3 py-2">
+                    <p className="text-[11px] uppercase tracking-wider text-[#6b6580]">{f.label}</p>
+                    <code className="text-xs text-purple-200 break-all">{f.value}</code>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="bg-[#1a1527] border border-white/[0.08] rounded-xl p-4 mt-3">
+          <div className="flex items-center gap-2 mb-1"><span className="text-xl">🔌</span><h3 className="font-semibold text-[#e2e0ea]">Conectores Ariba / SuccessFactors</h3></div>
+          <p className="text-sm text-[#9b95ad] mb-3">Para monitorar Ariba e SuccessFactors além do S/4. Cada produto usa a API Key do cliente.</p>
+          <ol className="list-decimal list-inside space-y-1.5 text-sm text-[#c9c5d6]">
+            <li>No SAP Business Accelerator Hub (api.sap.com) ou no tenant do cliente, gere/obtenha a <b>API Key</b> do produto.</li>
+            <li>No SAPLINK, vá em <b>Conectores (Ariba/SF)</b>, escolha o cliente e o produto, clique <b>Conectar</b> e cole a API Key (a base URL já vem preenchida com o sandbox).</li>
+            <li>Clique <b>Sincronizar</b>: as APIs alcançadas entram no inventário e aparecem no <b>Catálogo vivo</b>.</li>
+          </ol>
+        </div>
+      </section>
 
       <p className="text-xs text-[#6b6580] no-print">Dica: cada tela do sistema também tem o guia rápido (💡) no topo e o botão "🤖 Explique e recomende" que lê os dados reais e sugere a próxima ação.</p>
     </div>
