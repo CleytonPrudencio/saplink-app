@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { login, ssoProviderForEmail, API_BASE } from "@/lib/api";
+import Logo from "@/components/Logo";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -55,11 +56,9 @@ export default function LoginPage() {
   return (
     <div className="w-full max-w-md">
       <div className="bg-[#1a1527] rounded-2xl p-8 border border-white/[0.08] shadow-2xl">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-500 to-cyan-400 bg-clip-text text-transparent">
-            ◆ SAPLINK
-          </h1>
-          <p className="text-[#9b95ad] mt-2">Integration Health Monitor</p>
+        <div className="flex flex-col items-center mb-8">
+          <Logo size={44} />
+          <p className="text-[#9b95ad] mt-3">Integration Health Monitor</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">

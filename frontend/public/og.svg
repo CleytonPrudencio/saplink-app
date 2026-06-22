@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630" font-family="Inter, ui-sans-serif, system-ui, sans-serif">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#a78bfa"/><stop offset=".55" stop-color="#22d3ee"/><stop offset="1" stop-color="#34d399"/>
+    </linearGradient>
+    <linearGradient id="t" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#a78bfa"/><stop offset="1" stop-color="#22d3ee"/>
+    </linearGradient>
+    <radialGradient id="bg" cx="0.7" cy="0.1" r="0.9">
+      <stop offset="0" stop-color="#1b1430"/><stop offset="1" stop-color="#0f0b1a"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <g transform="translate(110,150)">
+    <rect x="0" y="0" width="120" height="120" rx="30" fill="none" stroke="url(#g)" stroke-width="8"/>
+    <path d="M16 64 H46 L57 40 L70 92 L80 64 H104" fill="none" stroke="url(#g)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="104" cy="64" r="9" fill="#34d399"/>
+    <text x="150" y="88" font-size="84" font-weight="800" letter-spacing="-2"><tspan fill="url(#t)">SAP</tspan><tspan fill="#e2e0ea">LINK</tspan></text>
+  </g>
+  <text x="112" y="380" font-size="46" font-weight="700" fill="#e2e0ea">Monitore, preveja, corrija e prove valor em R$</text>
+  <text x="112" y="438" font-size="46" font-weight="700" fill="#9b95ad">nas integrações SAP — do IDoc ao S/4HANA Cloud.</text>
+  <g fill="#9b95ad" font-size="26" font-weight="600">
+    <text x="112" y="520">18+ produtos SAP</text>
+    <text x="360" y="520">· IA de ponta a ponta</text>
+    <text x="690" y="520">· multi-cliente · white-label</text>
+  </g>
+  <rect x="112" y="548" width="976" height="3" rx="1.5" fill="url(#g)"/>
+</svg>

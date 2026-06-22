@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Logo from "@/components/Logo";
 import { usePathname, useRouter } from "next/navigation";
 
 interface User {
@@ -152,10 +153,12 @@ export default function Sidebar({ user, consultancy }: SidebarProps) {
             <h1 className="text-2xl font-bold" style={{ color: consultancy.primaryColor }}>
               ◆ {consultancy.name || "SAPLINK"}
             </h1>
-          ) : (
+          ) : consultancy?.name ? (
             <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-500 to-cyan-400 bg-clip-text text-transparent">
-              ◆ {consultancy?.name || "SAPLINK"}
+              ◆ {consultancy.name}
             </h1>
+          ) : (
+            <Logo size={30} />
           )}
         </Link>
       </div>

@@ -24,7 +24,10 @@ export const metadata: Metadata = {
   appleWebApp: { capable: true, title: "SAPLINK", statusBarStyle: "black-translucent" },
   keywords: ["SAP", "integração", "monitoramento", "S/4HANA Cloud", "CPI", "IDoc", "AMS", "consultoria SAP"],
   icons: {
-    icon: [{ url: "/icon.png", type: "image/png" }],
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/icon.png", type: "image/png", sizes: "512x512" },
+    ],
     apple: [{ url: "/apple-icon.png" }],
   },
   openGraph: {

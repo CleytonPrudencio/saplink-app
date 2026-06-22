@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { getPublicPlans, submitLead } from "@/lib/api";
 import FeatureModal from "@/components/landing/FeatureModal";
+import Logo from "@/components/Logo";
 
 interface Plan {
   key: string; name: string; description?: string; priceCents: number;
@@ -278,7 +279,7 @@ export default function LandingPage() {
       {/* Header */}
       <header className="sticky top-0 z-50 bg-[#0f0b1a] border-b border-white/[0.06]">
         <div className="max-w-6xl mx-auto px-4 sm:px-5 h-16 flex items-center justify-between gap-3">
-          <a href="#top" className="text-lg sm:text-xl font-extrabold bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent shrink-0">◆ SAPLINK</a>
+          <a href="#top" className="shrink-0"><Logo size={30} /></a>
           <nav className="hidden lg:flex items-center gap-6 text-sm text-[#9b95ad]">
             {NAV.map((n) => <a key={n.id} href={`#${n.id}`} className="hover:text-white transition">{n.label}</a>)}
           </nav>
@@ -538,7 +539,7 @@ export default function LandingPage() {
 
       <footer className="border-t border-white/[0.06]">
         <div className="max-w-6xl mx-auto px-4 sm:px-5 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-[#9b95ad] text-center sm:text-left">
-          <span>◆ SAPLINK © {new Date().getFullYear()} — Operação de integrações SAP</span>
+          <span className="flex items-center gap-2"><Logo size={22} /> © {new Date().getFullYear()} — Operação de integrações SAP</span>
           <div className="flex gap-5">
             <Link href="/termos" className="hover:text-white transition">Termos</Link>
             <Link href="/privacidade" className="hover:text-white transition">Privacidade</Link>
