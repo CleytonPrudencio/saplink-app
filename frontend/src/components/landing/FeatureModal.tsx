@@ -611,7 +611,7 @@ export default function FeatureModal({ feature, onClose, onInterest }: { feature
   const accent = feature.accent;
 
   return (
-    <div className="fixed inset-0 z-[60] bg-[#0f0b1a]/30 backdrop-blur-xl flex items-start sm:items-center justify-center p-0 sm:p-6 overflow-y-auto" onClick={onClose}>
+    <div className="fixed inset-0 z-[60] bg-[#0f0b1a]/30 backdrop-blur-xl flex items-start justify-center p-0 sm:p-6 overflow-y-auto" onClick={onClose}>
       <div className="bg-[#211a3a] w-full sm:rounded-2xl ring-1 ring-purple-400/20 border border-white/[0.12] sm:my-6 min-h-screen sm:min-h-0 max-w-full sm:max-w-3xl lg:max-w-6xl shadow-[0_24px_90px_rgba(0,0,0,0.7)]" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="sticky top-0 z-10 flex items-center gap-3 px-5 sm:px-7 py-4 border-b border-white/[0.1] bg-gradient-to-r from-[#2a2150] to-[#211a3a] sm:rounded-t-2xl">

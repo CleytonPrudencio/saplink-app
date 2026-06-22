@@ -45,8 +45,12 @@ export default function TechBackground() {
     const LINK = 180, MOUSE_R = 220;
     const at = (pk: Packet, t: number) => { const a = nodes[pk.a], b = nodes[pk.b]; return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t }; };
 
-    let frame = 0;
-    const draw = () => {
+    let frame = 0; let last = 0; const FPS = 30, MIN_DT = 1000 / FPS;
+    const draw = (ts?: number) => {
+      if (!reduce) raf = requestAnimationFrame(draw);
+      const now = ts || 0;
+      if (now - last < MIN_DT) return; // throttle ~30fps
+      last = now;
       frame++;
       ctx.clearRect(0, 0, w, h);
 
@@ -114,18 +118,18 @@ export default function TechBackground() {
           ctx.beginPath(); ctx.arc(p.x, p.y, 1.7, 0, Math.PI * 2); ctx.fill();
         }
       }
-
-      raf = requestAnimationFrame(draw);
     };
 
     const onMove = (e: MouseEvent) => { mouse.x = e.clientX; mouse.y = e.clientY; mouse.on = true; };
     const onLeave = () => { mouse.on = false; };
 
-    if (reduce) draw(); else raf = requestAnimationFrame(draw);
+    const onVis = () => { if (document.hidden) { cancelAnimationFrame(raf); } else if (!reduce) { last = 0; raf = requestAnimationFrame(draw); } };
+    if (reduce) draw(1e9); else raf = requestAnimationFrame(draw);
     window.addEventListener("resize", resize);
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseout", onLeave);
-    return () => { cancelAnimationFrame(raf); window.removeEventListener("resize", resize); window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseout", onLeave); };
+    document.addEventListener("visibilitychange", onVis);
+    return () => { cancelAnimationFrame(raf); window.removeEventListener("resize", resize); window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseout", onLeave); document.removeEventListener("visibilitychange", onVis); };
   }, []);
 
   // sem máscara vertical (evita a faixa de gradiente forte no topo) — canvas uniforme e sutil
