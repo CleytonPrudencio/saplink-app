@@ -283,7 +283,8 @@ export default function LandingPage() {
         {/* Planos */}
         <section id="planos" className="py-14 sm:py-16 border-t border-white/[0.06]">
           <h2 className="text-2xl sm:text-3xl font-bold mb-2">Planos</h2>
-          <p className="text-[#9b95ad] mb-8">Add-ons de integração e usuário extra. Cobrança automática ou avulsa.</p>
+          <p className="text-[#9b95ad] mb-2">Add-ons de integração e usuário extra. Cobrança automática ou avulsa.</p>
+          <p className="text-sm text-[#c9c5d6] mb-8">🎁 <b>1ª mensalidade grátis</b> nos planos Business e Enterprise · Pro com <b>50% OFF</b> no 1º mês · fidelidade mínima de 3 meses (veja o <Link href="/contrato" className="text-purple-300 underline">contrato</Link>).</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
             {plans.map((p) => (
               <div key={p.key} className={`relative bg-[#1a1527] rounded-xl p-5 border flex flex-col ${p.highlight ? "border-purple-500/60 shadow-[0_0_25px_rgba(124,58,237,0.15)]" : "border-white/[0.08]"}`}>
@@ -335,6 +336,8 @@ export default function LandingPage() {
           <span>◆ SAPLINK © {new Date().getFullYear()} — Operação de integrações SAP</span>
           <div className="flex gap-5">
             <Link href="/termos" className="hover:text-white transition">Termos</Link>
+            <Link href="/privacidade" className="hover:text-white transition">Privacidade</Link>
+            <Link href="/contrato" className="hover:text-white transition">Contrato/SLA</Link>
             <button onClick={() => setInterest(true)} className="hover:text-white transition cursor-pointer">Contato</button>
             <Link href="/login" className="hover:text-white transition">Entrar</Link>
           </div>
