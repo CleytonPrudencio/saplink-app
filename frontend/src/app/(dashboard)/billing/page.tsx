@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getBilling, getPlans, checkoutPlan, updateAddons, payInvoice, setAutoRenew } from "@/lib/api";
+import { getBilling, getPlans, checkoutPlan, updateAddons, payInvoice, setAutoRenew, payNow } from "@/lib/api";
 
 interface Plan {
   key: string;
@@ -38,6 +38,9 @@ interface Billing {
   addonPrices: { integrationCents: number; userCents: number } | null;
   monthlyCents: number;
   autoRenew: boolean;
+  gateway: "stripe" | "asaas" | null;
+  hasRecurringMethod: boolean;
+  openInvoice: { id: string; amountCents: number; status: string; dueDate: string | null } | null;
   currentPeriodEnd: string | null;
   trialEndsAt: string | null;
   usage: { clients: number; integrations: number; users: number; aiDiagnostics: number };
@@ -174,10 +177,27 @@ export default function BillingPage() {
     setBusy("autorenew");
     setError("");
     try {
+      // Ligar com gateway e sem cartão recorrente salvo → abre o Stripe pra cadastrar/validar o cartão.
+      if (next && b?.gateway && !b?.hasRecurringMethod && b?.plan) {
+        const r = await checkoutPlan(b.plan.key, "auto");
+        if (r?.status === "redirect" && r?.url) { window.location.href = r.url; return; }
+      }
       await setAutoRenew(next);
       await load();
     } catch (e: any) {
       setError(e?.response?.data?.error || "Não foi possível alterar a renovação.");
+    } finally { setBusy(""); }
+  }
+
+  async function onPayNow() {
+    setBusy("paynow");
+    setError("");
+    try {
+      const r = await payNow();
+      if (r?.status === "redirect" && r?.url) { window.location.href = r.url; return; }
+      await load();
+    } catch (e: any) {
+      setError(e?.response?.data?.error || "Não foi possível abrir o pagamento.");
     } finally { setBusy(""); }
   }
 
@@ -232,19 +252,37 @@ export default function BillingPage() {
             <div><p className="text-xs text-[#9b95ad]">Add-ons</p><p className="font-semibold mt-0.5">{b.extras.integrations} int · {b.extras.users} user</p></div>
           </div>
           {b.plan && (
-            <div className="flex items-center justify-between bg-[#0f0b1a] rounded-lg px-4 py-3 mb-4">
-              <div>
-                <p className="text-sm font-medium">Cobrança automática</p>
-                <p className="text-xs text-[#9b95ad]">{b.autoRenew ? "Renova e cobra sozinho todo mês." : "Você paga manualmente cada fatura."}</p>
+            <div className="bg-[#0f0b1a] rounded-lg px-4 py-3 mb-4 space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium flex items-center gap-2">Cobrança automática {b.autoRenew && b.hasRecurringMethod && <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300">cartão ✓</span>}</p>
+                  <p className="text-xs text-[#9b95ad]">
+                    {b.autoRenew
+                      ? (b.hasRecurringMethod ? "Cobra sozinho no cartão cadastrado todo mês." : "Ative para cadastrar e validar o cartão no Stripe.")
+                      : "Você paga manualmente cada fatura."}
+                  </p>
+                </div>
+                <button
+                  onClick={() => toggleAutoRenew(!b.autoRenew)}
+                  disabled={busy === "autorenew"}
+                  className={`relative w-12 h-6 rounded-full transition cursor-pointer disabled:opacity-50 shrink-0 ${b.autoRenew ? "bg-emerald-500" : "bg-white/[0.15]"}`}
+                  title={b.autoRenew ? "Desligar cobrança automática" : "Ligar e cadastrar cartão"}
+                >
+                  <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${b.autoRenew ? "translate-x-6" : ""}`} />
+                </button>
               </div>
-              <button
-                onClick={() => toggleAutoRenew(!b.autoRenew)}
-                disabled={busy === "autorenew"}
-                className={`relative w-12 h-6 rounded-full transition cursor-pointer disabled:opacity-50 ${b.autoRenew ? "bg-emerald-500" : "bg-white/[0.15]"}`}
-                title={b.autoRenew ? "Desligar cobrança automática" : "Ligar cobrança automática"}
-              >
-                <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${b.autoRenew ? "translate-x-6" : ""}`} />
-              </button>
+              <div className="flex items-center justify-between gap-3 border-t border-white/[0.06] pt-3 flex-wrap">
+                <p className="text-xs text-[#9b95ad]">
+                  {b.openInvoice ? <>Fatura em aberto: <b className="text-[#e2e0ea]">{brl(b.openInvoice.amountCents)}</b></> : "Pague a mensalidade atual quando quiser — na hora, sem esperar a data."}
+                </p>
+                <button
+                  onClick={onPayNow}
+                  disabled={busy === "paynow"}
+                  className="text-sm px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-cyan-500 text-white font-semibold disabled:opacity-50 cursor-pointer shrink-0"
+                >
+                  {busy === "paynow" ? "Abrindo…" : "⚡ Pagar agora"}
+                </button>
+              </div>
             </div>
           )}
           {b.effectiveLimits && (
@@ -319,20 +357,20 @@ export default function BillingPage() {
               onClick={() => setMode("auto")}
               className={`px-3 py-1.5 rounded-md transition cursor-pointer ${mode === "auto" ? "bg-gradient-to-r from-purple-600 to-cyan-500 text-white" : "text-[#9b95ad] hover:text-white"}`}
             >
-              ⟳ Cobrança automática
+              ⟳ Assinar recorrente
             </button>
             <button
               onClick={() => setMode("now")}
               className={`px-3 py-1.5 rounded-md transition cursor-pointer ${mode === "now" ? "bg-gradient-to-r from-purple-600 to-cyan-500 text-white" : "text-[#9b95ad] hover:text-white"}`}
             >
-              ⚡ Pagar agora
+              ⚡ Pagar avulso
             </button>
           </div>
         </div>
         <p className="text-xs text-[#9b95ad] -mt-2 mb-4">
           {mode === "auto"
-            ? "Assinatura recorrente — cobra automático todo mês (PIX/boleto/cartão via Asaas)."
-            : "Pagamento avulso da 1ª mensalidade — sem renovação automática; você paga cada mês manualmente."}
+            ? "Assinatura recorrente — cadastra o cartão no Stripe e cobra automático todo mês."
+            : "Pagamento avulso — paga a mensalidade na hora, sem renovação automática."}
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
           {plans.map((p) => {

@@ -152,6 +152,11 @@ export async function setAutoRenew(autoRenew: boolean) {
   return data;
 }
 
+export async function payNow() {
+  const { data } = await api.post('/billing/pay-now');
+  return data as { status: string; url?: string; message?: string };
+}
+
 export async function cancelSubscription() {
   const { data } = await api.post('/billing/cancel');
   return data;
