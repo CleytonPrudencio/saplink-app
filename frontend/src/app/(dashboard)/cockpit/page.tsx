@@ -67,7 +67,20 @@ export default function CockpitPage() {
   async function onDecide(id: string, decision: "approve" | "reject") {
     setBusy(id);
     try {
-      if (decision === "approve") await approveRemediation(id); else await rejectRemediation(id);
+      if (decision === "approve") {
+        try {
+          await approveRemediation(id);
+        } catch (e: any) {
+          // Trava de produção: backend exige confirmação explícita p/ PRD (HTTP 428)
+          if (e?.response?.status === 428) {
+            const ok = window.confirm("⚠️ PRODUÇÃO\n\nEsta remediação vai executar no SAP de PRODUÇÃO do cliente. Confirmar a aprovação?");
+            if (!ok) { setBusy(""); return; }
+            await approveRemediation(id, true);
+          } else { throw e; }
+        }
+      } else {
+        await rejectRemediation(id);
+      }
       await loadActions();
       // o item será resolvido após a execução do agente; recarrega o cockpit em seguida
       setTimeout(() => { load().catch(() => {}); loadActions().catch(() => {}); }, 2500);

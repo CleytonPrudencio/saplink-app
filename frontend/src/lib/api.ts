@@ -449,8 +449,8 @@ export async function listRemediations(status?: string) {
   return data as { actions: RemediationAction[]; labels: Record<string, string> };
 }
 
-export async function approveRemediation(id: string) {
-  const { data } = await api.post(`/remediation/${id}/approve`);
+export async function approveRemediation(id: string, confirmProd = false) {
+  const { data } = await api.post(`/remediation/${id}/approve`, { confirmProd });
   return data;
 }
 

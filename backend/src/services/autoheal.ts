@@ -53,15 +53,17 @@ export async function autoHealClient(consultancyId: string, clientId: string): P
     if (open) continue;
     const confidence = await confidenceFor(it.kind, it.statusText, actionType);
     if (confidence < policy.minConfidence) continue;
+    // Trava de produção: em PRD o AMS autônomo NÃO executa sozinho — apenas sugere (pendente de aprovação humana).
+    const isProd = ((it as any).environment || 'PRD') === 'PRD';
     await prisma.remediationAction.create({
       data: {
-        clientId: it.clientId, integrationId: it.integrationId, sapItemId: it.id, actionType, target: it.ref,
+        clientId: it.clientId, environment: (it as any).environment || 'PRD', integrationId: it.integrationId, sapItemId: it.id, actionType, target: it.ref,
         params: { kind: it.kind, messageType: it.messageType, partner: it.partner, statusCode: it.statusCode, auto: true },
         beforeText: `${it.kind} ${it.ref} — ${it.statusText || ''}`.trim(),
-        status: 'APPROVED', autoExecuted: true, confidence,
+        status: isProd ? 'PENDING_APPROVAL' : 'APPROVED', autoExecuted: !isProd, confidence,
       },
     });
-    fired += 1;
+    if (!isProd) fired += 1;
   }
   return fired;
 }

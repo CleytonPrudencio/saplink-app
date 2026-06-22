@@ -207,6 +207,7 @@ model SapItem {
 model RemediationAction {
   id            String       @id @default(uuid())
   clientId      String
+  environment   String       @default("PRD") // DEV | HML | PRD
   client        Client       @relation(fields: [clientId], references: [id])
   integrationId String?
   sapItemId     String?

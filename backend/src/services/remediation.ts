@@ -32,6 +32,7 @@ export async function createAction(consultancyId: string, userId: string | undef
   const action = await prisma.remediationAction.create({
     data: {
       clientId: item.clientId,
+      environment: (item as any).environment || 'PRD',
       integrationId: item.integrationId,
       sapItemId: item.id,
       actionType: type,
@@ -45,10 +46,14 @@ export async function createAction(consultancyId: string, userId: string | undef
   return { action };
 }
 
-export async function setStatus(consultancyId: string, userId: string | undefined, actionId: string, decision: 'APPROVED' | 'REJECTED') {
+export async function setStatus(consultancyId: string, userId: string | undefined, actionId: string, decision: 'APPROVED' | 'REJECTED', confirmProd = false) {
   const action = await prisma.remediationAction.findUnique({ where: { id: actionId }, include: { sapItem: { include: { client: true } } } });
   if (!action || action.sapItem?.client.consultancyId !== consultancyId) return { error: 'NOT_FOUND' as const };
   if (action.status !== 'PENDING_APPROVAL') return { error: 'NOT_PENDING' as const };
+  // Trava de produção: aprovar ação que mexe no SAP de PRODUÇÃO exige confirmação explícita.
+  if (decision === 'APPROVED' && action.environment === 'PRD' && !confirmProd) {
+    return { error: 'PROD_CONFIRM' as const };
+  }
   const updated = await prisma.remediationAction.update({
     where: { id: actionId },
     data: { status: decision, approvedById: userId ?? null, approvedAt: new Date() },

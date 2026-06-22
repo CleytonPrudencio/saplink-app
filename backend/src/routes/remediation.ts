@@ -36,7 +36,8 @@ router.post('/', requireConsultancyAdmin, async (req: Request, res: Response) =>
 
 // Aprova (admin) → APPROVED (o agente pega no próximo poll)
 router.post('/:id/approve', requireConsultancyAdmin, async (req: Request, res: Response) => {
-  const r = await setStatus(req.consultancyId!, req.user?.userId, req.params.id, 'APPROVED');
+  const r = await setStatus(req.consultancyId!, req.user?.userId, req.params.id, 'APPROVED', req.body?.confirmProd === true);
+  if (r.error === 'PROD_CONFIRM') { res.status(428).json({ error: 'PROD_CONFIRM', message: 'Esta ação mexe no SAP de PRODUÇÃO. Confirme explicitamente para aprovar.' }); return; }
   if (r.error) { res.status(r.error === 'NOT_FOUND' ? 404 : 409).json({ error: r.error === 'NOT_PENDING' ? 'Ação não está pendente.' : 'Ação não encontrada.' }); return; }
   res.json({ action: r.action });
 });

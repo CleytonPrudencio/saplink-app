@@ -39,6 +39,7 @@ export default function AutohealPage() {
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2">🤖 AMS Autônomo</h1>
         <p className="text-[#9b95ad] text-sm mt-1">Detecta → diagnostica → corrige → mede → aprende. A confiança vem da Rede Federada; acima do limiar, a correção é aplicada sozinha (com rastro e rollback no agente).</p>
+        <p className="text-xs text-amber-300/90 mt-2 inline-flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/20 rounded-lg px-2.5 py-1">🔒 Trava de produção: em integrações <b className="mx-1">PRD</b> o AMS <b className="mx-1">não executa sozinho</b> — gera sugestão pendente de aprovação. DEV/HML seguem automáticos.</p>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
