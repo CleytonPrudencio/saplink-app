@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getConnectors, saveConnector, syncConnector, getMe } from "@/lib/api";
+import EnvLabel from "@/components/EnvLabel";
 
 const META: Record<string, { label: string; icon: string }> = {
   ARIBA: { label: "SAP Ariba", icon: "🛒" },
@@ -46,8 +47,8 @@ export default function ConnectorsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2">🔌 Conectores SAP Cloud</h1>
-        <p className="text-[#9b95ad] text-sm mt-1">Conecte Ariba e SuccessFactors de cada cliente com a chave dele (igual ao S/4). As APIs alcançadas entram no inventário (Catálogo vivo).</p>
+        <div className="flex items-center gap-3 flex-wrap"><h1 className="text-2xl font-bold flex items-center gap-2">🔌 Conectores SAP Cloud</h1><EnvLabel prefix="Configurando" /></div>
+        <p className="text-[#9b95ad] text-sm mt-1">Conecte Ariba e SuccessFactors de cada cliente com a chave dele (igual ao S/4), <b>por ambiente</b>. As APIs alcançadas entram no inventário (Catálogo vivo).</p>
       </div>
 
       {!isAdmin && <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 text-sm text-amber-200">Apenas administradores conectam produtos.</div>}

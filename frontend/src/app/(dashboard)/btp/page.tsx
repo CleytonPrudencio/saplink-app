@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { getBtp, createBtp, deleteBtp, getMe } from "@/lib/api";
 import { usePaginate, Pagination } from "@/components/Pagination";
 import ExplainData from "@/components/ExplainData";
+import EnvLabel from "@/components/EnvLabel";
 
 const KINDS = [["SERVICE_KEY", "Service Key"], ["BINDING", "Binding"], ["DESTINATION", "Destination"], ["QUOTA", "Quota"], ["APP", "App (CF/Kyma)"]];
 const statusCls: Record<string, string> = { EXPIRED: "bg-rose-500/15 text-rose-300", WARN: "bg-amber-500/15 text-amber-300", DOWN: "bg-rose-500/15 text-rose-300", OK: "bg-emerald-500/15 text-emerald-300" };
@@ -35,7 +36,7 @@ export default function BtpPage() {
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">🪐 BTP Cockpit</h1>
+          <div className="flex items-center gap-3 flex-wrap"><h1 className="text-2xl font-bold flex items-center gap-2">🪐 BTP Cockpit</h1><EnvLabel /></div>
           <p className="text-[#9b95ad] text-sm mt-1">Inventário e radar de validade dos recursos da SAP BTP de cada cliente: service keys, bindings, destinations, quotas e apps. Evita o apagão por secret/destination vencida.</p>
           <ExplainData screen="BTP Cockpit" data={{ resumo: s, itens: (data?.items || []).slice(0, 15) }} />
         </div>

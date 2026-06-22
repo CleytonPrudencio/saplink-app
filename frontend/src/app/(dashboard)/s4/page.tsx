@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getS4Overview, getS4Comm, getS4Apis, getMe, getClients, getCpiConfigs, saveCpiConfig, syncCpi, getS4Connections, saveS4Connection, syncS4Connection } from "@/lib/api";
+import EnvLabel from "@/components/EnvLabel";
 import ExplainData from "@/components/ExplainData";
 
 function brl(c: number) { return (c / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }); }
@@ -87,7 +88,10 @@ export default function S4Page() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2">☁️ S/4HANA Cloud</h1>
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <h1 className="text-2xl font-bold flex items-center gap-2">☁️ S/4HANA Cloud</h1>
+          <EnvLabel />
+        </div>
         <p className="text-[#9b95ad] text-sm mt-1">Operação, governança de Clean Core e fiscal do seu S/4HANA Cloud — sem agente, via Communication Arrangement.</p>
         <div className="mt-3"><ExplainData screen="Visão geral S/4HANA Cloud" data={{ overview: ov, apis: apis?.summary, comm: comm?.summary }} /></div>
       </div>
@@ -145,7 +149,7 @@ export default function S4Page() {
       {/* Conector REAL S/4 sandbox (admin) — dados reais sem S-user */}
       {isAdmin && (
         <div className="bg-[#1a1527] rounded-xl p-5 border border-cyan-500/20">
-          <h2 className="text-lg font-semibold">🛰️ Conectar S/4HANA Cloud (sandbox SAP) — dados reais sem S-user</h2>
+          <div className="flex items-center justify-between gap-2 flex-wrap"><h2 className="text-lg font-semibold">🛰️ Conectar S/4HANA Cloud (sandbox SAP) — dados reais sem S-user</h2><EnvLabel prefix="Configurando" /></div>
           <p className="text-[#9b95ad] text-sm mt-1">Cole a <b>API Key</b> do <a href="https://api.sap.com" target="_blank" rel="noreferrer" className="text-cyan-300 underline">SAP Business Accelerator Hub</a> (api.sap.com → qualquer API S/4HANA Cloud → &quot;Show API Key&quot;). O SAPLINK chama as APIs OData reais do S/4 de demonstração e inventaria o uso.</p>
 
           {s4conns.length > 0 && (
@@ -177,7 +181,7 @@ export default function S4Page() {
       {/* Conector REAL CPI (admin) */}
       {isAdmin && (
         <div className="bg-[#1a1527] rounded-xl p-5 border border-purple-500/20">
-          <h2 className="text-lg font-semibold">🔌 Conectar SAP Integration Suite (BTP) — dados reais</h2>
+          <div className="flex items-center justify-between gap-2 flex-wrap"><h2 className="text-lg font-semibold">🔌 Conectar SAP Integration Suite (BTP) — dados reais</h2><EnvLabel prefix="Configurando" /></div>
           <p className="text-[#9b95ad] text-sm mt-1">Cole o service key (OAuth client-credentials) do Process Integration Runtime. O SAPLINK puxa os Message Processing Logs reais.</p>
 
           {cpi.length > 0 && (
