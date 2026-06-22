@@ -4,6 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import Logo from "@/components/Logo";
 import { usePathname, useRouter } from "next/navigation";
+import { useLang } from "@/i18n/I18n";
+import { tNav, tGroup, tUI, UI } from "@/i18n/ui";
 
 interface User {
   id: string;
@@ -126,6 +128,7 @@ const platformGroups: MenuGroup[] = [
 export default function Sidebar({ user, consultancy }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const { lang } = useLang();
   const [mobileOpen, setMobileOpen] = useState(false);
   const isAdmin = user?.role === "CONSULTANCY_ADMIN";
   const groups: MenuGroup[] = (user?.role === "PLATFORM_ADMIN" ? platformGroups : tenantGroups)
@@ -167,7 +170,7 @@ export default function Sidebar({ user, consultancy }: SidebarProps) {
         {groups.map((group) => (
           <div key={group.title}>
             <p className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-[#6b6580]">
-              {group.title}
+              {tGroup(group.title, lang)}
             </p>
             <div className="space-y-0.5">
               {group.items.map((item) => (
@@ -182,7 +185,7 @@ export default function Sidebar({ user, consultancy }: SidebarProps) {
                   }`}
                 >
                   <span className="text-lg">{item.icon}</span>
-                  {item.label}
+                  {tNav(item.href, lang)}
                 </Link>
               ))}
             </div>
@@ -203,7 +206,7 @@ export default function Sidebar({ user, consultancy }: SidebarProps) {
           onClick={handleLogout}
           className="w-full px-3 py-2 text-sm text-[#9b95ad] hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors text-left cursor-pointer"
         >
-          Sair
+          {tUI(UI.shell.logout, lang)}
         </button>
       </div>
     </div>

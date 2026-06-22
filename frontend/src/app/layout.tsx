@@ -4,6 +4,7 @@ import "./globals.css";
 import { ToastProvider } from "@/components/Toast";
 import TechBackground from "@/components/TechBackground";
 import TopProgress from "@/components/TopProgress";
+import { I18nProvider } from "@/i18n/I18n";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -57,7 +58,9 @@ export default function RootLayout({
       <body className="min-h-full bg-transparent text-[#e2e0ea] font-[family-name:var(--font-inter)]">
         <TechBackground />
         <TopProgress />
-        <ToastProvider>{children}</ToastProvider>
+        <I18nProvider>
+          <ToastProvider>{children}</ToastProvider>
+        </I18nProvider>
       </body>
     </html>
   );

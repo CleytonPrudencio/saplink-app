@@ -5,9 +5,13 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { login, ssoProviderForEmail, API_BASE } from "@/lib/api";
 import Logo from "@/components/Logo";
+import LangSwitcher from "@/components/LangSwitcher";
+import { useLang } from "@/i18n/I18n";
+import { UI, tUI } from "@/i18n/ui";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { lang } = useLang();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -47,7 +51,7 @@ export default function LoginPage() {
           ? (err as { response?: { data?: { message?: string } } }).response
               ?.data?.message
           : undefined;
-      setError(msg || "Erro ao fazer login. Verifique suas credenciais.");
+      setError(msg || tUI(UI.auth.loginError, lang));
     } finally {
       setLoading(false);
     }
@@ -55,10 +59,11 @@ export default function LoginPage() {
 
   return (
     <div className="w-full max-w-md">
+      <div className="flex justify-end mb-3"><LangSwitcher /></div>
       <div className="bg-[#1a1527] rounded-2xl p-8 border border-white/[0.08] shadow-2xl">
         <div className="flex flex-col items-center mb-8">
           <Logo size={44} />
-          <p className="text-[#9b95ad] mt-3">Integration Health Monitor</p>
+          <p className="text-[#9b95ad] mt-3">{tUI(UI.auth.subtitle, lang)}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
@@ -70,7 +75,7 @@ export default function LoginPage() {
 
           <div>
             <label className="block text-sm font-medium text-[#9b95ad] mb-1.5">
-              Email
+              {tUI(UI.auth.email, lang)}
             </label>
             <input
               type="email"
@@ -84,7 +89,7 @@ export default function LoginPage() {
 
           <div>
             <label className="block text-sm font-medium text-[#9b95ad] mb-1.5">
-              Senha
+              {tUI(UI.auth.password, lang)}
             </label>
             <input
               type="password"
@@ -101,7 +106,7 @@ export default function LoginPage() {
             disabled={loading}
             className="w-full py-2.5 bg-gradient-to-r from-purple-600 to-cyan-500 text-white font-semibold rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 cursor-pointer"
           >
-            {loading ? "Entrando..." : "Entrar"}
+            {loading ? tUI(UI.auth.signingIn, lang) : tUI(UI.auth.signIn, lang)}
           </button>
 
           {sso && (
@@ -110,18 +115,18 @@ export default function LoginPage() {
               onClick={goSso}
               className="w-full py-2.5 bg-[#0f0b1a] border border-purple-500/40 text-purple-200 font-semibold rounded-lg hover:bg-purple-500/10 transition-colors cursor-pointer"
             >
-              🔐 Entrar com SSO ({sso.provider === "azure" ? "Microsoft" : sso.provider === "google" ? "Google" : "Okta"})
+              🔐 {tUI(UI.auth.ssoWith, lang)} ({sso.provider === "azure" ? "Microsoft" : sso.provider === "google" ? "Google" : "Okta"})
             </button>
           )}
         </form>
 
         <p className="text-center text-sm text-[#9b95ad] mt-6">
-          Quer conhecer o SAPLINK?{" "}
+          {tUI(UI.auth.interestQ, lang)}{" "}
           <Link
             href="/"
             className="text-purple-400 hover:text-purple-300 transition-colors"
           >
-            Tenho interesse
+            {tUI(UI.auth.interest, lang)}
           </Link>
         </p>
       </div>
