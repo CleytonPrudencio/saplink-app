@@ -273,23 +273,23 @@ router.post('/pay-now', requireConsultancyAdmin, async (req: Request, res: Respo
   if (!sub?.plan) { res.status(409).json({ error: 'Sem plano ativo para cobrar.' }); return; }
   let invoice = await prisma.invoice.findFirst({ where: { consultancyId, status: { in: ['OPEN', 'FAILED'] } }, orderBy: { createdAt: 'asc' } });
 
+  // sem fatura aberta → gera a fatura da mensalidade atual (plano + add-ons) para cobrar agora.
+  // Sempre cobramos via fatura (pagamento único) — não mexe na recorrência/autoRenew.
+  if (!invoice) {
+    const monthly = sub.plan.priceCents + (sub.extraIntegrations ?? 0) * sub.plan.addonIntegrationCents + (sub.extraUsers ?? 0) * sub.plan.addonUserCents;
+    invoice = await prisma.invoice.create({ data: { consultancyId, subscriptionId: sub.id, amountCents: monthly, status: 'OPEN' } });
+  }
+
   if (stripeEnabled() || asaasEnabled()) {
     try {
-      if (invoice) {
-        const { url } = stripeEnabled() ? await stripeInvoicePay(consultancyId, invoice.id) : await asaasInvoicePay(consultancyId, invoice.id);
-        res.json({ status: 'redirect', url });
-      } else {
-        // sem fatura aberta → cobra a mensalidade do plano agora (avulso)
-        const { url } = stripeEnabled() ? await stripeCheckout(consultancyId, sub.plan.key, 'now') : await asaasCheckout(consultancyId, sub.plan.key, 'now');
-        res.json({ status: 'redirect', url });
-      }
+      const { url } = stripeEnabled() ? await stripeInvoicePay(consultancyId, invoice.id) : await asaasInvoicePay(consultancyId, invoice.id);
+      res.json({ status: 'redirect', url });
     } catch (e: any) {
       res.status(400).json({ error: e.message || 'Falha ao gerar o pagamento.' });
     }
     return;
   }
-  // Demo (sem gateway): cria a fatura se preciso e marca paga
-  if (!invoice) invoice = await prisma.invoice.create({ data: { consultancyId, subscriptionId: sub.id, amountCents: sub.plan.priceCents, status: 'OPEN' } });
+  // Demo (sem gateway): marca paga
   await prisma.invoice.update({ where: { id: invoice.id }, data: { status: 'PAID', paidAt: new Date() } });
   await activateSubscription(consultancyId);
   res.json({ status: 'ok', message: 'Pagamento confirmado (ambiente de teste).' });
