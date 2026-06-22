@@ -3,6 +3,7 @@ import prisma from '../lib/prisma';
 import { hashAgentToken } from '../lib/crypto';
 import { ingestAgentReport, AgentReport } from '../services/agent';
 import { ingestSapItems, SapItemInput } from '../services/cockpit';
+import { ingestOps, OpsSignalInput } from '../services/ops';
 import { claimCommands, recordResult } from '../services/remediation';
 import { ingestCatalog, CatalogItemInput } from '../services/catalog';
 import { ingestTransports, TransportInput } from '../services/transports';
@@ -67,6 +68,20 @@ router.post('/sap-items', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Agent sap-items error:', error);
     res.status(500).json({ error: 'Erro ao processar itens do agente' });
+  }
+});
+
+// POST /api/agent/ops-signals — o agente empurra saúde de Basis & Operações (F3)
+router.post('/ops-signals', async (req: Request, res: Response) => {
+  const integration = await resolveIntegration(req);
+  if (!integration) { res.status(401).json({ error: 'Token do agente inválido' }); return; }
+  try {
+    const signals = (req.body?.signals || []) as OpsSignalInput[];
+    const result = await ingestOps(integration.id, integration.clientId, signals);
+    res.json({ ok: true, ...result });
+  } catch (error) {
+    console.error('Agent ops-signals error:', error);
+    res.status(500).json({ error: 'Erro ao processar sinais de operação' });
   }
 });
 

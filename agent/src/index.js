@@ -2,7 +2,7 @@
 // Roda na rede do cliente, lê a saúde do SAP localmente e empurra via HTTPS (só saída)
 // para a plataforma. Autentica por token próprio da integração (X-Agent-Token).
 
-import { collectHealth, collectSapItems, executeCommand, discoverCatalog, discoverTransports, discoverCloud, discoverS4 } from './sap.js';
+import { collectHealth, collectSapItems, executeCommand, discoverCatalog, discoverTransports, discoverCloud, discoverS4, collectOpsSignals } from './sap.js';
 
 const cfg = {
   url: (process.env.SAPLINK_URL || '').replace(/\/$/, ''),
@@ -79,6 +79,17 @@ async function tick() {
     if (status === 200) log(`itens: ${items.length} enviado(s) (resolvidos: ${body.resolved ?? 0})`);
   } catch (e) {
     log('falha ao enviar itens (rede):', e.message);
+  }
+
+  // F3 — Basis & Operações (PI/PO, jobs, dumps, locks, gateway, HANA, segurança)
+  try {
+    const signals = collectOpsSignals(cfg);
+    if (signals.length) {
+      const { status, body } = await api('/api/agent/ops-signals', { method: 'POST', body: JSON.stringify({ signals }) });
+      if (status === 200) log(`ops: ${body.upserted ?? signals.length} sinal(is)`);
+    }
+  } catch (e) {
+    log('falha ao enviar ops-signals (rede):', e.message);
   }
 
   // B2 — busca remediações aprovadas, executa e reporta o resultado

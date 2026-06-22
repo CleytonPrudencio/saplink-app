@@ -321,6 +321,9 @@ export async function getBtp(clientId?: string) { const { data } = await api.get
 export async function createBtp(payload: Record<string, unknown>) { const { data } = await api.post('/btp', payload); return data; }
 export async function updateBtp(id: string, payload: Record<string, unknown>) { const { data } = await api.put(`/btp/${id}`, payload); return data; }
 export async function deleteBtp(id: string) { const { data } = await api.delete(`/btp/${id}`); return data; }
+// Basis & Operações
+export async function getOps(params: { clientId?: string; category?: string } = {}) { const { data } = await api.get('/ops', { params }); return data as { clients: any[]; summary: any; items: any[] }; }
+export async function resolveOps(id: string) { const { data } = await api.post(`/ops/${id}/resolve`); return data; }
 
 // C1 — Canais de notificação / on-call
 export interface NotificationChannel {

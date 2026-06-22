@@ -151,6 +151,23 @@ export function executeCommand(command) {
 }
 
 /** Descobre o catálogo de interfaces. No mock, retorna um landscape de exemplo estável. */
+/** F3 — sinais de Basis & Operações. No mock, gera amostras representativas; no real, viria de SM37/ST22/SM13/SM12/SM21/HANA. */
+export function collectOpsSignals(cfg) {
+  if (cfg.mode !== 'mock') return [];
+  const now = Date.now();
+  const t = (n) => new Date(now - n * 3600000).toISOString();
+  return [
+    { category: 'PIPO', severity: 'HIGH', title: 'Canal de comunicação em erro', object: 'CC_ORDERS_FILE', detail: 'PI/PO: channel parado (Comm Channel Monitoring)', ref: 'CC_ORDERS_FILE', occurredAt: t(1) },
+    { category: 'JOB', severity: 'HIGH', title: 'Job cancelado', object: 'ZRE_BILLING_NIGHTLY', detail: 'SM37: terminou com status Cancelado', ref: 'ZRE_BILLING_NIGHTLY', occurredAt: t(6) },
+    { category: 'DUMP', severity: 'MEDIUM', title: 'Runtime error TIME_OUT', object: 'SAPLZFI_REPORT', detail: 'ST22: dump por timeout em relatório FI', ref: 'DUMP_TIME_OUT_0613', occurredAt: t(3) },
+    { category: 'UPDATE_ERR', severity: 'HIGH', title: 'Update terminado', object: 'VBRK', detail: 'SM13: registro de atualização cancelado (faturamento)', ref: 'UPD_VBRK_0613', occurredAt: t(2) },
+    { category: 'LOCK', severity: 'LOW', title: 'Lock antigo (>2h)', object: 'EKKO 4500001234', detail: 'SM12: bloqueio preso em pedido de compra', ref: 'LOCK_EKKO_4500001234', occurredAt: t(4) },
+    { category: 'GATEWAY', severity: 'MEDIUM', title: 'OData service error', object: 'API_SALES_ORDER_SRV', detail: '/IWFND/ERROR_LOG: 500 em GET', ref: 'GW_API_SALES_ORDER_SRV', occurredAt: t(1) },
+    { category: 'HANA', severity: 'CRITICAL', title: 'Memória acima de 90%', object: 'HDB/usedMemory', detail: 'HANA: uso de memória 92% — risco de OOM', ref: 'HANA_MEM_HIGH', occurredAt: t(0) },
+    { category: 'SECURITY', severity: 'MEDIUM', title: 'Patch de segurança pendente', object: 'SAP Note 3300000', detail: 'Patch level abaixo do recomendado (HotNews)', ref: 'SEC_NOTE_3300000', occurredAt: t(12) },
+  ];
+}
+
 export function discoverCatalog() {
   return [
     { kind: 'PARTNER_PROFILE', name: 'LS_ECCCLNT100', detail: 'Parceiro lógico — ECC produção (WE20)', attributes: { type: 'LS' } },

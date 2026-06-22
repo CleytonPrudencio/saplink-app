@@ -173,6 +173,11 @@ const GUIDES: Record<string, Guide> = {
     why: "Cobra o parceiro certo e controla o gasto de nuvem.",
     actions: ["Aja sobre o parceiro com mais erros", "Veja o IFlow que mais consome BTP"],
   },
+  "/ops": {
+    what: "Saúde de Basis & Operações coletada pelo agente: PI/PO, jobs, dumps ABAP, update errors, locks, Gateway/OData, HANA e segurança/patch.",
+    why: "Centraliza o que hoje exige logar em vários SAPs (SM37/ST22/SM13/SM12/SM21) — visão multi-cliente do que está pegando fogo.",
+    actions: ["Ataque CRITICAL/HIGH primeiro", "Filtre por categoria (ex.: só dumps)", "Resolva o que já foi tratado para limpar a fila"],
+  },
   "/btp": {
     what: "Inventário e radar de validade dos recursos da SAP BTP por cliente (service keys, bindings, destinations, quotas, apps).",
     why: "Secret/destination vencida derruba integração sem aviso. Aqui você vê o que vai expirar antes do apagão.",

@@ -35,6 +35,7 @@ const tenantGroups: MenuGroup[] = [
       { href: "/clients", label: "Clientes", icon: "\uD83D\uDC65" },
       { href: "/integrations", label: "Integra\u00E7\u00f5es", icon: "\uD83D\uDD17" },
       { href: "/cockpit", label: "Cockpit", icon: "\uD83D\uDEF0\uFE0F" },
+      { href: "/ops", label: "Basis & Opera\u00E7\u00F5es", icon: "\uD83E\uDE7A" },
       { href: "/alerts", label: "Alertas", icon: "\uD83D\uDD14" },
     ],
   },

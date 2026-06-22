@@ -85,6 +85,7 @@ model Client {
   cpiConfig       CpiConfig?
   cloudConnectors CloudConnector[]
   btpResources    BtpResource[]
+  opsSignals      OpsSignal[]
   integrations  Integration[]
   alerts        Alert[]
   diagnostics   Diagnostic[]
@@ -307,6 +308,26 @@ model S4Connection {
   status        String   @default("PENDING") // PENDING | CONNECTED | ERROR
   lastSyncAt    DateTime?
   createdAt     DateTime @default(now())
+}
+
+// Basis & Operações — sinais de saúde do landscape coletados pelo agente
+// (PI/PO, jobs SM37, dumps ST22, update errors SM13, locks SM12, Gateway log, HANA, segurança/patch).
+model OpsSignal {
+  id            String    @id @default(uuid())
+  clientId      String
+  integrationId String?
+  category      String    // PIPO | JOB | DUMP | UPDATE_ERR | LOCK | GATEWAY | HANA | SECURITY
+  severity      String    @default("MEDIUM") // LOW | MEDIUM | HIGH | CRITICAL
+  title         String
+  object        String?
+  detail        String?
+  ref           String    // chave de dedupe (nome do job / id do dump / objeto bloqueado…)
+  occurredAt    DateTime?
+  resolved      Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  client        Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  @@unique([clientId, category, ref])
+  @@index([clientId, category, resolved])
 }
 
 // BTP Cockpit — inventário de recursos da SAP BTP por cliente (keys/bindings/destinations/quotas/apps).
