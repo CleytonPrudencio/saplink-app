@@ -2,30 +2,31 @@ import { Router, Request, Response } from 'express';
 import { requireConsultancyAdmin } from '../middleware/roles';
 import * as s4 from '../services/s4';
 import { saveCpiConfig, getCpiConfigs, syncCpi } from '../services/cpi';
+import { reqEnv } from '../lib/env';
 
 // S/4HANA Cloud — Upgrade, Clean Core, APIs, Comm, Fiscal (DRC), Eventos. Sob o tenantGate.
 const router = Router();
 
 router.get('/overview', async (req: Request, res: Response) => {
-  try { res.json(await s4.getOverview(req.consultancyId!)); } catch (e) { console.error('s4 overview', e); res.status(500).json({ error: 'Erro no overview S/4.' }); }
+  try { res.json(await s4.getOverview(req.consultancyId!, reqEnv(req))); } catch (e) { console.error('s4 overview', e); res.status(500).json({ error: 'Erro no overview S/4.' }); }
 });
 router.get('/upgrade', async (req: Request, res: Response) => {
-  try { res.json(await s4.getUpgrade(req.consultancyId!, req.query.clientId as string | undefined)); } catch (e) { console.error(e); res.status(500).json({ error: 'Erro no upgrade radar.' }); }
+  try { res.json(await s4.getUpgrade(req.consultancyId!, req.query.clientId as string | undefined, reqEnv(req))); } catch (e) { console.error(e); res.status(500).json({ error: 'Erro no upgrade radar.' }); }
 });
 router.get('/cleancore', async (req: Request, res: Response) => {
-  try { res.json(await s4.getCleanCore(req.consultancyId!)); } catch (e) { console.error(e); res.status(500).json({ error: 'Erro no clean core.' }); }
+  try { res.json(await s4.getCleanCore(req.consultancyId!, reqEnv(req))); } catch (e) { console.error(e); res.status(500).json({ error: 'Erro no clean core.' }); }
 });
 router.get('/apis', async (req: Request, res: Response) => {
-  try { res.json(await s4.getApis(req.consultancyId!)); } catch (e) { console.error(e); res.status(500).json({ error: 'Erro nas APIs.' }); }
+  try { res.json(await s4.getApis(req.consultancyId!, reqEnv(req))); } catch (e) { console.error(e); res.status(500).json({ error: 'Erro nas APIs.' }); }
 });
 router.get('/comm', async (req: Request, res: Response) => {
-  try { res.json(await s4.getComm(req.consultancyId!)); } catch (e) { console.error(e); res.status(500).json({ error: 'Erro nas comm arrangements.' }); }
+  try { res.json(await s4.getComm(req.consultancyId!, reqEnv(req))); } catch (e) { console.error(e); res.status(500).json({ error: 'Erro nas comm arrangements.' }); }
 });
 router.get('/events', async (req: Request, res: Response) => {
-  try { res.json(await s4.getEvents(req.consultancyId!)); } catch (e) { console.error(e); res.status(500).json({ error: 'Erro nos eventos.' }); }
+  try { res.json(await s4.getEvents(req.consultancyId!, reqEnv(req))); } catch (e) { console.error(e); res.status(500).json({ error: 'Erro nos eventos.' }); }
 });
 router.get('/fiscal', async (req: Request, res: Response) => {
-  try { res.json(await s4.getFiscal(req.consultancyId!, req.query.clientId as string | undefined, req.query.family as string | undefined)); } catch (e) { console.error(e); res.status(500).json({ error: 'Erro no fiscal.' }); }
+  try { res.json(await s4.getFiscal(req.consultancyId!, req.query.clientId as string | undefined, req.query.family as string | undefined, reqEnv(req))); } catch (e) { console.error(e); res.status(500).json({ error: 'Erro no fiscal.' }); }
 });
 router.post('/fiscal/:id/reprocess', requireConsultancyAdmin, async (req: Request, res: Response) => {
   const r = await s4.reprocessFiscal(req.consultancyId!, req.params.id);

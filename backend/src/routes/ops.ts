@@ -1,12 +1,13 @@
 import { Router, Request, Response } from 'express';
 import { requireConsultancyAdmin } from '../middleware/roles';
 import * as ops from '../services/ops';
+import { reqEnv } from '../lib/env';
 
 // Basis & Operações. Sob tenantGate.
 const router = Router();
 
 router.get('/', async (req: Request, res: Response) => {
-  try { res.json(await ops.listOps(req.consultancyId!, { clientId: req.query.clientId as string, category: req.query.category as string })); }
+  try { res.json(await ops.listOps(req.consultancyId!, { clientId: req.query.clientId as string, category: req.query.category as string, env: reqEnv(req) })); }
   catch (e) { console.error('ops list', e); res.status(500).json({ error: 'Erro.' }); }
 });
 

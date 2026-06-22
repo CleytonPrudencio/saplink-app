@@ -3,6 +3,7 @@ import prisma from '../lib/prisma';
 import { authMiddleware } from '../middleware/auth';
 import { tenancyMiddleware } from '../middleware/tenancy';
 import { diagnose } from '../services/ai';
+import { reqEnv } from '../lib/env';
 
 const router = Router();
 router.use(authMiddleware, tenancyMiddleware);
@@ -36,6 +37,8 @@ router.get('/', async (req: Request, res: Response) => {
     if (clientId) {
       where.clientId = clientId as string;
     }
+    const env = reqEnv(req);
+    if (env) where.environment = env;
 
     const alerts = await prisma.alert.findMany({
       where: where as any,

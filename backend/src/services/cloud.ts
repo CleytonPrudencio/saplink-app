@@ -49,6 +49,8 @@ async function clearCloudAlerts(integrationId: string, healthyArtifacts: Set<str
 
 /** Ingere mensagens CPI/AIF (upsert por integração+source+messageId) + gera alertas de falha. */
 export async function ingestCloud(integrationId: string, clientId: string, items: CloudItemInput[]) {
+  const integ = await prisma.integration.findUnique({ where: { id: integrationId }, select: { environment: true } });
+  const environment = integ?.environment || 'PRD';
   let n = 0, alerts = 0;
   const seenHealthy = new Set<string>();
   const failedArtifacts = new Set<string>();
@@ -57,7 +59,7 @@ export async function ingestCloud(integrationId: string, clientId: string, items
     const failed = /FAIL|ERROR|ESCAL|RETRY/i.test(it.status || '');
     const existing = await prisma.cloudItem.findUnique({ where: { integrationId_source_messageId: { integrationId, source: it.source, messageId: it.messageId } } });
     const data = {
-      clientId, artifact: it.artifact, direction: it.direction ?? null,
+      clientId, environment, artifact: it.artifact, direction: it.direction ?? null,
       status: it.status ?? null, error: it.error ?? null,
       occurredAt: it.occurredAt ? new Date(it.occurredAt) : null,
       resolved: !failed,
@@ -146,11 +148,12 @@ export async function fixCloudItem(consultancyId: string, id: string, force = fa
   return { ok: true, fix, cached: false };
 }
 
-export interface CloudFilters { source?: string; status?: string; q?: string; clientId?: string }
+export interface CloudFilters { source?: string; status?: string; q?: string; clientId?: string; env?: string }
 
 export async function getCloud(consultancyId: string, f: CloudFilters = {}) {
   const clientIds = (await prisma.client.findMany({ where: { consultancyId }, select: { id: true } })).map((c) => c.id);
   const where: Record<string, unknown> = { clientId: { in: f.clientId ? [f.clientId] : clientIds } };
+  if (f.env) where.environment = f.env;
   if (f.source) where.source = f.source;
   if (f.status) where.status = f.status;
   if (f.q) where.OR = [

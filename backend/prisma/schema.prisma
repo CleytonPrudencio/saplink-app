@@ -128,6 +128,7 @@ model Integration {
 }
 
 model Alert {
+  environment String   @default("PRD") // DEV | HML | PRD
   id            String       @id @default(uuid())
   type          String
   severity      String
@@ -178,6 +179,7 @@ model TicketConfig {
 
 // B1 — itens operacionais do SAP reportados pelo agente: IDocs em erro, filas qRFC/tRFC.
 model SapItem {
+  environment String   @default("PRD") // DEV | HML | PRD
   id            String       @id @default(uuid())
   clientId      String
   client        Client       @relation(fields: [clientId], references: [id])
@@ -229,6 +231,7 @@ model RemediationAction {
 
 // B3 — catálogo vivo de interfaces, auto-descoberto pelo agente.
 model InterfaceCatalogItem {
+  environment String   @default("PRD") // DEV | HML | PRD
   id            String       @id @default(uuid())
   clientId      String
   client        Client       @relation(fields: [clientId], references: [id])
@@ -246,6 +249,7 @@ model InterfaceCatalogItem {
 
 // D3 — transportes (STMS/TMS) reportados pelo agente, para correlação com incidentes.
 model Transport {
+  environment String   @default("PRD") // DEV | HML | PRD
   id            String       @id @default(uuid())
   clientId      String
   client        Client       @relation(fields: [clientId], references: [id])
@@ -276,6 +280,7 @@ model MetricSample {
 
 // F1/F2 — mensagens do SAP Cloud Integration (CPI) e do AIF.
 model CloudItem {
+  environment String   @default("PRD") // DEV | HML | PRD
   id            String   @id @default(uuid())
   clientId      String
   integrationId String?
@@ -314,6 +319,7 @@ model S4Connection {
 // Basis & Operações — sinais de saúde do landscape coletados pelo agente
 // (PI/PO, jobs SM37, dumps ST22, update errors SM13, locks SM12, Gateway log, HANA, segurança/patch).
 model OpsSignal {
+  environment String   @default("PRD") // DEV | HML | PRD
   id            String    @id @default(uuid())
   clientId      String
   integrationId String?
@@ -333,6 +339,7 @@ model OpsSignal {
 
 // BTP Cockpit — inventário de recursos da SAP BTP por cliente (keys/bindings/destinations/quotas/apps).
 model BtpResource {
+  environment String   @default("PRD") // DEV | HML | PRD
   id         String    @id @default(uuid())
   clientId   String
   subaccount String?
@@ -364,6 +371,7 @@ model CloudConnector {
 
 // S1.1 — Achados de impacto de upgrade/release.
 model UpgradeFinding {
+  environment String   @default("PRD") // DEV | HML | PRD
   id            String   @id @default(uuid())
   clientId      String
   client        Client   @relation(fields: [clientId], references: [id])
@@ -380,6 +388,7 @@ model UpgradeFinding {
 
 // S1.2 — Itens que afetam o Clean Core Score.
 model CleanCoreItem {
+  environment String   @default("PRD") // DEV | HML | PRD
   id            String   @id @default(uuid())
   clientId      String
   client        Client   @relation(fields: [clientId], references: [id])
@@ -395,6 +404,7 @@ model CleanCoreItem {
 
 // S1.3 — Inventário de APIs liberadas consumidas.
 model ApiUsage {
+  environment String   @default("PRD") // DEV | HML | PRD
   id            String   @id @default(uuid())
   clientId      String
   client        Client   @relation(fields: [clientId], references: [id])
@@ -411,6 +421,7 @@ model ApiUsage {
 
 // S2.1 — Communication Arrangements + certificados.
 model CommArrangement {
+  environment String   @default("PRD") // DEV | HML | PRD
   id            String   @id @default(uuid())
   clientId      String
   client        Client   @relation(fields: [clientId], references: [id])
@@ -426,6 +437,7 @@ model CommArrangement {
 
 // S3.1 — Documentos fiscais (DRC / eDocument).
 model FiscalDoc {
+  environment String   @default("PRD") // DEV | HML | PRD
   id            String   @id @default(uuid())
   clientId      String
   client        Client   @relation(fields: [clientId], references: [id])
@@ -445,6 +457,7 @@ model FiscalDoc {
 
 // S4.1 — Observabilidade de Event Mesh / eventos de negócio.
 model CloudEvent {
+  environment String   @default("PRD") // DEV | HML | PRD
   id            String   @id @default(uuid())
   clientId      String
   client        Client   @relation(fields: [clientId], references: [id])
@@ -491,6 +504,7 @@ model Lead {
 }
 
 model Diagnostic {
+  environment String   @default("PRD") // DEV | HML | PRD
   id        String   @id @default(uuid())
   query     String
   response  String   @default("")
@@ -501,6 +515,7 @@ model Diagnostic {
 }
 
 model DeadCode {
+  environment String   @default("PRD") // DEV | HML | PRD
   id             String    @id @default(uuid())
   objectName     String
   objectType     String

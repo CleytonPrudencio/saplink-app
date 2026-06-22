@@ -14,10 +14,10 @@ function expiryStatus(expiresAt: Date | null, base: string): string {
   return base === 'DOWN' ? 'DOWN' : 'OK';
 }
 
-export async function listBtp(consultancyId: string, clientId?: string) {
+export async function listBtp(consultancyId: string, clientId?: string, env?: string) {
   const clients = await prisma.client.findMany({ where: { consultancyId, ...(clientId ? { id: clientId } : {}) }, select: { id: true, name: true } });
   const ids = clients.map((c) => c.id);
-  const rows = ids.length ? await prisma.btpResource.findMany({ where: { clientId: { in: ids } }, orderBy: [{ expiresAt: 'asc' }] }) : [];
+  const rows = ids.length ? await prisma.btpResource.findMany({ where: { clientId: { in: ids }, ...(env ? { environment: env } : {}) }, orderBy: [{ expiresAt: 'asc' }] }) : [];
   const items = rows.map((r) => ({
     id: r.id, clientId: r.clientId, client: clients.find((c) => c.id === r.clientId)?.name,
     subaccount: r.subaccount, kind: r.kind, name: r.name, detail: r.detail,
@@ -33,13 +33,14 @@ export async function listBtp(consultancyId: string, clientId?: string) {
   return { clients, summary, items };
 }
 
-export async function createBtp(consultancyId: string, input: { clientId: string; kind: string; name: string; subaccount?: string; detail?: string; expiresAt?: string; status?: string }) {
+export async function createBtp(consultancyId: string, input: { clientId: string; kind: string; name: string; subaccount?: string; detail?: string; expiresAt?: string; status?: string; environment?: string }) {
   const client = await prisma.client.findUnique({ where: { id: input.clientId } });
   if (!client || client.consultancyId !== consultancyId) return { error: 'NOT_FOUND' as const };
   if (!KINDS.includes(input.kind) || !input.name) return { error: 'INVALID' as const };
   const r = await prisma.btpResource.create({ data: {
     clientId: input.clientId, kind: input.kind, name: input.name, subaccount: input.subaccount || null,
     detail: input.detail || null, status: input.status || 'OK',
+    environment: ['DEV', 'HML', 'PRD'].includes(input.environment || '') ? input.environment! : 'PRD',
     expiresAt: input.expiresAt ? new Date(input.expiresAt) : null,
   } });
   return { ok: true, id: r.id };

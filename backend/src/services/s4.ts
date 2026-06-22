@@ -174,18 +174,18 @@ export async function ingestS4(clientId: string, p: Record<string, unknown>) {
 }
 
 // ───────── Consultas ─────────
-export async function getUpgrade(consultancyId: string, clientId?: string) {
+export async function getUpgrade(consultancyId: string, clientId?: string, env?: string) {
   const ids = clientId ? [clientId] : await clientIds(consultancyId);
-  const findings = await prisma.upgradeFinding.findMany({ where: { clientId: { in: ids }, resolved: false }, orderBy: { createdAt: 'desc' }, take: 500, include: { client: { select: { name: true } } } });
+  const findings = await prisma.upgradeFinding.findMany({ where: { clientId: { in: ids }, resolved: false, ...(env ? { environment: env } : {}) }, orderBy: { createdAt: 'desc' }, take: 500, include: { client: { select: { name: true } } } });
   const byImpact: Record<string, number> = {};
   for (const f of findings) byImpact[f.impact] = (byImpact[f.impact] || 0) + 1;
   const release = findings[0]?.release || '—';
   return { release, findings: findings.map((f) => ({ id: f.id, release: f.release, area: f.area, object: f.object, impact: f.impact, detail: f.detail, recommendation: f.recommendation, client: f.client?.name })), summary: { total: findings.length, byImpact } };
 }
 
-export async function getCleanCore(consultancyId: string) {
+export async function getCleanCore(consultancyId: string, env?: string) {
   const clients = await prisma.client.findMany({ where: { consultancyId }, select: { id: true, name: true } });
-  const items = await prisma.cleanCoreItem.findMany({ where: { clientId: { in: clients.map((c) => c.id) }, resolved: false }, include: { client: { select: { name: true } } } });
+  const items = await prisma.cleanCoreItem.findMany({ where: { clientId: { in: clients.map((c) => c.id) }, resolved: false, ...(env ? { environment: env } : {}) }, include: { client: { select: { name: true } } } });
   const perClient = clients.map((c) => {
     const its = items.filter((i) => i.clientId === c.id);
     const deduct = its.reduce((s, i) => s + i.points, 0);
@@ -201,15 +201,15 @@ export async function getCleanCore(consultancyId: string) {
   };
 }
 
-export async function getApis(consultancyId: string) {
+export async function getApis(consultancyId: string, env?: string) {
   const ids = await clientIds(consultancyId);
-  const usage = await prisma.apiUsage.findMany({ where: { clientId: { in: ids } }, orderBy: [{ deprecated: 'desc' }, { calls30d: 'desc' }], take: 500, include: { client: { select: { name: true } } } });
+  const usage = await prisma.apiUsage.findMany({ where: { clientId: { in: ids }, ...(env ? { environment: env } : {}) }, orderBy: [{ deprecated: 'desc' }, { calls30d: 'desc' }], take: 500, include: { client: { select: { name: true } } } });
   return { items: usage.map((u) => ({ apiName: u.apiName, version: u.version, scenario: u.scenario, calls30d: u.calls30d, deprecated: u.deprecated, deprecationRelease: u.deprecationRelease, replacement: u.replacement, client: u.client?.name })), summary: { total: usage.length, deprecated: usage.filter((u) => u.deprecated).length } };
 }
 
-export async function getComm(consultancyId: string) {
+export async function getComm(consultancyId: string, env?: string) {
   const ids = await clientIds(consultancyId);
-  const arr = await prisma.commArrangement.findMany({ where: { clientId: { in: ids } }, orderBy: { certExpiresAt: 'asc' }, include: { client: { select: { name: true } } } });
+  const arr = await prisma.commArrangement.findMany({ where: { clientId: { in: ids }, ...(env ? { environment: env } : {}) }, orderBy: { certExpiresAt: 'asc' }, include: { client: { select: { name: true } } } });
   const now = Date.now();
   const sev = (d?: Date | null) => { if (!d) return 'OK'; const days = Math.floor((d.getTime() - now) / 864e5); return days < 0 ? 'EXPIRED' : days <= 7 ? 'CRITICAL' : days <= 30 ? 'WARN' : 'OK'; };
   const items = arr.map((a) => ({ scenario: a.scenario, name: a.name, direction: a.direction, commUser: a.commUser, status: a.status, certExpiresAt: a.certExpiresAt, certSeverity: sev(a.certExpiresAt), client: a.client?.name }));
@@ -231,9 +231,9 @@ export function fiscalFamily(docType: string): string {
   return 'OUTROS';
 }
 
-export async function getFiscal(consultancyId: string, clientId?: string, family?: string) {
+export async function getFiscal(consultancyId: string, clientId?: string, family?: string, env?: string) {
   const ids = clientId ? [clientId] : await clientIds(consultancyId);
-  let docs = await prisma.fiscalDoc.findMany({ where: { clientId: { in: ids } }, orderBy: { issuedAt: 'desc' }, take: 1000, include: { client: { select: { name: true } } } });
+  let docs = await prisma.fiscalDoc.findMany({ where: { clientId: { in: ids }, ...(env ? { environment: env } : {}) }, orderBy: { issuedAt: 'desc' }, take: 1000, include: { client: { select: { name: true } } } });
   const withFam = docs.map((d) => ({ id: d.id, docType: d.docType, family: fiscalFamily(d.docType), number: d.number, status: d.status, sefazCode: d.sefazCode, message: d.message, amountCents: d.amountCents, remediable: d.remediable, resolved: d.resolved, issuedAt: d.issuedAt, client: d.client?.name }));
   const byStatus: Record<string, number> = {};
   let atRiskCents = 0;
@@ -251,17 +251,17 @@ export async function reprocessFiscal(consultancyId: string, id: string) {
   return { ok: true, status: u.status };
 }
 
-export async function getEvents(consultancyId: string) {
+export async function getEvents(consultancyId: string, env?: string) {
   const ids = await clientIds(consultancyId);
-  const ev = await prisma.cloudEvent.findMany({ where: { clientId: { in: ids } }, orderBy: { occurredAt: 'desc' }, take: 500, include: { client: { select: { name: true } } } });
+  const ev = await prisma.cloudEvent.findMany({ where: { clientId: { in: ids }, ...(env ? { environment: env } : {}) }, orderBy: { occurredAt: 'desc' }, take: 500, include: { client: { select: { name: true } } } });
   const byStatus: Record<string, number> = {};
   for (const e of ev) byStatus[e.status] = (byStatus[e.status] || 0) + 1;
   return { items: ev.map((e) => ({ topic: e.topic, status: e.status, subscriber: e.subscriber, lagMs: e.lagMs, occurredAt: e.occurredAt, client: e.client?.name })), summary: { total: ev.length, byStatus, deadLetter: byStatus.DEAD_LETTER || 0 } };
 }
 
-export async function getOverview(consultancyId: string) {
+export async function getOverview(consultancyId: string, env?: string) {
   const [cc, up, fis, comm, ev, apis] = await Promise.all([
-    getCleanCore(consultancyId), getUpgrade(consultancyId), getFiscal(consultancyId), getComm(consultancyId), getEvents(consultancyId), getApis(consultancyId),
+    getCleanCore(consultancyId, env), getUpgrade(consultancyId, undefined, env), getFiscal(consultancyId, undefined, undefined, env), getComm(consultancyId, env), getEvents(consultancyId, env), getApis(consultancyId, env),
   ]);
   return {
     cleanCoreScore: cc.overall,

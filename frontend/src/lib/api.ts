@@ -10,6 +10,9 @@ api.interceptors.request.use((config) => {
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    // Ambiente global selecionado (DEV/HML/PRD); vazio = Todos
+    const env = localStorage.getItem('slk_env');
+    if (env) config.headers['x-environment'] = env;
   }
   return config;
 });

@@ -5,6 +5,7 @@ import { tenancyMiddleware } from '../middleware/tenancy';
 import { syncIntegration, isMonitorable, probe, probeUrl, analyzeFix } from '../services/connectors';
 import { encryptConfig, decryptConfig, maskConfig, SENSITIVE, generateAgentToken } from '../lib/crypto';
 import { requireConsultancyAdmin } from '../middleware/roles';
+import { reqEnv } from '../lib/env';
 
 // Tipos que exigem o Agente on-premise (não monitoráveis por HTTP direto)
 const AGENT_TYPES = new Set(['RFC', 'IDOC', 'BAPI', 'SOAP', 'FILE', 'DATABASE']);
@@ -137,9 +138,10 @@ router.post('/sync-all', async (req: Request, res: Response) => {
 // GET /all — list ALL integrations for consultancy
 router.get('/all', async (req: Request, res: Response) => {
   try {
-    const envFilter = req.query.environment as string | undefined;
+    const qEnv = req.query.environment as string | undefined;
+    const envFilter = (qEnv && ['DEV', 'HML', 'PRD'].includes(qEnv)) ? qEnv : reqEnv(req);
     const integrations = await prisma.integration.findMany({
-      where: { client: { consultancyId: req.consultancyId! }, ...(envFilter && ['DEV', 'HML', 'PRD'].includes(envFilter) ? { environment: envFilter } : {}) },
+      where: { client: { consultancyId: req.consultancyId! }, ...(envFilter ? { environment: envFilter } : {}) },
       include: { client: { select: { id: true, name: true } }, _count: { select: { alerts: true } } },
       orderBy: { updatedAt: 'desc' },
     });

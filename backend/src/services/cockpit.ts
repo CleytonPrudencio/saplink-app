@@ -16,6 +16,8 @@ export interface SapItemInput {
 /** Ingere o snapshot de itens operacionais do agente: upsert por (integration,kind,ref);
  *  o que sumiu do snapshot é marcado como resolvido. */
 export async function ingestSapItems(integrationId: string, clientId: string, items: SapItemInput[]) {
+  const integ = await prisma.integration.findUnique({ where: { id: integrationId }, select: { environment: true } });
+  const environment = integ?.environment || 'PRD';
   const seen = new Set<string>();
   for (const it of items || []) {
     if (!it.kind || !it.ref) continue;
@@ -32,8 +34,8 @@ export async function ingestSapItems(integrationId: string, clientId: string, it
     const prev = await prisma.sapItem.findUnique({ where: { integrationId_kind_ref: { integrationId, kind: it.kind, ref: it.ref } }, select: { resolved: true } });
     await prisma.sapItem.upsert({
       where: { integrationId_kind_ref: { integrationId, kind: it.kind, ref: it.ref } },
-      update: { ...data, clientId, resolved: false, lastSeenAt: new Date() },
-      create: { integrationId, clientId, kind: it.kind, ref: it.ref, ...data },
+      update: { ...data, clientId, environment, resolved: false, lastSeenAt: new Date() },
+      create: { integrationId, clientId, environment, kind: it.kind, ref: it.ref, ...data },
     });
     // item de erro novo → alimenta a Rede Federada (anonimizado)
     if (!prev || prev.resolved) await recordFailure(clientId, it.kind, it.statusText || it.statusCode).catch(() => {});
@@ -47,10 +49,11 @@ export async function ingestSapItems(integrationId: string, clientId: string, it
   return { upserted: (items || []).length, resolved: toResolve.length };
 }
 
-export interface CockpitFilters { clientId?: string; kind?: string; status?: string; q?: string }
+export interface CockpitFilters { clientId?: string; kind?: string; status?: string; q?: string; env?: string }
 
 export async function getCockpit(consultancyId: string, f: CockpitFilters = {}) {
   const where: Record<string, unknown> = { client: { consultancyId }, resolved: false };
+  if (f.env) where.environment = f.env;
   if (f.clientId) where.clientId = f.clientId;
   if (f.kind) where.kind = f.kind;
   if (f.status) where.statusCode = f.status;

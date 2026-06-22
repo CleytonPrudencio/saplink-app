@@ -1,17 +1,18 @@
 import { Router, Request, Response } from 'express';
 import { requireConsultancyAdmin } from '../middleware/roles';
 import * as btp from '../services/btp';
+import { reqEnv } from '../lib/env';
 
 // BTP Cockpit. Sob tenantGate.
 const router = Router();
 
 router.get('/', async (req: Request, res: Response) => {
-  try { res.json(await btp.listBtp(req.consultancyId!, req.query.clientId as string)); }
+  try { res.json(await btp.listBtp(req.consultancyId!, req.query.clientId as string, reqEnv(req))); }
   catch (e) { console.error('btp list', e); res.status(500).json({ error: 'Erro.' }); }
 });
 
 router.post('/', requireConsultancyAdmin, async (req: Request, res: Response) => {
-  const r = await btp.createBtp(req.consultancyId!, req.body || {});
+  const r = await btp.createBtp(req.consultancyId!, { ...(req.body || {}), environment: (req.body?.environment) || reqEnv(req) });
   if ('error' in r) { res.status(r.error === 'INVALID' ? 400 : 404).json({ error: r.error === 'INVALID' ? 'Informe tipo e nome.' : 'Cliente inválido.' }); return; }
   res.json(r);
 });

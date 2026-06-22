@@ -7,6 +7,7 @@ import Sidebar from "@/components/Sidebar";
 import PageGuide from "@/components/PageGuide";
 import PushSetup from "@/components/PushSetup";
 import Loading from "@/components/Loading";
+import EnvSwitcher from "@/components/EnvSwitcher";
 
 interface Consultancy {
   name?: string;
@@ -113,6 +114,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <Sidebar user={user} consultancy={user?.consultancy} />
       <main className="flex-1 ml-0 md:ml-64 min-h-screen overflow-auto">
         <div className="sticky top-0 z-20 flex items-center justify-end gap-3 pl-16 pr-4 md:px-8 py-3 bg-[#0f0b1a]/80 backdrop-blur border-b border-white/[0.06] no-print">
+          <div className="mr-auto"><EnvSwitcher /></div>
           <PushSetup />
           <span className="text-sm text-[#9b95ad] truncate max-w-[42vw] md:max-w-none">
             {user?.name}
