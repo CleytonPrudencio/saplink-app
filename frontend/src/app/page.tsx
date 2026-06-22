@@ -276,7 +276,7 @@ export default function LandingPage() {
       <FeatureModal feature={feature} onClose={() => setFeature(null)} onInterest={() => setInterest(true)} />
 
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-[#0f0b1a]/85 backdrop-blur border-b border-white/[0.06]">
+      <header className="sticky top-0 z-50 bg-[#0f0b1a]/70 backdrop-blur-md border-b border-white/[0.06]">
         <div className="max-w-6xl mx-auto px-4 sm:px-5 h-16 flex items-center justify-between gap-3">
           <a href="#top" className="text-lg sm:text-xl font-extrabold bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent shrink-0">◆ SAPLINK</a>
           <nav className="hidden lg:flex items-center gap-6 text-sm text-[#9b95ad]">
