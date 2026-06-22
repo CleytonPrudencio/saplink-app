@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { getPublicPlans, submitLead } from "@/lib/api";
 import FeatureModal from "@/components/landing/FeatureModal";
@@ -146,14 +146,127 @@ function InterestModal({ open, onClose }: { open: boolean; onClose: () => void }
   );
 }
 
+// ── Fundo de rede neural animado (canvas) — sensação de landscape de integrações vivo ──
+function NetworkCanvas() {
+  const ref = useRef<HTMLCanvasElement | null>(null);
+  useEffect(() => {
+    const canvas = ref.current; if (!canvas) return;
+    const ctx = canvas.getContext("2d"); if (!ctx) return;
+    let raf = 0; let w = 0, h = 0;
+    const reduce = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    const N = typeof window !== "undefined" && window.innerWidth < 640 ? 28 : 56;
+    type P = { x: number; y: number; vx: number; vy: number };
+    let pts: P[] = [];
+    const seed = () => { pts = Array.from({ length: N }, () => ({ x: Math.random() * w, y: Math.random() * h, vx: (Math.random() - 0.5) * 0.35, vy: (Math.random() - 0.5) * 0.35 })); };
+    const resize = () => {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const r = canvas.getBoundingClientRect(); w = r.width; h = r.height;
+      canvas.width = w * dpr; canvas.height = h * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      if (!pts.length) seed();
+    };
+    resize();
+    const draw = () => {
+      ctx.clearRect(0, 0, w, h);
+      for (const p of pts) {
+        p.x += p.vx; p.y += p.vy;
+        if (p.x < 0 || p.x > w) p.vx *= -1;
+        if (p.y < 0 || p.y > h) p.vy *= -1;
+      }
+      for (let i = 0; i < pts.length; i++) {
+        for (let j = i + 1; j < pts.length; j++) {
+          const a = pts[i], b = pts[j];
+          const dx = a.x - b.x, dy = a.y - b.y; const d2 = dx * dx + dy * dy;
+          if (d2 < 130 * 130) {
+            const o = (1 - Math.sqrt(d2) / 130) * 0.5;
+            ctx.strokeStyle = `rgba(124,58,237,${o})`; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+          }
+        }
+      }
+      for (const p of pts) {
+        ctx.fillStyle = "rgba(34,211,238,0.8)";
+        ctx.beginPath(); ctx.arc(p.x, p.y, 1.6, 0, Math.PI * 2); ctx.fill();
+      }
+      raf = requestAnimationFrame(draw);
+    };
+    if (reduce) { draw(); cancelAnimationFrame(raf); } else { raf = requestAnimationFrame(draw); }
+    window.addEventListener("resize", resize);
+    return () => { cancelAnimationFrame(raf); window.removeEventListener("resize", resize); };
+  }, []);
+  return <canvas ref={ref} className="absolute inset-0 w-full h-full -z-10 opacity-70" aria-hidden />;
+}
+
+// ── Reveal on scroll ──
+function Reveal({ children, className = "", delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    const el = ref.current; if (!el) return;
+    const io = new IntersectionObserver((es) => { es.forEach((e) => { if (e.isIntersecting) { setShown(true); io.disconnect(); } }); }, { threshold: 0.12 });
+    io.observe(el); return () => io.disconnect();
+  }, []);
+  return <div ref={ref} className={`${className} transition-all duration-700 ${shown ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`} style={{ transitionDelay: `${delay}ms` }}>{children}</div>;
+}
+
+// ── Número que sobe quando entra na tela ──
+function CountUp({ value }: { value: string }) {
+  const m = value.match(/^(\d+)(.*)$/); const target = m ? parseInt(m[1]) : 0; const suffix = m ? m[2] : value;
+  const ref = useRef<HTMLSpanElement | null>(null);
+  const [n, setN] = useState(0);
+  useEffect(() => {
+    const el = ref.current; if (!el || target === 0) { setN(target); return; }
+    const io = new IntersectionObserver((es) => {
+      if (es[0].isIntersecting) {
+        io.disconnect(); const start = performance.now(); const dur = 1100;
+        const tick = (t: number) => { const p = Math.min(1, (t - start) / dur); setN(Math.round(target * (1 - Math.pow(1 - p, 3)))); if (p < 1) requestAnimationFrame(tick); };
+        requestAnimationFrame(tick);
+      }
+    }, { threshold: 0.5 });
+    io.observe(el); return () => io.disconnect();
+  }, [target]);
+  return <span ref={ref}>{n}{suffix}</span>;
+}
+
+// ── Palavra que troca sozinha ──
+function RotatingWord({ words }: { words: string[] }) {
+  const [i, setI] = useState(0);
+  useEffect(() => { const t = setInterval(() => setI((v) => (v + 1) % words.length), 2200); return () => clearInterval(t); }, [words.length]);
+  return (
+    <span className="relative inline-block align-bottom">
+      <span key={i} className="slk-grad inline-block" style={{ animation: "slk-word .5s ease" }}>{words[i]}</span>
+    </span>
+  );
+}
+
+const FEED = [
+  "IA corrigiu 3 IDocs travados · sem intervenção",
+  "Alerta CRITICAL em CPI · diagnóstico em 4s",
+  "NF-e rejeitada reprocessada · SEFAZ OK",
+  "Fila qRFC destravada · 0 pendências",
+  "Runbook aplicado · 'Sold-to not found'",
+];
+
 function LivePanel() {
-  const rows: [string, string, string][] = [
-    ["S/4HANA Cloud · OData", "98%", "#34d399"],
-    ["CPI · Pedidos B2B", "94%", "#34d399"],
-    ["IDoc · INVOIC02", "71%", "#fbbf24"],
-    ["RFC · PI_PROD", "88%", "#34d399"],
-    ["Event Mesh · BP", "62%", "#f87171"],
+  const base: [string, number, string][] = [
+    ["S/4HANA Cloud · OData", 98, "#34d399"],
+    ["CPI · Pedidos B2B", 94, "#34d399"],
+    ["IDoc · INVOIC02", 71, "#fbbf24"],
+    ["RFC · PI_PROD", 88, "#34d399"],
+    ["Event Mesh · BP", 62, "#f87171"],
   ];
+  const [health, setHealth] = useState(92);
+  const [risk, setRisk] = useState(84.2);
+  const [rows, setRows] = useState(base.map((r) => r[1]));
+  const [feed, setFeed] = useState(0);
+  useEffect(() => {
+    const a = setInterval(() => {
+      setHealth((h) => Math.max(89, Math.min(96, h + (Math.random() < 0.5 ? -1 : 1))));
+      setRisk((r) => Math.max(40, Math.min(120, +(r + (Math.random() - 0.5) * 9).toFixed(1))));
+      setRows((rs) => rs.map((v, i) => Math.max(40, Math.min(99, v + Math.round((Math.random() - 0.5) * 6 * (i === 4 ? 2 : 1))))));
+    }, 1600);
+    const b = setInterval(() => setFeed((f) => (f + 1) % FEED.length), 2600);
+    return () => { clearInterval(a); clearInterval(b); };
+  }, []);
   return (
     <div className="slk-float relative mx-auto w-full max-w-md">
       <div className="absolute -inset-4 -z-10 rounded-3xl opacity-60 blur-2xl" style={{ background: "radial-gradient(circle at 50% 30%, rgba(124,58,237,.35), transparent 70%)" }} />
@@ -161,32 +274,33 @@ function LivePanel() {
         <div className="flex items-center gap-2 px-4 py-3 border-b border-white/[0.08]">
           <span className="w-2.5 h-2.5 rounded-full bg-rose-400/70" /><span className="w-2.5 h-2.5 rounded-full bg-amber-400/70" /><span className="w-2.5 h-2.5 rounded-full bg-emerald-400/70" />
           <span className="ml-2 text-xs text-[#9b95ad]">SAPLINK · carteira ao vivo</span>
+          <span className="ml-auto flex items-center gap-1 text-[10px] text-emerald-300"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400" style={{ animation: "slk-pulse 1.4s infinite" }} />LIVE</span>
         </div>
         <div className="p-4">
           <div className="flex items-end justify-between mb-4">
             <div>
               <p className="text-xs text-[#9b95ad]">Saúde da carteira</p>
-              <p className="text-4xl font-extrabold slk-grad">92</p>
+              <p className="text-4xl font-extrabold slk-grad tabular-nums">{health}</p>
             </div>
             <div className="text-right">
               <p className="text-xs text-[#9b95ad]">Em risco agora</p>
-              <p className="text-xl font-bold text-amber-300">R$ 84,2k</p>
+              <p className="text-xl font-bold text-amber-300 tabular-nums">R$ {risk.toFixed(1).replace(".", ",")}k</p>
             </div>
           </div>
           <div className="space-y-2.5">
-            {rows.map(([name, pct, color], i) => (
+            {base.map(([name, , color], i) => (
               <div key={name} className="flex items-center gap-3">
                 <span className="text-xs text-[#c9c5d6] w-40 truncate">{name}</span>
                 <div className="flex-1 h-2 rounded-full bg-white/[0.06] overflow-hidden">
-                  <div className="slk-bar h-full rounded-full" style={{ width: pct, background: color, animationDelay: `${i * 0.3}s` }} />
+                  <div className="h-full rounded-full transition-all duration-700" style={{ width: `${rows[i]}%`, background: color }} />
                 </div>
-                <span className="text-[11px] text-[#9b95ad] w-9 text-right">{pct}</span>
+                <span className="text-[11px] text-[#9b95ad] w-9 text-right tabular-nums">{rows[i]}%</span>
               </div>
             ))}
           </div>
-          <div className="mt-4 flex items-center gap-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-3 py-2">
-            <span className="text-emerald-300">✓</span>
-            <span className="text-xs text-emerald-200">IA corrigiu 3 IDocs travados · sem intervenção</span>
+          <div className="mt-4 flex items-center gap-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-3 py-2 overflow-hidden">
+            <span className="text-emerald-300 shrink-0">✓</span>
+            <span key={feed} className="text-xs text-emerald-200 truncate" style={{ animation: "slk-word .5s ease" }}>{FEED[feed]}</span>
           </div>
         </div>
       </div>
@@ -236,14 +350,22 @@ export default function LandingPage() {
         @keyframes slk-pan { 0%{background-position:0% 50%} 100%{background-position:200% 50%} }
         @keyframes slk-pulse { 0%,100%{opacity:.35} 50%{opacity:.9} }
         @keyframes slk-bar { 0%{transform:scaleX(.4)} 50%{transform:scaleX(1)} 100%{transform:scaleX(.7)} }
+        @keyframes slk-word { 0%{opacity:0;transform:translateY(8px)} 100%{opacity:1;transform:translateY(0)} }
+        @keyframes slk-marquee { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
         .slk-grad { background:linear-gradient(90deg,#a78bfa,#22d3ee,#34d399,#a78bfa); background-size:200% auto; -webkit-background-clip:text; background-clip:text; color:transparent; animation:slk-pan 6s linear infinite; }
         .slk-float { animation:slk-float 5s ease-in-out infinite; }
         .slk-bar { transform-origin:left; animation:slk-bar 2.4s ease-in-out infinite; }
+        .slk-marquee { display:flex; width:max-content; animation:slk-marquee 28s linear infinite; }
+        .slk-marquee:hover { animation-play-state:paused; }
+        .slk-tilt { transition:transform .25s ease, box-shadow .25s ease; }
+        .slk-tilt:hover { transform:translateY(-4px); box-shadow:0 12px 40px rgba(124,58,237,.18); }
+        @media (prefers-reduced-motion: reduce){ .slk-grad,.slk-float,.slk-bar,.slk-marquee{animation:none!important} }
       `}</style>
 
       <main id="top" className="max-w-6xl mx-auto px-4 sm:px-5">
         {/* Hero */}
         <section className="pt-14 pb-12 sm:pt-20 sm:pb-16 relative">
+          <NetworkCanvas />
           <div className="absolute inset-0 -z-10 opacity-50" style={{ background: "radial-gradient(700px 360px at 50% -5%, rgba(124,58,237,.28), transparent), radial-gradient(500px 300px at 90% 10%, rgba(34,211,238,.16), transparent)" }} />
           <div className="grid lg:grid-cols-2 gap-10 items-center">
             <div className="text-center lg:text-left">
@@ -251,7 +373,7 @@ export default function LandingPage() {
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" style={{ animation: "slk-pulse 1.6s ease-in-out infinite" }} /> 18+ produtos SAP · IA de ponta a ponta · white-label
               </div>
               <h1 className="text-4xl sm:text-5xl xl:text-6xl font-extrabold leading-[1.05]">
-                Inove a operação SAP<br />da sua consultoria com a <span className="slk-grad">SAPLINK</span>
+                Inove a operação<br />de <RotatingWord words={["S/4HANA Cloud", "Ariba & SF", "CPI & AIF", "BTP", "fiscal BR", "todo o SAP"]} /><br />da sua consultoria
               </h1>
               <p className="text-base sm:text-lg text-[#c9c5d6] max-w-xl mx-auto lg:mx-0 mt-6 leading-relaxed">
                 Um só painel que <b className="text-white">monitora, prevê, corrige e prova valor em R$</b> em todo o landscape SAP do cliente — do IDoc clássico ao S/4HANA Cloud, Ariba, SuccessFactors, BTP e fiscal brasileiro.
@@ -270,8 +392,8 @@ export default function LandingPage() {
           {/* Faixa de métricas */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-12">
             {METRICS.map(([n, l]) => (
-              <div key={l} className="rounded-xl bg-[#1a1527] border border-white/[0.08] p-4 text-center">
-                <div className="text-3xl font-extrabold slk-grad">{n}</div>
+              <div key={l} className="slk-tilt rounded-xl bg-[#1a1527] border border-white/[0.08] p-4 text-center">
+                <div className="text-3xl font-extrabold slk-grad tabular-nums"><CountUp value={n} /></div>
                 <div className="text-xs text-[#9b95ad] mt-1">{l}</div>
               </div>
             ))}
@@ -285,13 +407,23 @@ export default function LandingPage() {
             <h2 className="text-2xl sm:text-4xl font-bold">Todo o universo SAP do seu cliente. Numa tela.</h2>
             <p className="text-[#9b95ad] mt-3">Integração clássica, nuvem, LoB, plataforma, Basis e fiscal brasileiro — o concorrente cobre um pedaço; o SAPLINK cobre o conjunto.</p>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mt-9">
-            {COVERAGE.map(([ic, name, sub]) => (
-              <div key={name} className="group rounded-xl bg-[#1a1527] border border-white/[0.08] p-4 text-center hover:border-purple-500/50 hover:bg-purple-500/[0.04] transition">
-                <div className="text-3xl mb-2 transition group-hover:scale-110">{ic}</div>
-                <p className="font-semibold text-sm leading-tight">{name}</p>
-                <p className="text-[11px] text-[#9b95ad] mt-1 leading-tight">{sub}</p>
-              </div>
+          {/* marquee contínuo de produtos */}
+          <div className="relative mt-8 overflow-hidden [mask-image:linear-gradient(90deg,transparent,#000_8%,#000_92%,transparent)]">
+            <div className="slk-marquee gap-3 py-1">
+              {[...COVERAGE, ...COVERAGE].map(([ic, name], i) => (
+                <span key={i} className="shrink-0 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.05] border border-white/[0.08] text-sm text-[#c9c5d6]"><span>{ic}</span>{name}</span>
+              ))}
+            </div>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mt-6">
+            {COVERAGE.map(([ic, name, sub], i) => (
+              <Reveal key={name} delay={(i % 6) * 60}>
+                <div className="slk-tilt group h-full rounded-xl bg-[#1a1527] border border-white/[0.08] p-4 text-center hover:border-purple-500/50 hover:bg-purple-500/[0.04]">
+                  <div className="text-3xl mb-2 transition group-hover:scale-110">{ic}</div>
+                  <p className="font-semibold text-sm leading-tight">{name}</p>
+                  <p className="text-[11px] text-[#9b95ad] mt-1 leading-tight">{sub}</p>
+                </div>
+              </Reveal>
             ))}
           </div>
         </section>
@@ -345,7 +477,7 @@ export default function LandingPage() {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                   {(feats as string[][]).map((f) => (
-                    <button key={f[1]} onClick={() => setFeature({ icon: f[0], name: f[1], tagline: f[2], accent: accent as string })} className="text-left bg-[#0f0b1a] rounded-xl p-4 border border-white/[0.05] hover:border-white/[0.2] hover:bg-white/[0.02] transition group cursor-pointer">
+                    <button key={f[1]} onClick={() => setFeature({ icon: f[0], name: f[1], tagline: f[2], accent: accent as string })} className="slk-tilt text-left bg-[#0f0b1a] rounded-xl p-4 border border-white/[0.05] hover:border-white/[0.2] hover:bg-white/[0.02] group cursor-pointer">
                       <div className="text-2xl mb-1.5">{f[0]}</div>
                       <p className="font-semibold text-sm">{f[1]}</p>
                       <p className="text-xs text-[#9b95ad] mt-1 leading-relaxed">{f[2]}</p>
@@ -383,7 +515,7 @@ export default function LandingPage() {
           <p className="text-[#9b95ad] mb-8 max-w-3xl">Treze diferenciais que viram moat: efeito de rede, dado cross-camada que só nós temos, autonomia, reconciliação, IA que escreve a correção, operação por WhatsApp, pré-voo de mudança, time machine, auditoria, FinOps e a linguagem do CFO. Clique pra explorar com simulador.</p>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {INNOVATIONS.map((g) => (
-              <button key={g[1]} onClick={() => setFeature({ icon: g[0], name: g[1], tagline: g[2], accent: "#a78bfa" })} className="text-left bg-gradient-to-br from-purple-600/10 to-cyan-500/[0.06] border border-purple-500/25 rounded-2xl p-6 hover:border-purple-500/60 transition group cursor-pointer">
+              <button key={g[1]} onClick={() => setFeature({ icon: g[0], name: g[1], tagline: g[2], accent: "#a78bfa" })} className="slk-tilt text-left bg-gradient-to-br from-purple-600/10 to-cyan-500/[0.06] border border-purple-500/25 rounded-2xl p-6 hover:border-purple-500/60 group cursor-pointer">
                 <div className="flex items-center gap-3 mb-2">
                   <span className="text-3xl">{g[0]}</span>
                   <div>
