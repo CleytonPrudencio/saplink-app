@@ -15,7 +15,14 @@ api.interceptors.request.use((config) => {
 });
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Sliding session: o backend renova o token quando perto de expirar
+    if (typeof window !== "undefined") {
+      const fresh = response.headers?.["x-refresh-token"];
+      if (fresh) localStorage.setItem("token", fresh);
+    }
+    return response;
+  },
   (error) => {
     if (typeof window !== 'undefined') {
       const status = error.response?.status;

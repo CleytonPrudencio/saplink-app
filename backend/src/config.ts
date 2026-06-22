@@ -10,7 +10,8 @@ function required(name: string): string {
 }
 
 export const JWT_SECRET: string = required('JWT_SECRET');
-export const JWT_EXPIRES_IN: string = process.env.JWT_EXPIRES_IN || '7d';
+// Sessão expira em 2 dias SEM atividade (sliding: renova a cada request — ver middleware/auth).
+export const JWT_EXPIRES_IN: string = process.env.JWT_EXPIRES_IN || '2d';
 
 // Origens permitidas no CORS (lista separada por vírgula). Default: front local.
 export const CORS_ORIGINS: string[] = (process.env.CORS_ORIGINS || 'http://localhost:3000')

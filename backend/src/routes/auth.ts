@@ -179,7 +179,7 @@ router.post('/login', loginLimiter, async (req: Request, res: Response) => {
 });
 
 // POST /forgot-password — gera token e (em prod) envia e-mail. Resposta neutra (não revela e-mail).
-router.post('/forgot-password', async (req: Request, res: Response) => {
+router.post('/forgot-password', loginLimiter, async (req: Request, res: Response) => {
   try {
     const { email } = req.body || {};
     if (!email) {

@@ -42,6 +42,7 @@ import { runDueDigests } from './services/digest';
 import { refreshAllCerts } from './services/validity';
 import { processAlerts } from './services/alertproc';
 import { snapshotMetrics } from './services/predict';
+import { recomputeHealthScores } from './services/health';
 import { syncAllCpi } from './services/cpi';
 import { stripeWebhookHandler } from './services/stripe';
 import prisma from './lib/prisma';
@@ -79,6 +80,12 @@ app.get('/api/plans', async (_req: Request, res: Response) => {
   } catch {
     res.status(500).json({ error: 'Erro ao listar planos' });
   }
+});
+
+// Healthcheck público (uptime externo / load balancer)
+app.get('/api/health', async (_req: Request, res: Response) => {
+  try { await prisma.$queryRaw`SELECT 1`; res.json({ status: 'ok', db: true, ts: new Date().toISOString() }); }
+  catch { res.status(503).json({ status: 'degraded', db: false }); }
 });
 
 // Auth e billing: acessíveis sem assinatura ativa (login, regularizar pagamento)
@@ -161,6 +168,15 @@ app.listen(PORT, () => {
       logger.error({ err: (error as Error).message }, 'agent heartbeat error');
     }
   }, 60000);
+
+  // Recálculo automático do health score (dados reais) — substitui o cálculo estático
+  const HEALTH_INTERVAL = parseInt(process.env.HEALTH_INTERVAL || '180000'); // 3 min
+  const runHealth = async () => {
+    try { const n = await recomputeHealthScores(); if (n) logger.debug({ updated: n }, 'health recompute'); }
+    catch (error) { logger.error({ err: (error as Error).message }, 'health recompute error'); }
+  };
+  runHealth();
+  setInterval(runHealth, HEALTH_INTERVAL);
 
   // Digest semanal por IA: verifica periodicamente quem está com a janela de 7 dias vencida.
   // O envio em si só ocorre quando há RESEND_API_KEY; o check é leve e idempotente.
