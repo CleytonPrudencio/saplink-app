@@ -84,6 +84,7 @@ model Client {
   cloudEvents     CloudEvent[]
   cpiConfig       CpiConfig?
   cloudConnectors CloudConnector[]
+  btpResources    BtpResource[]
   integrations  Integration[]
   alerts        Alert[]
   diagnostics   Diagnostic[]
@@ -306,6 +307,22 @@ model S4Connection {
   status        String   @default("PENDING") // PENDING | CONNECTED | ERROR
   lastSyncAt    DateTime?
   createdAt     DateTime @default(now())
+}
+
+// BTP Cockpit — inventário de recursos da SAP BTP por cliente (keys/bindings/destinations/quotas/apps).
+model BtpResource {
+  id         String    @id @default(uuid())
+  clientId   String
+  subaccount String?
+  kind       String    // SERVICE_KEY | BINDING | DESTINATION | QUOTA | APP
+  name       String
+  status     String    @default("OK") // OK | WARN | EXPIRED | DOWN
+  detail     String?
+  expiresAt  DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  client     Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  @@index([clientId])
 }
 
 // Conectores SAP Cloud BYO (Ariba / SuccessFactors) — uma chave por cliente, espelha o do S/4.

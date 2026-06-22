@@ -173,6 +173,11 @@ const GUIDES: Record<string, Guide> = {
     why: "Cobra o parceiro certo e controla o gasto de nuvem.",
     actions: ["Aja sobre o parceiro com mais erros", "Veja o IFlow que mais consome BTP"],
   },
+  "/btp": {
+    what: "Inventário e radar de validade dos recursos da SAP BTP por cliente (service keys, bindings, destinations, quotas, apps).",
+    why: "Secret/destination vencida derruba integração sem aviso. Aqui você vê o que vai expirar antes do apagão.",
+    actions: ["Cadastre service keys e destinations com a data de validade", "Aja nos EXPIRED e nos que vencem ≤30d", "Acompanhe quotas perto do limite"],
+  },
   "/connectors": {
     what: "Conecta Ariba e SuccessFactors de cada cliente com a chave (API Key) dele.",
     why: "Amplia o monitoramento além do S/4 — uma só tela pra todo o portfólio SAP Cloud do cliente.",

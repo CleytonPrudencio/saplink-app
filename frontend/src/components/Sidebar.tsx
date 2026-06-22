@@ -69,7 +69,8 @@ const tenantGroups: MenuGroup[] = [
     title: "SAP Cloud & transportes",
     items: [
       { href: "/cloud", label: "CPI & AIF", icon: "\u2601\uFE0F" },
-      { href: "/connectors", label: "Conectores (Ariba/SF)", icon: "\uD83D\uDD0C", adminOnly: true },
+      { href: "/btp", label: "BTP Cockpit", icon: "\uD83E\uDE90" },
+      { href: "/connectors", label: "Conectores SAP Cloud", icon: "\uD83D\uDD0C", adminOnly: true },
       { href: "/transports", label: "Transports", icon: "\uD83D\uDE9A" },
     ],
   },

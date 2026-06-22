@@ -316,6 +316,11 @@ export async function ssoProviderForEmail(email: string) { const { data } = awai
 export async function getConnectors() { const { data } = await api.get('/connectors'); return data as { clients: any[] }; }
 export async function saveConnector(clientId: string, product: string, payload: Record<string, unknown>) { const { data } = await api.post(`/connectors/${clientId}/${product}`, payload); return data; }
 export async function syncConnector(clientId: string, product: string) { const { data } = await api.post(`/connectors/${clientId}/${product}/sync`); return data; }
+// BTP Cockpit
+export async function getBtp(clientId?: string) { const { data } = await api.get('/btp', { params: clientId ? { clientId } : {} }); return data as { clients: any[]; summary: any; items: any[] }; }
+export async function createBtp(payload: Record<string, unknown>) { const { data } = await api.post('/btp', payload); return data; }
+export async function updateBtp(id: string, payload: Record<string, unknown>) { const { data } = await api.put(`/btp/${id}`, payload); return data; }
+export async function deleteBtp(id: string) { const { data } = await api.delete(`/btp/${id}`); return data; }
 
 // C1 — Canais de notificação / on-call
 export interface NotificationChannel {
