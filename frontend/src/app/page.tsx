@@ -146,56 +146,6 @@ function InterestModal({ open, onClose }: { open: boolean; onClose: () => void }
   );
 }
 
-// ── Fundo de rede neural animado (canvas) — sensação de landscape de integrações vivo ──
-function NetworkCanvas() {
-  const ref = useRef<HTMLCanvasElement | null>(null);
-  useEffect(() => {
-    const canvas = ref.current; if (!canvas) return;
-    const ctx = canvas.getContext("2d"); if (!ctx) return;
-    let raf = 0; let w = 0, h = 0;
-    const reduce = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-    const N = typeof window !== "undefined" && window.innerWidth < 640 ? 28 : 56;
-    type P = { x: number; y: number; vx: number; vy: number };
-    let pts: P[] = [];
-    const seed = () => { pts = Array.from({ length: N }, () => ({ x: Math.random() * w, y: Math.random() * h, vx: (Math.random() - 0.5) * 0.35, vy: (Math.random() - 0.5) * 0.35 })); };
-    const resize = () => {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const r = canvas.getBoundingClientRect(); w = r.width; h = r.height;
-      canvas.width = w * dpr; canvas.height = h * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      if (!pts.length) seed();
-    };
-    resize();
-    const draw = () => {
-      ctx.clearRect(0, 0, w, h);
-      for (const p of pts) {
-        p.x += p.vx; p.y += p.vy;
-        if (p.x < 0 || p.x > w) p.vx *= -1;
-        if (p.y < 0 || p.y > h) p.vy *= -1;
-      }
-      for (let i = 0; i < pts.length; i++) {
-        for (let j = i + 1; j < pts.length; j++) {
-          const a = pts[i], b = pts[j];
-          const dx = a.x - b.x, dy = a.y - b.y; const d2 = dx * dx + dy * dy;
-          if (d2 < 130 * 130) {
-            const o = (1 - Math.sqrt(d2) / 130) * 0.5;
-            ctx.strokeStyle = `rgba(124,58,237,${o})`; ctx.lineWidth = 1;
-            ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
-          }
-        }
-      }
-      for (const p of pts) {
-        ctx.fillStyle = "rgba(34,211,238,0.8)";
-        ctx.beginPath(); ctx.arc(p.x, p.y, 1.6, 0, Math.PI * 2); ctx.fill();
-      }
-      raf = requestAnimationFrame(draw);
-    };
-    if (reduce) { draw(); cancelAnimationFrame(raf); } else { raf = requestAnimationFrame(draw); }
-    window.addEventListener("resize", resize);
-    return () => { cancelAnimationFrame(raf); window.removeEventListener("resize", resize); };
-  }, []);
-  return <canvas ref={ref} className="absolute inset-0 w-full h-full -z-10 opacity-70" aria-hidden />;
-}
-
 // ── Reveal on scroll ──
 function Reveal({ children, className = "", delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
   const ref = useRef<HTMLDivElement | null>(null);
@@ -321,7 +271,7 @@ export default function LandingPage() {
   );
 
   return (
-    <div className="min-h-screen bg-[#0f0b1a] text-[#e2e0ea] overflow-x-hidden">
+    <div className="min-h-screen bg-transparent text-[#e2e0ea] overflow-x-hidden">
       <InterestModal open={interest} onClose={() => setInterest(false)} />
       <FeatureModal feature={feature} onClose={() => setFeature(null)} onInterest={() => setInterest(true)} />
 
@@ -365,7 +315,6 @@ export default function LandingPage() {
       <main id="top" className="max-w-6xl mx-auto px-4 sm:px-5">
         {/* Hero */}
         <section className="pt-14 pb-12 sm:pt-20 sm:pb-16 relative">
-          <NetworkCanvas />
           <div className="absolute inset-0 -z-10 opacity-50" style={{ background: "radial-gradient(700px 360px at 50% -5%, rgba(124,58,237,.28), transparent), radial-gradient(500px 300px at 90% 10%, rgba(34,211,238,.16), transparent)" }} />
           <div className="grid lg:grid-cols-2 gap-10 items-center">
             <div className="text-center lg:text-left">

@@ -45,7 +45,7 @@ export default function PortalPage() {
   const accent = data.consultancy.primaryColor || "#a78bfa";
 
   return (
-    <div className="min-h-screen bg-[#0f0b1a] text-[#e2e0ea]">
+    <div className="min-h-screen bg-transparent text-[#e2e0ea]">
       <header className="border-b border-white/[0.08] px-6 py-4 flex items-center justify-between">
         {data.consultancy.logoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element

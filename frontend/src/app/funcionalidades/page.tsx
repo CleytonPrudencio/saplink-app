@@ -212,7 +212,7 @@ const GROUPS: Group[] = [
 
 export default function FuncionalidadesPage() {
   return (
-    <div className="min-h-screen bg-[#0f0b1a] text-[#e2e0ea]">
+    <div className="min-h-screen bg-transparent text-[#e2e0ea]">
       {/* Header */}
       <header className="sticky top-0 z-20 bg-[#0f0b1a]/85 backdrop-blur border-b border-white/[0.06]">
         <div className="max-w-6xl mx-auto px-4 sm:px-5 py-3 flex items-center justify-between gap-3">

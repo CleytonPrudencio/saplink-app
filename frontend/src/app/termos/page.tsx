@@ -62,7 +62,7 @@ const SECTIONS: { t: string; p: string[] }[] = [
 
 export default function TermosPage() {
   return (
-    <div className="min-h-screen bg-[#0f0b1a] text-[#e2e0ea]">
+    <div className="min-h-screen bg-transparent text-[#e2e0ea]">
       <header className="border-b border-white/[0.06]">
         <div className="max-w-3xl mx-auto px-5 h-16 flex items-center justify-between">
           <Link href="/" className="text-xl font-extrabold bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">◆ SAPLINK</Link>

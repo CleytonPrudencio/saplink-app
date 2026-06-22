@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "@/components/Toast";
+import TechBackground from "@/components/TechBackground";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -48,8 +49,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR" className={`${inter.variable} h-full`}>
-      <body className="min-h-full bg-[#0f0b1a] text-[#e2e0ea] font-[family-name:var(--font-inter)]">
+    <html lang="pt-BR" className={`${inter.variable} h-full`} style={{ backgroundColor: "#0f0b1a" }}>
+      <body className="min-h-full bg-transparent text-[#e2e0ea] font-[family-name:var(--font-inter)]">
+        <TechBackground />
         <ToastProvider>{children}</ToastProvider>
       </body>
     </html>
