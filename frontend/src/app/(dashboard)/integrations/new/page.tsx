@@ -69,6 +69,7 @@ export default function NewIntegrationPage() {
   // Step 2
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [environment, setEnvironment] = useState("PRD");
   const [clients, setClients] = useState<Client[]>([]);
   const [selectedClientId, setSelectedClientId] = useState("");
   const [clientsLoading, setClientsLoading] = useState(false);
@@ -127,6 +128,7 @@ export default function NewIntegrationPage() {
         description,
         type: selectedType.type,
         clientId: selectedClientId,
+        environment,
         config: configValues,
       };
       // Cria uma vez; em re-testes, ATUALIZA a mesma integração (evita duplicar)
@@ -165,6 +167,7 @@ export default function NewIntegrationPage() {
         description,
         type: selectedType.type,
         clientId: selectedClientId,
+        environment,
         config: configValues,
       };
       const result = await createIntegration(payload);
@@ -325,6 +328,23 @@ export default function NewIntegrationPage() {
                   ))}
                 </select>
               )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[#e2e0ea] mb-1.5">Ambiente</label>
+              <div className="grid grid-cols-3 gap-2">
+                {[["DEV", "Desenvolvimento"], ["HML", "Homologação"], ["PRD", "Produção"]].map(([v, l]) => (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => setEnvironment(v)}
+                    className={`px-3 py-2.5 rounded-lg text-sm font-medium border transition cursor-pointer ${environment === v ? "bg-purple-500/20 border-purple-500/50 text-purple-200" : "bg-[#0f0b1a] border-white/[0.08] text-[#9b95ad] hover:text-white"}`}
+                  >
+                    {v}<span className="block text-[10px] font-normal opacity-70">{l}</span>
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-[#6b6580] mt-1.5">Separa dev/homologação/produção do mesmo cliente — cada ambiente tem suas próprias integrações, credenciais e alertas.</p>
             </div>
           </div>
 

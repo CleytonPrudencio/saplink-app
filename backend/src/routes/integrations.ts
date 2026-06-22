@@ -137,8 +137,9 @@ router.post('/sync-all', async (req: Request, res: Response) => {
 // GET /all — list ALL integrations for consultancy
 router.get('/all', async (req: Request, res: Response) => {
   try {
+    const envFilter = req.query.environment as string | undefined;
     const integrations = await prisma.integration.findMany({
-      where: { client: { consultancyId: req.consultancyId! } },
+      where: { client: { consultancyId: req.consultancyId! }, ...(envFilter && ['DEV', 'HML', 'PRD'].includes(envFilter) ? { environment: envFilter } : {}) },
       include: { client: { select: { id: true, name: true } }, _count: { select: { alerts: true } } },
       orderBy: { updatedAt: 'desc' },
     });
@@ -277,11 +278,12 @@ router.get('/client/:clientId', async (req: Request, res: Response) => {
 // POST / — create integration
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const { name, description, type, clientId, config, status } = req.body;
+    const { name, description, type, clientId, config, status, environment } = req.body;
     if (!name || !type || !clientId) {
       res.status(400).json({ error: 'Campos obrigatórios: name, type, clientId' });
       return;
     }
+    const env = ['DEV', 'HML', 'PRD'].includes(environment) ? environment : 'PRD';
 
     const client = await prisma.client.findFirst({
       where: { id: clientId, consultancyId: req.consultancyId! },
@@ -290,7 +292,7 @@ router.post('/', async (req: Request, res: Response) => {
 
     const integration = await prisma.integration.create({
       data: {
-        name, description: description || null, type, clientId,
+        name, description: description || null, type, clientId, environment: env,
         config: config ? encryptConfig(config) : null,
         status: status || 'PENDING',
         latency: 0, errorRate: 0, uptime: 0,

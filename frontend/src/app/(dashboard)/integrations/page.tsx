@@ -12,6 +12,7 @@ interface Integration {
   name: string;
   type: string;
   status: string;
+  environment?: string;
   clientName?: string;
   clientId?: string;
   client?: { id: string; name: string };
@@ -27,6 +28,13 @@ interface Integration {
 
 function clientOf(i: Integration) {
   return { id: i.client?.id || i.clientId || "", name: i.client?.name || i.clientName || "—" };
+}
+
+// Cores por ambiente (DEV/HML/PRD)
+function envBadge(env?: string) {
+  if (env === "DEV") return "bg-sky-500/15 text-sky-300";
+  if (env === "HML") return "bg-amber-500/15 text-amber-300";
+  return "bg-emerald-500/15 text-emerald-300"; // PRD
 }
 
 interface TestResult {
@@ -74,6 +82,7 @@ export default function IntegrationsPage() {
   const [filterClient, setFilterClient] = useState("");
   const [filterType, setFilterType] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
+  const [filterEnv, setFilterEnv] = useState("");
 
   useEffect(() => {
     loadIntegrations();
@@ -186,14 +195,15 @@ export default function IntegrationsPage() {
     if (filterClient && clientOf(i).id !== filterClient) return false;
     if (filterType && (i.type || "").toUpperCase() !== filterType) return false;
     if (filterStatus && i.status !== filterStatus) return false;
+    if (filterEnv && (i.environment || "PRD") !== filterEnv) return false;
     if (search) {
       const q = search.toLowerCase();
       if (!i.name.toLowerCase().includes(q) && !clientOf(i).name.toLowerCase().includes(q)) return false;
     }
     return true;
   });
-  const hasFilters = !!(search || filterClient || filterType || filterStatus);
-  function clearFilters() { setSearch(""); setFilterClient(""); setFilterType(""); setFilterStatus(""); }
+  const hasFilters = !!(search || filterClient || filterType || filterStatus || filterEnv);
+  function clearFilters() { setSearch(""); setFilterClient(""); setFilterType(""); setFilterStatus(""); setFilterEnv(""); }
 
   if (loading) return <div className="text-[#9b95ad]">Carregando...</div>;
   if (error) return <div className="text-rose-400">{error}</div>;
@@ -273,6 +283,12 @@ export default function IntegrationsPage() {
           <option value="OFFLINE">Offline</option>
           <option value="PENDING">Pendentes</option>
         </select>
+        <select value={filterEnv} onChange={(e) => setFilterEnv(e.target.value)} className="px-3 py-2 bg-[#0f0b1a] border border-white/[0.1] rounded-lg text-sm focus:outline-none focus:border-purple-500/50">
+          <option value="">Todos os ambientes</option>
+          <option value="DEV">DEV</option>
+          <option value="HML">HML</option>
+          <option value="PRD">PRD</option>
+        </select>
         {hasFilters && (
           <button onClick={clearFilters} className="px-3 py-2 text-sm text-[#9b95ad] hover:text-white rounded-lg hover:bg-white/[0.06] transition cursor-pointer shrink-0">
             Limpar
@@ -306,6 +322,10 @@ export default function IntegrationsPage() {
                 {/* Type Badge */}
                 <span className={`px-2.5 py-1 rounded-full text-xs font-semibold uppercase shrink-0 ${tc}`}>
                   {integ.type?.replace(/_/g, " ")}
+                </span>
+                {/* Environment Badge */}
+                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase shrink-0 ${envBadge(integ.environment)}`} title="Ambiente">
+                  {integ.environment || "PRD"}
                 </span>
 
                 {/* Name & Client */}

@@ -647,8 +647,8 @@ export async function getPresets() {
 }
 
 // Integrations (all)
-export async function getAllIntegrations() {
-  const { data } = await api.get('/integrations/all');
+export async function getAllIntegrations(environment?: string) {
+  const { data } = await api.get('/integrations/all', { params: environment ? { environment } : {} });
   return data;
 }
 

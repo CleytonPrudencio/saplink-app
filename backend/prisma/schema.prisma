@@ -101,6 +101,7 @@ model Integration {
   name        String
   description String?
   type        String
+  environment String   @default("PRD") // DEV | HML | PRD — separa dev/homologação/produção
   status      String   @default("ACTIVE")
   config      Json?
   latency     Int      @default(0)
