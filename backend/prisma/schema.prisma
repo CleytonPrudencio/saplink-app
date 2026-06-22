@@ -604,6 +604,35 @@ model AiKnowledge {
   @@index([consultancyId, topicKey])
 }
 
+// Marketplace de Runbooks — playbooks de correção publicados/instalados entre consultorias.
+model Runbook {
+  id                  String   @id @default(uuid())
+  authorConsultancyId String
+  authorName          String?  // nome da consultoria autora (vitrine)
+  name                String
+  description         String?
+  category            String?  // CPI | IDOC | FISCAL | RFC | S4 | GERAL
+  triggerKeywords     String?  // palavras/assinatura do erro que casa (recomendação)
+  steps               Json     // [{ kind:'DIAGNOSE'|'ACTION'|'VALIDATE', title, detail }]
+  published           Boolean  @default(false)
+  installs            Int      @default(0)
+  ratingSum           Int      @default(0)
+  ratingCount         Int      @default(0)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  @@index([published, category])
+}
+
+model RunbookInstall {
+  id            String   @id @default(uuid())
+  consultancyId String
+  runbookId     String
+  rating        Int?
+  installedAt   DateTime @default(now())
+  @@unique([consultancyId, runbookId])
+  @@index([consultancyId])
+}
+
 // Web Push (PWA) — inscrições de notificação por usuário/consultoria.
 model PushSubscription {
   id            String   @id @default(uuid())

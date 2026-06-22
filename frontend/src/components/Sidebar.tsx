@@ -86,6 +86,7 @@ const tenantGroups: MenuGroup[] = [
       { href: "/timemachine", label: "Time machine", icon: "\u23EA" },
       { href: "/audit", label: "Auditoria & SoD", icon: "\uD83D\uDEE1\uFE0F" },
       { href: "/partners", label: "Parceiros & FinOps", icon: "\uD83E\uDD1D" },
+      { href: "/marketplace", label: "Marketplace de Runbooks", icon: "\uD83D\uDED2" },
     ],
   },
   {

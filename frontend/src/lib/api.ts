@@ -295,6 +295,17 @@ export async function testAiProvider(payload: { provider: string; key?: string; 
 // Web Push (PWA)
 export async function getVapidKey() { const { data } = await api.get('/push/vapid'); return data as { key: string }; }
 export async function subscribePush(subscription: unknown) { const { data } = await api.post('/push/subscribe', { subscription }); return data as { ok: boolean }; }
+// Marketplace de runbooks
+export async function getMarketplace(params: { q?: string; category?: string } = {}) { const { data } = await api.get('/runbooks', { params }); return data as { runbooks: any[] }; }
+export async function getMyRunbooks() { const { data } = await api.get('/runbooks/mine'); return data as { authored: any[]; installed: any[] }; }
+export async function getRunbook(id: string) { const { data } = await api.get(`/runbooks/${id}`); return data as { ok: boolean; runbook: any }; }
+export async function createRunbook(payload: Record<string, unknown>) { const { data } = await api.post('/runbooks', payload); return data; }
+export async function updateRunbook(id: string, payload: Record<string, unknown>) { const { data } = await api.put(`/runbooks/${id}`, payload); return data; }
+export async function publishRunbook(id: string, published: boolean) { const { data } = await api.post(`/runbooks/${id}/publish`, { published }); return data; }
+export async function deleteRunbook(id: string) { const { data } = await api.delete(`/runbooks/${id}`); return data; }
+export async function installRunbook(id: string) { const { data } = await api.post(`/runbooks/${id}/install`); return data; }
+export async function uninstallRunbook(id: string) { const { data } = await api.delete(`/runbooks/${id}/install`); return data; }
+export async function rateRunbook(id: string, rating: number) { const { data } = await api.post(`/runbooks/${id}/rate`, { rating }); return data; }
 
 // C1 — Canais de notificação / on-call
 export interface NotificationChannel {

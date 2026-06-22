@@ -34,6 +34,7 @@ import innovateRoutes from './routes/innovate';
 import chatopsInRoutes from './routes/chatops-in';
 import aiConfigRoutes from './routes/ai-config';
 import pushRoutes from './routes/push';
+import runbookRoutes from './routes/runbooks';
 import { authMiddleware } from './middleware/auth';
 import { tenancyMiddleware } from './middleware/tenancy';
 import { requireActiveSubscription } from './middleware/subscription';
@@ -124,6 +125,7 @@ app.use('/api/s4', ...tenantGate, s4Routes);
 app.use('/api/innovate', ...tenantGate, innovateRoutes);
 app.use('/api/ai-config', ...tenantGate, aiConfigRoutes);
 app.use('/api/push', ...tenantGate, pushRoutes);
+app.use('/api/runbooks', ...tenantGate, runbookRoutes);
 
 // Error handler global (último middleware)
 app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {

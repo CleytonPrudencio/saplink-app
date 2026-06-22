@@ -173,6 +173,11 @@ const GUIDES: Record<string, Guide> = {
     why: "Cobra o parceiro certo e controla o gasto de nuvem.",
     actions: ["Aja sobre o parceiro com mais erros", "Veja o IFlow que mais consome BTP"],
   },
+  "/marketplace": {
+    what: "Loja de runbooks: playbooks de correção SAP prontos (diagnóstico → ação → validação).",
+    why: "Instale a expertise da comunidade em vez de começar do zero; publique a sua e ganhe reputação.",
+    actions: ["Explore e instale os mais bem avaliados", "Publique um runbook do seu time", "Avalie os que você usou"],
+  },
   "/ia": {
     what: "Conecte a IA da sua empresa (Claude/ChatGPT/Copilot) e defina a ordem de uso.",
     why: "Você usa (e paga) a sua própria IA; e pode deixar o SAPLINK aprender com ela.",
