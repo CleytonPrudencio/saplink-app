@@ -8,23 +8,27 @@ async function ownsClient(consultancyId: string, clientId: string) {
   return !!(await prisma.client.findFirst({ where: { id: clientId, consultancyId }, select: { id: true } }));
 }
 
-export async function saveCpiConfig(consultancyId: string, clientId: string, input: CpiInput) {
+const ENV = (e?: string) => (['DEV', 'HML', 'PRD'].includes(e || '') ? e! : 'PRD');
+
+export async function saveCpiConfig(consultancyId: string, clientId: string, input: CpiInput, env?: string) {
+  const environment = ENV(env);
   if (!(await ownsClient(consultancyId, clientId))) return { error: 'NOT_FOUND' as const };
-  const existing = await prisma.cpiConfig.findUnique({ where: { clientId } });
+  const existing = await prisma.cpiConfig.findUnique({ where: { clientId_environment: { clientId, environment } } });
   const secret = input.oauthSecret ? encryptValue(input.oauthSecret) : existing?.oauthSecret;
   if (!secret) return { error: 'NO_SECRET' as const };
   const data = {
     baseUrl: input.baseUrl.replace(/\/$/, ''), tokenUrl: input.tokenUrl,
     oauthClientId: input.oauthClientId, oauthSecret: secret, enabled: input.enabled ?? true,
   };
-  await prisma.cpiConfig.upsert({ where: { clientId }, update: data, create: { clientId, ...data } });
+  await prisma.cpiConfig.upsert({ where: { clientId_environment: { clientId, environment } }, update: data, create: { clientId, environment, ...data } });
   return { ok: true };
 }
 
-export async function getCpiConfigs(consultancyId: string) {
+export async function getCpiConfigs(consultancyId: string, env?: string) {
   const ids = (await prisma.client.findMany({ where: { consultancyId }, select: { id: true } })).map((c) => c.id);
-  const cfgs = await prisma.cpiConfig.findMany({ where: { clientId: { in: ids } }, include: { client: { select: { name: true } } } });
-  return cfgs.map((c) => ({ clientId: c.clientId, client: c.client?.name, baseUrl: c.baseUrl, tokenUrl: c.tokenUrl, oauthClientId: c.oauthClientId, enabled: c.enabled, lastSyncAt: c.lastSyncAt, lastResult: c.lastResult, lastCount: c.lastCount, hasSecret: !!c.oauthSecret }));
+  const e = env ? ENV(env) : undefined;
+  const cfgs = await prisma.cpiConfig.findMany({ where: { clientId: { in: ids }, ...(e ? { environment: e } : {}) }, include: { client: { select: { name: true } } } });
+  return cfgs.map((c) => ({ clientId: c.clientId, client: c.client?.name, environment: c.environment, baseUrl: c.baseUrl, tokenUrl: c.tokenUrl, oauthClientId: c.oauthClientId, enabled: c.enabled, lastSyncAt: c.lastSyncAt, lastResult: c.lastResult, lastCount: c.lastCount, hasSecret: !!c.oauthSecret }));
 }
 
 async function getToken(cfg: { tokenUrl: string; oauthClientId: string; secret: string }): Promise<string | null> {
@@ -41,8 +45,9 @@ function parseSapDate(s?: string): Date | null {
 }
 
 /** Conecta de verdade ao Integration Suite, puxa os Message Processing Logs e ingere como CloudItem (CPI). */
-export async function syncCpi(consultancyId: string, clientId: string) {
-  const cfg = await prisma.cpiConfig.findUnique({ where: { clientId }, include: { client: true } });
+export async function syncCpi(consultancyId: string, clientId: string, env?: string) {
+  const environment = ENV(env);
+  const cfg = await prisma.cpiConfig.findUnique({ where: { clientId_environment: { clientId, environment } }, include: { client: true } });
   if (!cfg || cfg.client.consultancyId !== consultancyId) return { error: 'NOT_FOUND' as const };
   try {
     const token = await getToken({ tokenUrl: cfg.tokenUrl, oauthClientId: cfg.oauthClientId, secret: String(decryptValue(cfg.oauthSecret) ?? '') });
@@ -69,8 +74,9 @@ export async function syncCpi(consultancyId: string, clientId: string) {
       }
     }
     // pendura num "integration" CPI do cliente (cria se não existir)
-    let integ = await prisma.integration.findFirst({ where: { clientId, type: 'CPI', name: 'SAP Cloud Integration (BTP)' } });
-    if (!integ) integ = await prisma.integration.create({ data: { name: 'SAP Cloud Integration (BTP)', type: 'CPI', status: 'ACTIVE', clientId } });
+    const integName = `SAP Cloud Integration (BTP) · ${environment}`;
+    let integ = await prisma.integration.findFirst({ where: { clientId, type: 'CPI', environment } });
+    if (!integ) integ = await prisma.integration.create({ data: { name: integName, type: 'CPI', status: 'ACTIVE', clientId, environment } });
     const r = await ingestCloud(integ.id, clientId, items);
     await mark(cfg.id, `OK — ${items.length} MPL`, items.length);
     return { ok: true, fetched: items.length, ...r };
@@ -88,6 +94,6 @@ async function mark(id: string, result: string, count?: number) {
 export async function syncAllCpi(): Promise<number> {
   const cfgs = await prisma.cpiConfig.findMany({ where: { enabled: true }, include: { client: { select: { consultancyId: true } } } });
   let ok = 0;
-  for (const c of cfgs) { const r = await syncCpi(c.client.consultancyId, c.clientId); if ((r as any).ok) ok++; }
+  for (const c of cfgs) { const r = await syncCpi(c.client.consultancyId, c.clientId, c.environment); if ((r as any).ok) ok++; }
   return ok;
 }

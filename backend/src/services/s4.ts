@@ -8,19 +8,23 @@ async function ownsClient(consultancyId: string, clientId: string): Promise<bool
   return !!(await prisma.client.findFirst({ where: { id: clientId, consultancyId }, select: { id: true } }));
 }
 
-// ───────── Conector (S0) ─────────
-export async function saveConnection(consultancyId: string, clientId: string, input: { baseUrl: string; authType?: string; commUser?: string; authToken?: string; release?: string }) {
+const ENV = (e?: string) => (['DEV', 'HML', 'PRD'].includes(e || '') ? e! : 'PRD');
+
+// ───────── Conector (S0) — por ambiente ─────────
+export async function saveConnection(consultancyId: string, clientId: string, input: { baseUrl: string; authType?: string; commUser?: string; authToken?: string; release?: string }, env?: string) {
+  const environment = ENV(env);
   if (!(await ownsClient(consultancyId, clientId))) return { error: 'NOT_FOUND' as const };
-  const existing = await prisma.s4Connection.findUnique({ where: { clientId } });
+  const existing = await prisma.s4Connection.findUnique({ where: { clientId_environment: { clientId, environment } } });
   const token = input.authToken ? encryptValue(input.authToken) : existing?.authToken ?? null;
   const data = { baseUrl: input.baseUrl, authType: input.authType || 'OAUTH', commUser: input.commUser ?? null, authToken: token, release: input.release ?? existing?.release ?? null, status: 'CONNECTED' };
-  const conn = await prisma.s4Connection.upsert({ where: { clientId }, update: data, create: { clientId, ...data } });
-  return { connection: { baseUrl: conn.baseUrl, authType: conn.authType, commUser: conn.commUser, release: conn.release, status: conn.status, hasToken: !!conn.authToken, lastSyncAt: conn.lastSyncAt } };
+  const conn = await prisma.s4Connection.upsert({ where: { clientId_environment: { clientId, environment } }, update: data, create: { clientId, environment, ...data } });
+  return { connection: { baseUrl: conn.baseUrl, authType: conn.authType, commUser: conn.commUser, release: conn.release, status: conn.status, environment: conn.environment, hasToken: !!conn.authToken, lastSyncAt: conn.lastSyncAt } };
 }
-export async function getConnections(consultancyId: string) {
+export async function getConnections(consultancyId: string, env?: string) {
   const ids = await clientIds(consultancyId);
-  const conns = await prisma.s4Connection.findMany({ where: { clientId: { in: ids } }, include: { client: { select: { name: true } } } });
-  return conns.map((c) => ({ clientId: c.clientId, client: c.client?.name, baseUrl: c.baseUrl, release: c.release, status: c.status, lastSyncAt: c.lastSyncAt, hasToken: !!c.authToken }));
+  const e = env ? ENV(env) : undefined;
+  const conns = await prisma.s4Connection.findMany({ where: { clientId: { in: ids }, ...(e ? { environment: e } : {}) }, include: { client: { select: { name: true } } } });
+  return conns.map((c) => ({ clientId: c.clientId, client: c.client?.name, baseUrl: c.baseUrl, release: c.release, status: c.status, environment: c.environment, lastSyncAt: c.lastSyncAt, hasToken: !!c.authToken }));
 }
 
 // ───────── Sync ao vivo via SAP Business Accelerator Hub (sandbox, APIKey) ─────────
@@ -34,8 +38,9 @@ const S4_API_PROBES = [
 ];
 
 /** Conecta de verdade ao S/4 sandbox da SAP e inventaria as APIs OData reais (contagem real de registros). */
-export async function syncS4Sandbox(consultancyId: string, clientId: string) {
-  const conn = await prisma.s4Connection.findUnique({ where: { clientId }, include: { client: true } });
+export async function syncS4Sandbox(consultancyId: string, clientId: string, env?: string) {
+  const environment = ENV(env);
+  const conn = await prisma.s4Connection.findUnique({ where: { clientId_environment: { clientId, environment } }, include: { client: true } });
   if (!conn || conn.client.consultancyId !== consultancyId) return { error: 'NOT_FOUND' as const };
   const apiKey = conn.authToken ? String(decryptValue(conn.authToken) ?? '') : '';
   if (!apiKey) return { error: 'NO_KEY' as const };
@@ -60,29 +65,29 @@ export async function syncS4Sandbox(consultancyId: string, clientId: string) {
     // grava o uso REAL (apenas as alcançadas viram inventário)
     if (ok) {
       await prisma.apiUsage.upsert({
-        where: { clientId_apiName_version: { clientId, apiName: p.apiName, version: p.version } },
+        where: { clientId_apiName_version_environment: { clientId, apiName: p.apiName, version: p.version, environment } },
         update: { scenario: p.scenario, calls30d: count ?? 0, deprecated: p.deprecated, replacement: (p as any).replacement ?? null, lastSeenAt: new Date() },
-        create: { clientId, apiName: p.apiName, version: p.version, scenario: p.scenario, calls30d: count ?? 0, deprecated: p.deprecated, replacement: (p as any).replacement ?? null },
+        create: { clientId, environment, apiName: p.apiName, version: p.version, scenario: p.scenario, calls30d: count ?? 0, deprecated: p.deprecated, replacement: (p as any).replacement ?? null },
       });
     }
   }
 
   // ── deriva achados REAIS de Upgrade + Clean Core a partir das APIs depreciadas em uso ──
   const deprecatedHit = S4_API_PROBES.filter((p) => p.deprecated && results.find((r) => r.apiName === p.apiName && r.ok));
-  await prisma.upgradeFinding.deleteMany({ where: { clientId, resolved: false } });
+  await prisma.upgradeFinding.deleteMany({ where: { clientId, environment, resolved: false } });
   if (deprecatedHit.length) {
     await prisma.upgradeFinding.createMany({
       data: deprecatedHit.map((p) => ({
-        clientId, release: 'OData v2→v4', area: 'API', object: `${p.apiName} (${p.version})`, impact: 'DEPRECATED',
+        clientId, environment, release: 'OData v2→v4', area: 'API', object: `${p.apiName} (${p.version})`, impact: 'DEPRECATED',
         detail: `OData v2 em uso real no S/4 — será descontinuada.`, recommendation: `Migrar o consumo para ${(p as any).replacement || p.apiName + ';v4'}.`,
       })),
     });
   }
-  await prisma.cleanCoreItem.deleteMany({ where: { clientId, resolved: false } });
+  await prisma.cleanCoreItem.deleteMany({ where: { clientId, environment, resolved: false } });
   if (deprecatedHit.length) {
     await prisma.cleanCoreItem.createMany({
       data: deprecatedHit.map((p) => ({
-        clientId, category: 'DEPRECATED_API', object: `${p.apiName} ${p.version}`, severity: 'HIGH', points: 12,
+        clientId, environment, category: 'DEPRECATED_API', object: `${p.apiName} ${p.version}`, severity: 'HIGH', points: 12,
         recommendation: `Migrar para ${(p as any).replacement || p.apiName + ';v4'}.`,
       })),
     });
@@ -96,14 +101,14 @@ export async function syncS4Sandbox(consultancyId: string, clientId: string) {
     if (fRes.ok) {
       const fj = (await fRes.json()) as { d?: { results?: any[] } };
       const docs = fj?.d?.results || [];
-      await prisma.fiscalDoc.deleteMany({ where: { clientId } });
+      await prisma.fiscalDoc.deleteMany({ where: { clientId, environment, docType: { startsWith: 'BILLING' } } });
       for (const d of docs) {
         if (!d.BillingDocument) continue;
         const cancelled = d.BillingDocumentIsCancelled === true || d.BillingDocumentIsCancelled === 'true';
         const cents = Math.round(Number(d.TotalGrossAmount || 0) * 100);
         await prisma.fiscalDoc.create({
           data: {
-            clientId, docType: `BILLING_${d.BillingDocumentType || 'F2'}`, number: String(d.BillingDocument),
+            clientId, environment, docType: `BILLING_${d.BillingDocumentType || 'F2'}`, number: String(d.BillingDocument),
             status: cancelled ? 'CANCELLED' : 'AUTHORIZED', amountCents: isNaN(cents) ? 0 : cents,
             message: `Fatura ${d.BillingDocumentType || ''} · ${d.TransactionCurrency || ''} (S/4 sandbox)`.trim(),
             remediable: false, resolved: true, issuedAt: parseSapDate(d.BillingDocumentDate),
@@ -115,7 +120,7 @@ export async function syncS4Sandbox(consultancyId: string, clientId: string) {
   } catch { /* fiscal opcional — não quebra o sync de APIs */ }
 
   const status = reachable > 0 ? 'CONNECTED' : 'ERROR';
-  await prisma.s4Connection.update({ where: { clientId }, data: { lastSyncAt: new Date(), status, release: conn.release ?? 'sandbox' } });
+  await prisma.s4Connection.update({ where: { clientId_environment: { clientId, environment } }, data: { lastSyncAt: new Date(), status, release: conn.release ?? 'sandbox' } });
   return { ok: reachable > 0, probed: S4_API_PROBES.length, reachable, deprecated, upgrade: deprecatedHit.length, fiscal, results };
 }
 
@@ -124,25 +129,26 @@ function parseSapDate(s?: string): Date | null {
 }
 
 // ───────── Ingestão pelo agente (token → integration → clientId) ─────────
-export async function ingestS4(clientId: string, p: Record<string, unknown>) {
+export async function ingestS4(clientId: string, p: Record<string, unknown>, env?: string) {
+  const environment = ENV(env);
   const out: Record<string, number> = {};
   if (Array.isArray(p.upgradeFindings)) {
-    await prisma.upgradeFinding.deleteMany({ where: { clientId, resolved: false } });
-    await prisma.upgradeFinding.createMany({ data: (p.upgradeFindings as any[]).map((f) => ({ clientId, release: String(f.release || '—'), area: f.area || 'API', object: f.object || '?', impact: f.impact || 'CHANGED', detail: f.detail ?? null, recommendation: f.recommendation ?? null })) });
+    await prisma.upgradeFinding.deleteMany({ where: { clientId, environment, resolved: false } });
+    await prisma.upgradeFinding.createMany({ data: (p.upgradeFindings as any[]).map((f) => ({ clientId, environment, release: String(f.release || '—'), area: f.area || 'API', object: f.object || '?', impact: f.impact || 'CHANGED', detail: f.detail ?? null, recommendation: f.recommendation ?? null })) });
     out.upgrade = (p.upgradeFindings as any[]).length;
   }
   if (Array.isArray(p.cleanCore)) {
-    await prisma.cleanCoreItem.deleteMany({ where: { clientId, resolved: false } });
-    await prisma.cleanCoreItem.createMany({ data: (p.cleanCore as any[]).map((c) => ({ clientId, category: c.category || 'IN_APP', object: c.object || '?', severity: c.severity || 'MEDIUM', points: c.points ?? 5, recommendation: c.recommendation ?? null })) });
+    await prisma.cleanCoreItem.deleteMany({ where: { clientId, environment, resolved: false } });
+    await prisma.cleanCoreItem.createMany({ data: (p.cleanCore as any[]).map((c) => ({ clientId, environment, category: c.category || 'IN_APP', object: c.object || '?', severity: c.severity || 'MEDIUM', points: c.points ?? 5, recommendation: c.recommendation ?? null })) });
     out.cleanCore = (p.cleanCore as any[]).length;
   }
   if (Array.isArray(p.apiUsage)) {
     for (const a of p.apiUsage as any[]) {
       if (!a.apiName) continue;
       await prisma.apiUsage.upsert({
-        where: { clientId_apiName_version: { clientId, apiName: a.apiName, version: a.version || 'v2' } },
+        where: { clientId_apiName_version_environment: { clientId, apiName: a.apiName, version: a.version || 'v2', environment } },
         update: { scenario: a.scenario ?? null, calls30d: a.calls30d ?? 0, deprecated: !!a.deprecated, deprecationRelease: a.deprecationRelease ?? null, replacement: a.replacement ?? null, lastSeenAt: new Date() },
-        create: { clientId, apiName: a.apiName, version: a.version || 'v2', scenario: a.scenario ?? null, calls30d: a.calls30d ?? 0, deprecated: !!a.deprecated, deprecationRelease: a.deprecationRelease ?? null, replacement: a.replacement ?? null },
+        create: { clientId, environment, apiName: a.apiName, version: a.version || 'v2', scenario: a.scenario ?? null, calls30d: a.calls30d ?? 0, deprecated: !!a.deprecated, deprecationRelease: a.deprecationRelease ?? null, replacement: a.replacement ?? null },
       });
     }
     out.apiUsage = (p.apiUsage as any[]).length;
@@ -151,7 +157,7 @@ export async function ingestS4(clientId: string, p: Record<string, unknown>) {
     for (const c of p.commArrangements as any[]) {
       if (!c.scenario || !c.name) continue;
       const data = { direction: c.direction ?? null, commUser: c.commUser ?? null, status: c.status || 'ACTIVE', certExpiresAt: c.certExpiresAt ? new Date(c.certExpiresAt) : null, lastSeenAt: new Date() };
-      await prisma.commArrangement.upsert({ where: { clientId_scenario_name: { clientId, scenario: c.scenario, name: c.name } }, update: data, create: { clientId, scenario: c.scenario, name: c.name, ...data } });
+      await prisma.commArrangement.upsert({ where: { clientId_scenario_name_environment: { clientId, scenario: c.scenario, name: c.name, environment } }, update: data, create: { clientId, environment, scenario: c.scenario, name: c.name, ...data } });
     }
     out.comm = (p.commArrangements as any[]).length;
   }
@@ -160,16 +166,16 @@ export async function ingestS4(clientId: string, p: Record<string, unknown>) {
       if (!f.docType || !f.number) continue;
       const failed = /REJECT|CONTING|PENDING/i.test(f.status || '');
       const data = { status: f.status || 'PENDING', sefazCode: f.sefazCode ?? null, message: f.message ?? null, amountCents: f.amountCents ?? 0, remediable: !!f.remediable, resolved: !failed, issuedAt: f.issuedAt ? new Date(f.issuedAt) : null };
-      await prisma.fiscalDoc.upsert({ where: { clientId_docType_number: { clientId, docType: f.docType, number: String(f.number) } }, update: data, create: { clientId, docType: f.docType, number: String(f.number), ...data } });
+      await prisma.fiscalDoc.upsert({ where: { clientId_docType_number_environment: { clientId, docType: f.docType, number: String(f.number), environment } }, update: data, create: { clientId, environment, docType: f.docType, number: String(f.number), ...data } });
     }
     out.fiscal = (p.fiscalDocs as any[]).length;
   }
   if (Array.isArray(p.cloudEvents)) {
-    await prisma.cloudEvent.deleteMany({ where: { clientId, resolved: false } });
-    await prisma.cloudEvent.createMany({ data: (p.cloudEvents as any[]).map((e) => ({ clientId, topic: e.topic || '?', status: e.status || 'DELIVERED', subscriber: e.subscriber ?? null, lagMs: e.lagMs ?? 0, occurredAt: e.occurredAt ? new Date(e.occurredAt) : null, resolved: !/DEAD|RETRY|PENDING/i.test(e.status || '') })) });
+    await prisma.cloudEvent.deleteMany({ where: { clientId, environment, resolved: false } });
+    await prisma.cloudEvent.createMany({ data: (p.cloudEvents as any[]).map((e) => ({ clientId, environment, topic: e.topic || '?', status: e.status || 'DELIVERED', subscriber: e.subscriber ?? null, lagMs: e.lagMs ?? 0, occurredAt: e.occurredAt ? new Date(e.occurredAt) : null, resolved: !/DEAD|RETRY|PENDING/i.test(e.status || '') })) });
     out.events = (p.cloudEvents as any[]).length;
   }
-  await prisma.s4Connection.updateMany({ where: { clientId }, data: { lastSyncAt: new Date(), status: 'CONNECTED' } });
+  await prisma.s4Connection.updateMany({ where: { clientId, environment }, data: { lastSyncAt: new Date(), status: 'CONNECTED' } });
   return out;
 }
 

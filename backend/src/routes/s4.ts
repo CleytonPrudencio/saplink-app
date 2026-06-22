@@ -36,35 +36,35 @@ router.post('/fiscal/:id/reprocess', requireConsultancyAdmin, async (req: Reques
 
 // Conector (admin)
 router.get('/connections', requireConsultancyAdmin, async (req: Request, res: Response) => {
-  res.json({ connections: await s4.getConnections(req.consultancyId!) });
+  res.json({ connections: await s4.getConnections(req.consultancyId!, reqEnv(req)) });
 });
 router.put('/connections/:clientId', requireConsultancyAdmin, async (req: Request, res: Response) => {
   const { baseUrl, authType, commUser, authToken, release } = req.body || {};
   if (!baseUrl) { res.status(400).json({ error: 'baseUrl é obrigatório.' }); return; }
-  const r = await s4.saveConnection(req.consultancyId!, req.params.clientId, { baseUrl, authType, commUser, authToken, release });
+  const r = await s4.saveConnection(req.consultancyId!, req.params.clientId, { baseUrl, authType, commUser, authToken, release }, reqEnv(req));
   if ('error' in r) { res.status(404).json({ error: 'Cliente não encontrado.' }); return; }
   res.json(r);
 });
 // Sync ao vivo via sandbox do SAP Business Accelerator Hub (APIKey) — dados reais sem S-user.
 router.post('/connections/:clientId/sync', requireConsultancyAdmin, async (req: Request, res: Response) => {
-  const r = await s4.syncS4Sandbox(req.consultancyId!, req.params.clientId);
+  const r = await s4.syncS4Sandbox(req.consultancyId!, req.params.clientId, reqEnv(req));
   if ('error' in r) { res.status(r.error === 'NO_KEY' ? 400 : 404).json({ error: r.error === 'NO_KEY' ? 'Salve a conexão com a API Key antes de sincronizar.' : 'Conexão não encontrada.' }); return; }
   res.json(r);
 });
 
 // ───── Conector REAL CPI (Integration Suite) ─────
 router.get('/cpi', requireConsultancyAdmin, async (req: Request, res: Response) => {
-  res.json({ configs: await getCpiConfigs(req.consultancyId!) });
+  res.json({ configs: await getCpiConfigs(req.consultancyId!, reqEnv(req)) });
 });
 router.put('/cpi/:clientId', requireConsultancyAdmin, async (req: Request, res: Response) => {
   const { baseUrl, tokenUrl, oauthClientId, oauthSecret, enabled } = req.body || {};
   if (!baseUrl || !tokenUrl || !oauthClientId) { res.status(400).json({ error: 'baseUrl, tokenUrl e oauthClientId são obrigatórios.' }); return; }
-  const r = await saveCpiConfig(req.consultancyId!, req.params.clientId, { baseUrl, tokenUrl, oauthClientId, oauthSecret, enabled });
+  const r = await saveCpiConfig(req.consultancyId!, req.params.clientId, { baseUrl, tokenUrl, oauthClientId, oauthSecret, enabled }, reqEnv(req));
   if ('error' in r) { res.status(r.error === 'NO_SECRET' ? 400 : 404).json({ error: r.error === 'NO_SECRET' ? 'Informe o secret na primeira configuração.' : 'Cliente não encontrado.' }); return; }
   res.json(r);
 });
 router.post('/cpi/:clientId/sync', requireConsultancyAdmin, async (req: Request, res: Response) => {
-  const r = await syncCpi(req.consultancyId!, req.params.clientId);
+  const r = await syncCpi(req.consultancyId!, req.params.clientId, reqEnv(req));
   if ('error' in r) { res.status(404).json({ error: 'Configuração não encontrada.' }); return; }
   res.json(r);
 });

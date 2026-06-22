@@ -75,14 +75,14 @@ model Client {
   slaUptimeTarget Float       @default(99.0)   // D1: meta de uptime (%)
   slaMaxLatencyMs Int         @default(2000)   // D1: meta de latência (ms)
   transports    Transport[]
-  s4Connection    S4Connection?
+  s4Connections   S4Connection[]
   upgradeFindings UpgradeFinding[]
   cleanCoreItems  CleanCoreItem[]
   apiUsages       ApiUsage[]
   commArrangements CommArrangement[]
   fiscalDocs      FiscalDoc[]
   cloudEvents     CloudEvent[]
-  cpiConfig       CpiConfig?
+  cpiConfigs      CpiConfig[]
   cloudConnectors CloudConnector[]
   btpResources    BtpResource[]
   opsSignals      OpsSignal[]
@@ -304,7 +304,8 @@ model CloudItem {
 // S0 — Conector cloud por cliente (Communication Arrangement / OData).
 model S4Connection {
   id            String   @id @default(uuid())
-  clientId      String   @unique
+  clientId      String
+  environment   String   @default("PRD") // DEV | HML | PRD — conexão S/4 por ambiente
   client        Client   @relation(fields: [clientId], references: [id])
   baseUrl       String                       // ex.: https://my300000.s4hana.cloud.sap
   authType      String   @default("OAUTH")   // OAUTH | BASIC | CERT
@@ -314,6 +315,7 @@ model S4Connection {
   status        String   @default("PENDING") // PENDING | CONNECTED | ERROR
   lastSyncAt    DateTime?
   createdAt     DateTime @default(now())
+  @@unique([clientId, environment])
 }
 
 // Basis & Operações — sinais de saúde do landscape coletados pelo agente
@@ -417,7 +419,7 @@ model ApiUsage {
   deprecationRelease String?
   replacement   String?
   lastSeenAt    DateTime @default(now())
-  @@unique([clientId, apiName, version])
+  @@unique([clientId, apiName, version, environment])
 }
 
 // S2.1 — Communication Arrangements + certificados.
@@ -433,7 +435,7 @@ model CommArrangement {
   status        String   @default("ACTIVE")  // ACTIVE | ERROR | INACTIVE
   certExpiresAt DateTime?
   lastSeenAt    DateTime @default(now())
-  @@unique([clientId, scenario, name])
+  @@unique([clientId, scenario, name, environment])
 }
 
 // S3.1 — Documentos fiscais (DRC / eDocument).
@@ -452,7 +454,7 @@ model FiscalDoc {
   resolved      Boolean  @default(false)
   issuedAt      DateTime?
   createdAt     DateTime @default(now())
-  @@unique([clientId, docType, number])
+  @@unique([clientId, docType, number, environment])
   @@index([clientId, status])
 }
 
@@ -475,7 +477,8 @@ model CloudEvent {
 // Conector REAL do SAP Integration Suite (CPI) via OAuth client-credentials + OData MPL.
 model CpiConfig {
   id            String   @id @default(uuid())
-  clientId      String   @unique
+  clientId      String
+  environment   String   @default("PRD") // DEV | HML | PRD — config CPI por ambiente
   client        Client   @relation(fields: [clientId], references: [id])
   baseUrl       String                       // ex.: https://xxxx.it-cpitrial06.cfapps.../api/v1
   tokenUrl      String                       // ex.: https://xxxx.authentication.../oauth/token
@@ -486,6 +489,7 @@ model CpiConfig {
   lastResult    String?
   lastCount     Int      @default(0)
   createdAt     DateTime @default(now())
+  @@unique([clientId, environment])
 }
 
 // Lead (manifestação de interesse na landing) — cadastro público fechado por enquanto.

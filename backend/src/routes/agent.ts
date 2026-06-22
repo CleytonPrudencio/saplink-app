@@ -149,7 +149,7 @@ router.post('/s4', async (req: Request, res: Response) => {
   const integration = await resolveIntegration(req);
   if (!integration) { res.status(401).json({ error: 'Token do agente inválido' }); return; }
   try {
-    const result = await ingestS4(integration.clientId, (req.body || {}) as Record<string, unknown>);
+    const result = await ingestS4(integration.clientId, (req.body || {}) as Record<string, unknown>, (integration as any).environment || 'PRD');
     res.json({ ok: true, ...result });
   } catch (error) {
     console.error('Agent s4 error:', error);
