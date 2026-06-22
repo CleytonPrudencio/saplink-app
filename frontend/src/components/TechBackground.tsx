@@ -128,12 +128,6 @@ export default function TechBackground() {
     return () => { cancelAnimationFrame(raf); window.removeEventListener("resize", resize); window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseout", onLeave); };
   }, []);
 
-  return (
-    <canvas
-      ref={ref}
-      aria-hidden
-      className="fixed inset-0 -z-10 pointer-events-none"
-      style={{ opacity: 0.6, maskImage: "linear-gradient(to bottom, transparent 0, #000 140px, #000 86%, transparent 100%)", WebkitMaskImage: "linear-gradient(to bottom, transparent 0, #000 140px, #000 86%, transparent 100%)" }}
-    />
-  );
+  // sem máscara vertical (evita a faixa de gradiente forte no topo) — canvas uniforme e sutil
+  return <canvas ref={ref} aria-hidden className="fixed inset-0 -z-10 pointer-events-none" style={{ opacity: 0.5 }} />;
 }

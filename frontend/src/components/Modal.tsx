@@ -26,14 +26,14 @@ export function Modal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[90] flex items-start justify-center p-4 pt-16 no-print" role="dialog" aria-modal="true">
+    <div className="fixed inset-0 z-[90] flex items-end sm:items-start justify-center p-0 sm:p-4 sm:pt-16 no-print" role="dialog" aria-modal="true">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className={`relative bg-[#1a1527] border border-white/[0.1] rounded-2xl w-full ${size === "lg" ? "max-w-3xl" : "max-w-lg"} max-h-[85vh] overflow-auto shadow-2xl`}>
-        <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06] sticky top-0 bg-[#1a1527] z-10">
-          <h3 className="font-semibold">{title}</h3>
-          <button onClick={onClose} aria-label="Fechar" className="text-[#9b95ad] hover:text-white text-lg leading-none">✕</button>
+      <div className={`relative bg-[#1a1527] border border-white/[0.1] rounded-t-2xl sm:rounded-2xl w-full ${size === "lg" ? "max-w-3xl" : "max-w-lg"} max-h-[90vh] sm:max-h-[85vh] overflow-auto shadow-2xl`}>
+        <div className="flex items-center justify-between px-4 sm:px-5 py-4 border-b border-white/[0.06] sticky top-0 bg-[#1a1527] z-10">
+          <h3 className="font-semibold pr-2">{title}</h3>
+          <button onClick={onClose} aria-label="Fechar" className="text-[#9b95ad] hover:text-white text-xl leading-none shrink-0 cursor-pointer">✕</button>
         </div>
-        <div className="p-5">{children}</div>
+        <div className="p-4 sm:p-5">{children}</div>
       </div>
     </div>
   );

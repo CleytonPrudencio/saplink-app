@@ -276,7 +276,7 @@ export default function LandingPage() {
       <FeatureModal feature={feature} onClose={() => setFeature(null)} onInterest={() => setInterest(true)} />
 
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-[#0f0b1a]/70 backdrop-blur-md border-b border-white/[0.06]">
+      <header className="sticky top-0 z-50 bg-[#0f0b1a] border-b border-white/[0.06]">
         <div className="max-w-6xl mx-auto px-4 sm:px-5 h-16 flex items-center justify-between gap-3">
           <a href="#top" className="text-lg sm:text-xl font-extrabold bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent shrink-0">◆ SAPLINK</a>
           <nav className="hidden lg:flex items-center gap-6 text-sm text-[#9b95ad]">
@@ -315,7 +315,7 @@ export default function LandingPage() {
       <main id="top" className="max-w-6xl mx-auto px-4 sm:px-5">
         {/* Hero */}
         <section className="pt-14 pb-12 sm:pt-20 sm:pb-16 relative">
-          <div className="absolute inset-0 -z-10 opacity-50" style={{ background: "radial-gradient(700px 360px at 50% -5%, rgba(124,58,237,.28), transparent), radial-gradient(500px 300px at 90% 10%, rgba(34,211,238,.16), transparent)" }} />
+          <div className="absolute inset-0 -z-10 opacity-30" style={{ background: "radial-gradient(600px 320px at 80% 30%, rgba(124,58,237,.18), transparent)" }} />
           <div className="grid lg:grid-cols-2 gap-10 items-center">
             <div className="text-center lg:text-left">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/25 text-xs text-purple-200 mb-5">

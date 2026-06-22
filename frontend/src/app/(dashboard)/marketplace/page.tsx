@@ -134,8 +134,8 @@ export default function MarketplacePage() {
       {/* Detalhe */}
       {detail && (
         <div className="fixed inset-0 z-[60] bg-[#0f0b1a]/40 backdrop-blur-xl flex items-start sm:items-center justify-center p-0 sm:p-6 overflow-y-auto" onClick={() => setDetail(null)}>
-          <div className="bg-[#211a3a] w-full sm:rounded-2xl ring-1 ring-purple-400/20 border border-white/[0.12] sm:my-6 max-w-full sm:max-w-2xl shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center gap-3 px-5 py-4 border-b border-white/[0.1]">
+          <div className="bg-[#211a3a] w-full sm:rounded-2xl ring-1 ring-purple-400/20 border border-white/[0.12] sm:my-6 max-w-full sm:max-w-2xl max-h-[100dvh] sm:max-h-[88vh] overflow-y-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-3 px-4 sm:px-5 py-4 border-b border-white/[0.1] sticky top-0 bg-[#211a3a] z-10">
               <span className="text-2xl">🛒</span>
               <div className="flex-1 min-w-0"><h2 className="font-bold truncate">{detail.name}</h2><p className="text-xs text-[#9b95ad]">{detail.category} · por {detail.author} · {detail.installs}↓ · <Stars value={detail.rating} /></p></div>
               <button onClick={() => setDetail(null)} className="text-[#9b95ad] hover:text-white text-2xl cursor-pointer">×</button>
