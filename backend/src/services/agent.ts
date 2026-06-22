@@ -70,6 +70,7 @@ export async function ingestAgentReport(integrationId: string, report: AgentRepo
           message: `Integração ${integration.name} (agente): ${detalhe}`,
           clientId: integration.clientId,
           integrationId: integration.id,
+          environment: (integration as any).environment || 'PRD',
         },
       });
     }
@@ -110,6 +111,7 @@ export async function markStaleAgents(staleMs: number): Promise<number> {
           message: `Integração ${i.name} (agente): sem relatório do agente há mais de ${Math.round(staleMs / 60000)} min — agente offline?`,
           clientId: i.clientId,
           integrationId: i.id,
+          environment: (i as any).environment || 'PRD',
         },
       });
     }

@@ -20,7 +20,7 @@ function cloudSeverity(status: string): string {
 }
 
 /** Cria 1 alerta aberto por artefato com falha (dedup) — alimenta on-call/ticket/SLA. */
-async function ensureCloudAlert(integrationId: string, clientId: string, source: string, artifact: string, status: string, err?: string | null) {
+async function ensureCloudAlert(integrationId: string, clientId: string, source: string, artifact: string, status: string, err?: string | null, environment = 'PRD') {
   const tag = `${source} · ${artifact}`;
   const open = await prisma.alert.findFirst({ where: { integrationId, resolved: false, type: 'CLOUD_FAILURE', message: { startsWith: tag } } });
   if (open) return false;
@@ -28,7 +28,7 @@ async function ensureCloudAlert(integrationId: string, clientId: string, source:
     data: {
       type: 'CLOUD_FAILURE', severity: cloudSeverity(status),
       message: `${tag} — mensagem ${status}${err ? `: ${String(err).slice(0, 180)}` : ''}`,
-      clientId, integrationId,
+      clientId, integrationId, environment,
     },
   });
   return true;
@@ -74,7 +74,7 @@ export async function ingestCloud(integrationId: string, clientId: string, items
       failedArtifacts.add(it.artifact);
       // nova falha (não existia ou estava resolvida) → garante alerta + alimenta a rede federada
       if (!existing || existing.resolved) {
-        if (await ensureCloudAlert(integrationId, clientId, it.source, it.artifact, it.status || 'FAILED', it.error)) alerts++;
+        if (await ensureCloudAlert(integrationId, clientId, it.source, it.artifact, it.status || 'FAILED', it.error, environment)) alerts++;
         await recordFailure(clientId, it.source, it.error || it.status).catch(() => {});
       }
     } else {

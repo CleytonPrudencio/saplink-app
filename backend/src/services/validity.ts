@@ -140,9 +140,9 @@ export interface ValidityItem {
 }
 
 /** Monta o radar de validade da consultoria (cert + segredos), ordenado por urgência. */
-export async function scanValidity(consultancyId: string): Promise<ValidityItem[]> {
+export async function scanValidity(consultancyId: string, env?: string): Promise<ValidityItem[]> {
   const integrations = await prisma.integration.findMany({
-    where: { client: { consultancyId } },
+    where: { client: { consultancyId }, ...(env ? { environment: env } : {}) },
     select: {
       id: true, name: true, type: true, certExpiresAt: true, certCheckedAt: true, certHost: true,
       secretExpiresAt: true, secretLabel: true, client: { select: { name: true } },

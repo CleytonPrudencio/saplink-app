@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Logo from "@/components/Logo";
 
 interface Feature {
   icon: string; name: string; tagline: string;
@@ -216,7 +217,7 @@ export default function FuncionalidadesPage() {
       {/* Header */}
       <header className="sticky top-0 z-20 bg-[#0f0b1a]/85 backdrop-blur border-b border-white/[0.06]">
         <div className="max-w-6xl mx-auto px-4 sm:px-5 py-3 flex items-center justify-between gap-3">
-          <Link href="/" className="text-xl font-bold bg-gradient-to-r from-purple-500 to-cyan-400 bg-clip-text text-transparent">◆ SAPLINK</Link>
+          <Link href="/"><Logo size={26} /></Link>
           <div className="flex items-center gap-2 sm:gap-3">
             <Link href="/" className="text-sm text-[#9b95ad] hover:text-white transition hidden sm:inline">← Início</Link>
             <Link href="/#planos" className="text-sm px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-cyan-500 text-white font-semibold">Tenho interesse</Link>
@@ -298,7 +299,7 @@ export default function FuncionalidadesPage() {
 
       <footer className="border-t border-white/[0.06]">
         <div className="max-w-6xl mx-auto px-4 sm:px-5 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-[#9b95ad] text-center sm:text-left">
-          <span>◆ SAPLINK © {new Date().getFullYear()} — Operação de integrações SAP</span>
+          <span className="flex items-center gap-2"><Logo size={20} /> © {new Date().getFullYear()} — Operação de integrações SAP</span>
           <div className="flex gap-5">
             <Link href="/" className="hover:text-white transition">Início</Link>
             <Link href="/login" className="hover:text-white transition">Entrar</Link>

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Logo from "@/components/Logo";
 
 export const metadata = { title: "Contrato & SLA — SAPLINK" };
 
@@ -89,7 +90,7 @@ export default function ContratoPage() {
     <div className="min-h-screen bg-transparent text-[#e2e0ea]">
       <header className="border-b border-white/[0.06]">
         <div className="max-w-3xl mx-auto px-5 h-16 flex items-center justify-between">
-          <Link href="/" className="text-xl font-extrabold bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">◆ SAPLINK</Link>
+          <Link href="/"><Logo size={26} /></Link>
           <div className="flex gap-4 text-sm"><Link href="/termos" className="text-[#9b95ad] hover:text-white">Termos</Link><Link href="/privacidade" className="text-[#9b95ad] hover:text-white">Privacidade</Link></div>
         </div>
       </header>

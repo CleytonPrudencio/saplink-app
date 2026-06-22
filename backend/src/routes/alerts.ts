@@ -64,15 +64,17 @@ router.get('/stats', async (req: Request, res: Response) => {
       select: { id: true },
     });
     const clientIds = clients.map((c: { id: string }) => c.id);
+    const e = reqEnv(req);
+    const base = { clientId: { in: clientIds }, ...(e ? { environment: e } : {}) };
 
     const [total, critical, high, medium, low, resolved, unresolved] = await Promise.all([
-      prisma.alert.count({ where: { clientId: { in: clientIds } } }),
-      prisma.alert.count({ where: { clientId: { in: clientIds }, severity: 'CRITICAL' } }),
-      prisma.alert.count({ where: { clientId: { in: clientIds }, severity: 'HIGH' } }),
-      prisma.alert.count({ where: { clientId: { in: clientIds }, severity: 'MEDIUM' } }),
-      prisma.alert.count({ where: { clientId: { in: clientIds }, severity: 'LOW' } }),
-      prisma.alert.count({ where: { clientId: { in: clientIds }, resolved: true } }),
-      prisma.alert.count({ where: { clientId: { in: clientIds }, resolved: false } }),
+      prisma.alert.count({ where: { ...base } }),
+      prisma.alert.count({ where: { ...base, severity: 'CRITICAL' } }),
+      prisma.alert.count({ where: { ...base, severity: 'HIGH' } }),
+      prisma.alert.count({ where: { ...base, severity: 'MEDIUM' } }),
+      prisma.alert.count({ where: { ...base, severity: 'LOW' } }),
+      prisma.alert.count({ where: { ...base, resolved: true } }),
+      prisma.alert.count({ where: { ...base, resolved: false } }),
     ]);
 
     res.json({

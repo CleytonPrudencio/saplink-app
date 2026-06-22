@@ -3,6 +3,7 @@ import prisma from '../lib/prisma';
 import { requireConsultancyAdmin } from '../middleware/roles';
 import { scanValidity, refreshCert, refreshAllCerts, httpsHost, severityFor } from '../services/validity';
 import { decryptConfig } from '../lib/crypto';
+import { reqEnv } from '../lib/env';
 
 // A4 — Radar de validade. Sob o tenantGate.
 const router = Router();
@@ -10,7 +11,7 @@ const router = Router();
 // Radar da consultoria (cert TLS + segredos), ordenado por urgência
 router.get('/', async (req: Request, res: Response) => {
   try {
-    const items = await scanValidity(req.consultancyId!);
+    const items = await scanValidity(req.consultancyId!, reqEnv(req));
     res.json({ items });
   } catch (e) {
     console.error('Validity scan error:', e);

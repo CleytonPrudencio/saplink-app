@@ -13,6 +13,8 @@ export interface TransportInput {
 
 /** Ingere transportes reportados pelo agente (upsert por cliente+TR). */
 export async function ingestTransports(integrationId: string, clientId: string, items: TransportInput[]) {
+  const integ = await prisma.integration.findUnique({ where: { id: integrationId }, select: { environment: true } });
+  const environment = integ?.environment || 'PRD';
   let n = 0;
   for (const t of items || []) {
     if (!t.trNumber) continue;
@@ -22,7 +24,7 @@ export async function ingestTransports(integrationId: string, clientId: string, 
       status: t.status ?? null,
       target: t.target ?? null,
       importedAt: t.importedAt ? new Date(t.importedAt) : null,
-      integrationId,
+      integrationId, environment,
     };
     await prisma.transport.upsert({
       where: { clientId_trNumber: { clientId, trNumber: t.trNumber } },
@@ -36,19 +38,20 @@ export async function ingestTransports(integrationId: string, clientId: string, 
 
 /** Lista transportes da consultoria + correlaciona incidentes abertos com transportes
  *  importados nas 24h anteriores ao alerta (provável causa). */
-export async function getTransports(consultancyId: string, clientId?: string) {
+export async function getTransports(consultancyId: string, clientId?: string, env?: string) {
   const clientIds = (await prisma.client.findMany({ where: { consultancyId }, select: { id: true } })).map((c) => c.id);
   const scope = clientId ? [clientId] : clientIds;
+  const envW = env ? { environment: env } : {};
 
   const [transports, alerts] = await Promise.all([
     prisma.transport.findMany({
-      where: { clientId: { in: scope } },
+      where: { clientId: { in: scope }, ...envW },
       orderBy: { importedAt: 'desc' },
       take: 300,
       include: { client: { select: { name: true } } },
     }),
     prisma.alert.findMany({
-      where: { clientId: { in: scope }, resolved: false },
+      where: { clientId: { in: scope }, resolved: false, ...envW },
       orderBy: { createdAt: 'desc' },
       take: 50,
       include: { client: { select: { name: true } } },

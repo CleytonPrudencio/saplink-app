@@ -70,7 +70,7 @@ function printInvoice(inv: Invoice, b: Billing) {
   <style>
     body{font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#1a1a2e;max-width:680px;margin:32px auto;padding:0 24px}
     .head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #7c3aed;padding-bottom:16px}
-    .brand{font-size:22px;font-weight:800;color:#7c3aed}
+    .brand{font-size:22px;font-weight:800;color:#7c3aed;display:flex;align-items:center;gap:8px}
     .muted{color:#666;font-size:13px}
     h2{font-size:16px;margin:24px 0 8px}
     table{width:100%;border-collapse:collapse;margin-top:8px}
@@ -80,7 +80,7 @@ function printInvoice(inv: Invoice, b: Billing) {
     .foot{margin-top:40px;color:#999;font-size:12px;border-top:1px solid #eee;padding-top:12px}
   </style></head><body>
     <div class="head">
-      <div><div class="brand">◆ SAPLINK</div><div class="muted">Monitoramento de integrações SAP</div></div>
+      <div><div class="brand"><svg width="24" height="24" viewBox="0 0 64 64"><rect x="6" y="6" width="52" height="52" rx="15" fill="none" stroke="#7c3aed" stroke-width="5"/><path d="M14 33 H25 L30 22 L36 44 L40 33 H50" fill="none" stroke="#7c3aed" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="50" cy="33" r="4.5" fill="#22d3ee"/></svg>SAPLINK</div><div class="muted">Monitoramento de integrações SAP</div></div>
       <div style="text-align:right"><div style="font-weight:700">FATURA</div><div class="muted">Nº ${inv.id.slice(0, 8).toUpperCase()}</div><div class="muted">${date}</div></div>
     </div>
     <h2>Cobrado de</h2>

@@ -359,6 +359,7 @@ export async function syncIntegration(integrationId: string): Promise<ProbeResul
               : `Integração ${integration.name} respondeu com erro HTTP ${r.httpStatus}.`,
           clientId: integration.clientId,
           integrationId: integration.id,
+          environment: (integration as any).environment || 'PRD',
         },
       });
     }

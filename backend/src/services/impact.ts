@@ -16,9 +16,9 @@ export interface ImpactItem {
 
 /** Calcula a exposição financeira: R$/h em risco (integrações fora do ar) e
  *  exposição acumulada estimada pela idade dos alertas abertos. */
-export async function computeImpact(consultancyId: string) {
+export async function computeImpact(consultancyId: string, env?: string) {
   const integrations = await prisma.integration.findMany({
-    where: { client: { consultancyId }, costPerHourCents: { gt: 0 } },
+    where: { client: { consultancyId }, costPerHourCents: { gt: 0 }, ...(env ? { environment: env } : {}) },
     select: {
       id: true, name: true, status: true, costPerHourCents: true, businessProcess: true,
       client: { select: { name: true } },

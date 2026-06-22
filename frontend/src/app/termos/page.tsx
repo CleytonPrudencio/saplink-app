@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Logo from "@/components/Logo";
 
 export const metadata = { title: "Termos de Uso — SAPLINK" };
 
@@ -65,7 +66,7 @@ export default function TermosPage() {
     <div className="min-h-screen bg-transparent text-[#e2e0ea]">
       <header className="border-b border-white/[0.06]">
         <div className="max-w-3xl mx-auto px-5 h-16 flex items-center justify-between">
-          <Link href="/" className="text-xl font-extrabold bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">◆ SAPLINK</Link>
+          <Link href="/"><Logo size={26} /></Link>
           <Link href="/register" className="px-4 py-2 text-sm font-semibold rounded-lg bg-gradient-to-r from-purple-600 to-cyan-500 text-white">Criar conta</Link>
         </div>
       </header>

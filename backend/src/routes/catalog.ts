@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { getCatalog } from '../services/catalog';
+import { reqEnv } from '../lib/env';
 
 // B3 — Catálogo vivo de interfaces. Sob o tenantGate.
 const router = Router();
@@ -10,6 +11,7 @@ router.get('/', async (req: Request, res: Response) => {
       clientId: req.query.clientId as string | undefined,
       kind: req.query.kind as string | undefined,
       q: req.query.q as string | undefined,
+      env: reqEnv(req),
     });
     res.json(data);
   } catch (error) {

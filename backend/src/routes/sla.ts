@@ -2,12 +2,13 @@ import { Router, Request, Response } from 'express';
 import { requireConsultancyAdmin } from '../middleware/roles';
 import { computeSla, setSlaTargets, slaReport } from '../services/sla';
 import { computeImpact, setCost, listForCost } from '../services/impact';
+import { reqEnv } from '../lib/env';
 
 // D1 + D2 — SLA por cliente e impacto em R$. Sob o tenantGate.
 const router = Router();
 
 router.get('/', async (req: Request, res: Response) => {
-  try { res.json(await computeSla(req.consultancyId!)); }
+  try { res.json(await computeSla(req.consultancyId!, reqEnv(req))); }
   catch (e) { console.error('SLA error:', e); res.status(500).json({ error: 'Erro ao calcular SLA.' }); }
 });
 
@@ -25,7 +26,7 @@ router.get('/:clientId/report', async (req: Request, res: Response) => {
 
 // Impacto em R$
 router.get('/impact/all', async (req: Request, res: Response) => {
-  try { res.json(await computeImpact(req.consultancyId!)); }
+  try { res.json(await computeImpact(req.consultancyId!, reqEnv(req))); }
   catch (e) { console.error('Impact error:', e); res.status(500).json({ error: 'Erro ao calcular impacto.' }); }
 });
 

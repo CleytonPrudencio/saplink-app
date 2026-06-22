@@ -12,6 +12,8 @@ export interface CatalogItemInput {
  *  o que sumiu da descoberta é marcado inativo (não some — vira histórico). */
 export async function ingestCatalog(integrationId: string, clientId: string, items: CatalogItemInput[]) {
   const seen = new Set<string>();
+  const integ = await prisma.integration.findUnique({ where: { id: integrationId }, select: { environment: true } });
+  const environment = integ?.environment || 'PRD';
   for (const it of items || []) {
     if (!it.kind || !it.name) continue;
     seen.add(`${it.kind}::${it.name}`);
@@ -23,8 +25,8 @@ export async function ingestCatalog(integrationId: string, clientId: string, ite
     };
     await prisma.interfaceCatalogItem.upsert({
       where: { integrationId_kind_name: { integrationId, kind: it.kind, name: it.name } },
-      update: { ...data, clientId },
-      create: { integrationId, clientId, kind: it.kind, name: it.name, ...data },
+      update: { ...data, clientId, environment },
+      create: { integrationId, clientId, environment, kind: it.kind, name: it.name, ...data },
     });
   }
   const existing = await prisma.interfaceCatalogItem.findMany({
@@ -36,11 +38,12 @@ export async function ingestCatalog(integrationId: string, clientId: string, ite
   return { upserted: (items || []).length, deactivated: gone.length };
 }
 
-export interface CatalogFilters { clientId?: string; kind?: string; q?: string }
+export interface CatalogFilters { clientId?: string; kind?: string; q?: string; env?: string }
 
 export async function getCatalog(consultancyId: string, f: CatalogFilters = {}) {
   const clientIds = (await prisma.client.findMany({ where: { consultancyId }, select: { id: true } })).map((c) => c.id);
   const where: Record<string, unknown> = { clientId: { in: clientIds } };
+  if (f.env) where.environment = f.env;
   if (f.clientId) where.clientId = f.clientId;
   if (f.kind) where.kind = f.kind;
   if (f.q) {
