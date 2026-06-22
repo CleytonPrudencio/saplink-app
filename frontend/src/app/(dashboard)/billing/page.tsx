@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getBilling, getPlans, checkoutPlan, updateAddons, payInvoice, setAutoRenew, payNow } from "@/lib/api";
+import { getBilling, getPlans, checkoutPlan, updateAddons, payInvoice, setAutoRenew, payNow, billingPortal } from "@/lib/api";
 
 interface Plan {
   key: string;
@@ -201,6 +201,17 @@ export default function BillingPage() {
     } finally { setBusy(""); }
   }
 
+  async function onManageCard() {
+    setBusy("portal");
+    setError("");
+    try {
+      const r = await billingPortal();
+      if (r?.status === "redirect" && r?.url) { window.location.href = r.url; return; }
+    } catch (e: any) {
+      setError(e?.response?.data?.error || "Não foi possível abrir o portal de cobrança.");
+    } finally { setBusy(""); }
+  }
+
   async function saveAddons() {
     setBusy("addons");
     setError("");
@@ -275,13 +286,25 @@ export default function BillingPage() {
                 <p className="text-xs text-[#9b95ad]">
                   {b.openInvoice ? <>Fatura em aberto: <b className="text-[#e2e0ea]">{brl(b.openInvoice.amountCents)}</b></> : "Pague a mensalidade atual quando quiser — na hora, sem esperar a data."}
                 </p>
-                <button
-                  onClick={onPayNow}
-                  disabled={busy === "paynow"}
-                  className="text-sm px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-cyan-500 text-white font-semibold disabled:opacity-50 cursor-pointer shrink-0"
-                >
-                  {busy === "paynow" ? "Abrindo…" : "⚡ Pagar agora"}
-                </button>
+                <div className="flex items-center gap-2 shrink-0">
+                  {b.gateway === "stripe" && (
+                    <button
+                      onClick={onManageCard}
+                      disabled={busy === "portal"}
+                      className="text-sm px-4 py-2 rounded-lg bg-white/[0.08] text-[#e2e0ea] hover:bg-white/[0.14] font-semibold disabled:opacity-50 cursor-pointer"
+                      title="Adicionar ou trocar o cartão no Stripe"
+                    >
+                      {busy === "portal" ? "Abrindo…" : "💳 Gerenciar cartão"}
+                    </button>
+                  )}
+                  <button
+                    onClick={onPayNow}
+                    disabled={busy === "paynow"}
+                    className="text-sm px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-cyan-500 text-white font-semibold disabled:opacity-50 cursor-pointer"
+                  >
+                    {busy === "paynow" ? "Abrindo…" : "⚡ Pagar agora"}
+                  </button>
+                </div>
               </div>
             </div>
           )}

@@ -157,6 +157,11 @@ export async function payNow() {
   return data as { status: string; url?: string; message?: string };
 }
 
+export async function billingPortal() {
+  const { data } = await api.post('/billing/portal');
+  return data as { status: string; url?: string };
+}
+
 export async function cancelSubscription() {
   const { data } = await api.post('/billing/cancel');
   return data;

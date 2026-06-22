@@ -115,6 +115,17 @@ export async function createInvoicePayment(consultancyId: string, invoiceId: str
   return { url: session.url };
 }
 
+/** Portal de Cobrança do Stripe — o cliente adiciona/troca o cartão, vê faturas e gerencia a assinatura. */
+export async function createBillingPortal(consultancyId: string): Promise<{ url: string }> {
+  const customer = await ensureCustomer(consultancyId);
+  await prisma.subscription.update({ where: { consultancyId }, data: { providerCustomerId: customer } }).catch(() => {});
+  const session = await stripe<{ url: string }>('/billing_portal/sessions', {
+    customer,
+    return_url: `${APP_URL}/billing`,
+  });
+  return { url: session.url };
+}
+
 function verifySignature(rawBody: Buffer, sigHeader: string): any {
   const parts: Record<string, string> = {};
   for (const item of sigHeader.split(',')) {

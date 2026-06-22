@@ -11,7 +11,7 @@ import {
   cancel as cancelSub,
 } from '../services/billing';
 import { asaasEnabled, createCheckout as asaasCheckout, createInvoicePayment as asaasInvoicePay, handleWebhook } from '../services/asaas';
-import { stripeEnabled, createCheckout as stripeCheckout, createInvoicePayment as stripeInvoicePay } from '../services/stripe';
+import { stripeEnabled, createCheckout as stripeCheckout, createInvoicePayment as stripeInvoicePay, createBillingPortal as stripePortal } from '../services/stripe';
 import { logger } from '../lib/logger';
 
 const router = Router();
@@ -293,6 +293,17 @@ router.post('/pay-now', requireConsultancyAdmin, async (req: Request, res: Respo
   await prisma.invoice.update({ where: { id: invoice.id }, data: { status: 'PAID', paidAt: new Date() } });
   await activateSubscription(consultancyId);
   res.json({ status: 'ok', message: 'Pagamento confirmado (ambiente de teste).' });
+});
+
+// Portal de Cobrança do Stripe — adicionar/trocar cartão, ver faturas, gerenciar assinatura.
+router.post('/portal', requireConsultancyAdmin, async (req: Request, res: Response) => {
+  if (!stripeEnabled()) { res.status(409).json({ error: 'Portal disponível apenas com o Stripe ativo.' }); return; }
+  try {
+    const { url } = await stripePortal(req.consultancyId!);
+    res.json({ status: 'redirect', url });
+  } catch (e: any) {
+    res.status(400).json({ error: e.message || 'Falha ao abrir o portal de cobrança.' });
+  }
 });
 
 // Liga/desliga a cobrança automática (renovação recorrente).
