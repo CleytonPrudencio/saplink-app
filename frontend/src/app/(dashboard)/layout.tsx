@@ -6,6 +6,7 @@ import { getMe, getBilling } from "@/lib/api";
 import Sidebar from "@/components/Sidebar";
 import PageGuide from "@/components/PageGuide";
 import PushSetup from "@/components/PushSetup";
+import Loading from "@/components/Loading";
 
 interface Consultancy {
   name?: string;
@@ -71,8 +72,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0f0b1a]">
-        <div className="text-[#9b95ad] text-lg">Carregando...</div>
+      <div className="min-h-screen flex items-center justify-center">
+        <Loading label="Carregando seu painel…" />
       </div>
     );
   }
