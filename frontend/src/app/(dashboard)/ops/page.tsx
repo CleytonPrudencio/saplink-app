@@ -15,6 +15,9 @@ const CATS: [string, string, string][] = [
   ["GATEWAY", "Gateway/OData", "🚪"],
   ["HANA", "HANA", "🗄️"],
   ["SECURITY", "Segurança/Patch", "🛡️"],
+  ["PAYMENT", "Pagamentos (F110)", "💳"],
+  ["BANK", "Extrato (MT940)", "🏦"],
+  ["MASTERDATA", "Dados mestre (BP)", "🗃️"],
 ];
 const sevCls: Record<string, string> = { CRITICAL: "bg-rose-500/15 text-rose-300", HIGH: "bg-orange-500/15 text-orange-300", MEDIUM: "bg-amber-500/15 text-amber-300", LOW: "bg-white/[0.06] text-[#9b95ad]" };
 

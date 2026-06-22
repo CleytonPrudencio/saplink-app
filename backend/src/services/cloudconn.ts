@@ -4,7 +4,7 @@ import { encryptValue, decryptValue } from '../lib/crypto';
 // Conectores SAP Cloud BYO (Ariba / SuccessFactors). Mesmo modelo do S/4: 1 chave por cliente,
 // sync ao vivo via SAP Business Accelerator Hub (sandbox, header APIKey) ou tenant do cliente.
 
-type Product = 'ARIBA' | 'SUCCESSFACTORS' | 'CONCUR' | 'FIELDGLASS' | 'CX' | 'COMMERCE' | 'APIM';
+type Product = 'ARIBA' | 'SUCCESSFACTORS' | 'CONCUR' | 'FIELDGLASS' | 'CX' | 'COMMERCE' | 'APIM' | 'TPM';
 
 const DEFAULTS: Record<Product, { base: string; probes: { apiName: string; path: string; count: boolean }[] }> = {
   SUCCESSFACTORS: {
@@ -55,6 +55,14 @@ const DEFAULTS: Record<Product, { base: string; probes: { apiName: string; path:
     base: 'https://sandbox.api.sap.com',
     probes: [
       { apiName: 'APIM_Proxies', path: '/apiportal/api/1.0/Management.svc/APIProxies', count: false },
+    ],
+  },
+  TPM: {
+    // Trading Partner Management (Integration Suite B2B/EDI) — acordos e parceiros comerciais.
+    base: 'https://sandbox.api.sap.com',
+    probes: [
+      { apiName: 'TPM_TradingPartners', path: '/itspaces/api/1.0/tpm/tradingpartners', count: false },
+      { apiName: 'TPM_Agreements', path: '/itspaces/api/1.0/tpm/agreements', count: false },
     ],
   },
 };

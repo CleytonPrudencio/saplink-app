@@ -1,7 +1,7 @@
 import prisma from '../lib/prisma';
 
 // Basis & Operações — ingest do agente + leitura agregada.
-export const OPS_CATEGORIES = ['PIPO', 'JOB', 'DUMP', 'UPDATE_ERR', 'LOCK', 'GATEWAY', 'HANA', 'SECURITY'] as const;
+export const OPS_CATEGORIES = ['PIPO', 'JOB', 'DUMP', 'UPDATE_ERR', 'LOCK', 'GATEWAY', 'HANA', 'SECURITY', 'PAYMENT', 'BANK', 'MASTERDATA'] as const;
 const SEVERITIES = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
 
 export interface OpsSignalInput { category: string; severity?: string; title: string; object?: string; detail?: string; ref: string; occurredAt?: string }

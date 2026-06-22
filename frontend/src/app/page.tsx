@@ -13,12 +13,43 @@ const brl = (c: number) => (c / 100).toLocaleString("pt-BR", { style: "currency"
 
 const NAV = [
   { id: "problema", label: "Problema" },
+  { id: "cobertura", label: "Cobertura" },
   { id: "como", label: "Como funciona" },
   { id: "plataforma", label: "Plataforma" },
   { id: "inovacao", label: "Inovação" },
   { id: "s4", label: "S/4HANA Cloud" },
   { id: "planos", label: "Planos" },
   { id: "faq", label: "FAQ" },
+];
+
+// Faixa de números (capacidades reais, não métricas de clientes)
+const METRICS = [
+  ["18+", "produtos SAP cobertos"],
+  ["20+", "capacidades na plataforma"],
+  ["13", "diferenciais que ninguém tem"],
+  ["0", "portas abertas no cliente"],
+];
+
+// Tudo o que o SAPLINK enxerga do universo SAP
+const COVERAGE: [string, string, string][] = [
+  ["☁️", "S/4HANA Cloud", "Upgrade, Clean Core, APIs"],
+  ["🗄️", "ECC / S/4 on-prem", "via Agente (RFC/IDoc)"],
+  ["🔀", "CPI / Cloud Integration", "Message Processing Logs"],
+  ["🧩", "AIF", "Application Interface Framework"],
+  ["📨", "Event Mesh", "dead-letter, lag"],
+  ["🛒", "Ariba", "suppliers, reporting"],
+  ["👥", "SuccessFactors", "User, EmpJob"],
+  ["✈️", "Concur", "despesas, relatórios"],
+  ["🧰", "Fieldglass", "força de trabalho externa"],
+  ["🎧", "CX (Sales/Service)", "C4C OData"],
+  ["🛍️", "Commerce", "OCC API"],
+  ["🔗", "API Management", "proxies publicados"],
+  ["🪐", "BTP Cockpit", "keys, destinations, quotas"],
+  ["🔁", "PI/PO", "channels, backlog"],
+  ["🩺", "Basis & HANA", "jobs, dumps, locks, memória"],
+  ["📑", "B2B / EDI (TPM)", "parceiros e acordos"],
+  ["🧾", "Fiscal BR", "NF-e, CT-e, SPED, eSocial"],
+  ["🚚", "Transports (STMS)", "blast radius"],
 ];
 
 const STEPS = [
@@ -115,6 +146,54 @@ function InterestModal({ open, onClose }: { open: boolean; onClose: () => void }
   );
 }
 
+function LivePanel() {
+  const rows: [string, string, string][] = [
+    ["S/4HANA Cloud · OData", "98%", "#34d399"],
+    ["CPI · Pedidos B2B", "94%", "#34d399"],
+    ["IDoc · INVOIC02", "71%", "#fbbf24"],
+    ["RFC · PI_PROD", "88%", "#34d399"],
+    ["Event Mesh · BP", "62%", "#f87171"],
+  ];
+  return (
+    <div className="slk-float relative mx-auto w-full max-w-md">
+      <div className="absolute -inset-4 -z-10 rounded-3xl opacity-60 blur-2xl" style={{ background: "radial-gradient(circle at 50% 30%, rgba(124,58,237,.35), transparent 70%)" }} />
+      <div className="rounded-2xl bg-[#15101f] border border-white/[0.1] shadow-2xl overflow-hidden">
+        <div className="flex items-center gap-2 px-4 py-3 border-b border-white/[0.08]">
+          <span className="w-2.5 h-2.5 rounded-full bg-rose-400/70" /><span className="w-2.5 h-2.5 rounded-full bg-amber-400/70" /><span className="w-2.5 h-2.5 rounded-full bg-emerald-400/70" />
+          <span className="ml-2 text-xs text-[#9b95ad]">SAPLINK · carteira ao vivo</span>
+        </div>
+        <div className="p-4">
+          <div className="flex items-end justify-between mb-4">
+            <div>
+              <p className="text-xs text-[#9b95ad]">Saúde da carteira</p>
+              <p className="text-4xl font-extrabold slk-grad">92</p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-[#9b95ad]">Em risco agora</p>
+              <p className="text-xl font-bold text-amber-300">R$ 84,2k</p>
+            </div>
+          </div>
+          <div className="space-y-2.5">
+            {rows.map(([name, pct, color], i) => (
+              <div key={name} className="flex items-center gap-3">
+                <span className="text-xs text-[#c9c5d6] w-40 truncate">{name}</span>
+                <div className="flex-1 h-2 rounded-full bg-white/[0.06] overflow-hidden">
+                  <div className="slk-bar h-full rounded-full" style={{ width: pct, background: color, animationDelay: `${i * 0.3}s` }} />
+                </div>
+                <span className="text-[11px] text-[#9b95ad] w-9 text-right">{pct}</span>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 flex items-center gap-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-3 py-2">
+            <span className="text-emerald-300">✓</span>
+            <span className="text-xs text-emerald-200">IA corrigiu 3 IDocs travados · sem intervenção</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function LandingPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
@@ -152,23 +231,68 @@ export default function LandingPage() {
         )}
       </header>
 
+      <style>{`
+        @keyframes slk-float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+        @keyframes slk-pan { 0%{background-position:0% 50%} 100%{background-position:200% 50%} }
+        @keyframes slk-pulse { 0%,100%{opacity:.35} 50%{opacity:.9} }
+        @keyframes slk-bar { 0%{transform:scaleX(.4)} 50%{transform:scaleX(1)} 100%{transform:scaleX(.7)} }
+        .slk-grad { background:linear-gradient(90deg,#a78bfa,#22d3ee,#34d399,#a78bfa); background-size:200% auto; -webkit-background-clip:text; background-clip:text; color:transparent; animation:slk-pan 6s linear infinite; }
+        .slk-float { animation:slk-float 5s ease-in-out infinite; }
+        .slk-bar { transform-origin:left; animation:slk-bar 2.4s ease-in-out infinite; }
+      `}</style>
+
       <main id="top" className="max-w-6xl mx-auto px-4 sm:px-5">
         {/* Hero */}
-        <section className="py-16 sm:py-24 text-center relative">
-          <div className="absolute inset-0 -z-10 opacity-40" style={{ background: "radial-gradient(600px 300px at 50% 0%, rgba(124,58,237,.25), transparent)" }} />
-          <div className="inline-block px-3 py-1 rounded-full bg-white/[0.06] text-xs text-[#9b95ad] mb-5">Operação de integrações SAP · ECC, S/4HANA & S/4HANA Cloud</div>
-          <h1 className="text-4xl sm:text-6xl font-extrabold leading-tight">
-            Opere o SAP dos seus clientes<br className="hidden sm:block" /> <span className="bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">sem apagar incêndio</span>
-          </h1>
-          <p className="text-base sm:text-lg text-[#9b95ad] max-w-2xl mx-auto mt-6">
-            A plataforma que <b className="text-[#e2e0ea]">monitora, prevê, corrige e prova valor em R$</b> nas integrações SAP — do IDoc clássico ao S/4HANA Cloud — num só painel multi-cliente, white-label.
-          </p>
-          <div className="flex flex-wrap gap-3 justify-center mt-8">
-            {cta("Tenho interesse →")}
-            <a href="#plataforma" className="px-6 py-3 rounded-lg bg-white/[0.06] text-[#e2e0ea] font-semibold hover:bg-white/[0.12] transition">Ver funcionalidades</a>
+        <section className="pt-14 pb-12 sm:pt-20 sm:pb-16 relative">
+          <div className="absolute inset-0 -z-10 opacity-50" style={{ background: "radial-gradient(700px 360px at 50% -5%, rgba(124,58,237,.28), transparent), radial-gradient(500px 300px at 90% 10%, rgba(34,211,238,.16), transparent)" }} />
+          <div className="grid lg:grid-cols-2 gap-10 items-center">
+            <div className="text-center lg:text-left">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/25 text-xs text-purple-200 mb-5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" style={{ animation: "slk-pulse 1.6s ease-in-out infinite" }} /> 18+ produtos SAP · IA de ponta a ponta · white-label
+              </div>
+              <h1 className="text-4xl sm:text-5xl xl:text-6xl font-extrabold leading-[1.05]">
+                Inove a operação SAP<br />da sua consultoria com a <span className="slk-grad">SAPLINK</span>
+              </h1>
+              <p className="text-base sm:text-lg text-[#c9c5d6] max-w-xl mx-auto lg:mx-0 mt-6 leading-relaxed">
+                Um só painel que <b className="text-white">monitora, prevê, corrige e prova valor em R$</b> em todo o landscape SAP do cliente — do IDoc clássico ao S/4HANA Cloud, Ariba, SuccessFactors, BTP e fiscal brasileiro.
+              </p>
+              <div className="flex flex-wrap gap-3 justify-center lg:justify-start mt-8">
+                {cta("Quero inovar minha operação →", true, "shadow-[0_0_30px_rgba(124,58,237,0.35)]")}
+                <a href="#cobertura" className="px-6 py-3 rounded-lg bg-white/[0.06] text-[#e2e0ea] font-semibold hover:bg-white/[0.12] transition">Ver tudo que cobrimos</a>
+              </div>
+              <div className="flex flex-wrap gap-x-5 gap-y-2 justify-center lg:justify-start mt-7 text-xs text-[#6b6580]">
+                <span>✓ Sem abrir portas no cliente</span><span>✓ Multi-cliente</span><span>✓ Pronto em dias, não meses</span>
+              </div>
+            </div>
+            <LivePanel />
           </div>
-          <div className="flex flex-wrap gap-x-6 gap-y-2 justify-center mt-8 text-xs text-[#6b6580]">
-            <span>✓ Sem abrir portas no cliente</span><span>✓ IA aplicada de ponta a ponta</span><span>✓ Multi-cliente & white-label</span><span>✓ Carro-chefe S/4HANA Cloud</span>
+
+          {/* Faixa de métricas */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-12">
+            {METRICS.map(([n, l]) => (
+              <div key={l} className="rounded-xl bg-[#1a1527] border border-white/[0.08] p-4 text-center">
+                <div className="text-3xl font-extrabold slk-grad">{n}</div>
+                <div className="text-xs text-[#9b95ad] mt-1">{l}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Cobertura SAP */}
+        <section id="cobertura" className="py-14 sm:py-16 border-t border-white/[0.06]">
+          <div className="text-center max-w-3xl mx-auto">
+            <span className="inline-block px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/25 text-cyan-300 text-xs font-bold mb-4">COBERTURA TOTAL</span>
+            <h2 className="text-2xl sm:text-4xl font-bold">Todo o universo SAP do seu cliente. Numa tela.</h2>
+            <p className="text-[#9b95ad] mt-3">Integração clássica, nuvem, LoB, plataforma, Basis e fiscal brasileiro — o concorrente cobre um pedaço; o SAPLINK cobre o conjunto.</p>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mt-9">
+            {COVERAGE.map(([ic, name, sub]) => (
+              <div key={name} className="group rounded-xl bg-[#1a1527] border border-white/[0.08] p-4 text-center hover:border-purple-500/50 hover:bg-purple-500/[0.04] transition">
+                <div className="text-3xl mb-2 transition group-hover:scale-110">{ic}</div>
+                <p className="font-semibold text-sm leading-tight">{name}</p>
+                <p className="text-[11px] text-[#9b95ad] mt-1 leading-tight">{sub}</p>
+              </div>
+            ))}
           </div>
         </section>
 

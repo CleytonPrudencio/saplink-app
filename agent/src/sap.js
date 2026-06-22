@@ -165,6 +165,9 @@ export function collectOpsSignals(cfg) {
     { category: 'GATEWAY', severity: 'MEDIUM', title: 'OData service error', object: 'API_SALES_ORDER_SRV', detail: '/IWFND/ERROR_LOG: 500 em GET', ref: 'GW_API_SALES_ORDER_SRV', occurredAt: t(1) },
     { category: 'HANA', severity: 'CRITICAL', title: 'Memória acima de 90%', object: 'HDB/usedMemory', detail: 'HANA: uso de memória 92% — risco de OOM', ref: 'HANA_MEM_HIGH', occurredAt: t(0) },
     { category: 'SECURITY', severity: 'MEDIUM', title: 'Patch de segurança pendente', object: 'SAP Note 3300000', detail: 'Patch level abaixo do recomendado (HotNews)', ref: 'SEC_NOTE_3300000', occurredAt: t(12) },
+    { category: 'PAYMENT', severity: 'HIGH', title: 'Payment run com itens bloqueados', object: 'F110 2026-06-22', detail: 'F110: 7 faturas com bloqueio de pagamento', ref: 'F110_20260622', occurredAt: t(2) },
+    { category: 'BANK', severity: 'MEDIUM', title: 'Extrato bancário não importado', object: 'MT940 Itaú 0613', detail: 'FF_5 / FEBAN: arquivo do dia não processado', ref: 'MT940_ITAU_0613', occurredAt: t(5) },
+    { category: 'MASTERDATA', severity: 'LOW', title: 'BP fora de sincronia', object: 'BP 0001002345', detail: 'MDI/DRF: Business Partner divergente entre sistemas', ref: 'BP_0001002345', occurredAt: t(7) },
   ];
 }
 
