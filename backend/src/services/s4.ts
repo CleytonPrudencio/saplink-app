@@ -216,13 +216,31 @@ export async function getComm(consultancyId: string) {
   return { items, summary: { total: items.length, errors: items.filter((i) => i.status === 'ERROR').length, expiring: items.filter((i) => ['EXPIRED', 'CRITICAL', 'WARN'].includes(i.certSeverity)).length } };
 }
 
-export async function getFiscal(consultancyId: string, clientId?: string) {
+// Famílias de documentos fiscais BR (DRC/GRC) — classifica pelo docType.
+export const FISCAL_FAMILIES = ['NFE', 'NFSE', 'CTE', 'MDFE', 'SPED', 'ESOCIAL', 'EFDREINF', 'BILLING', 'OUTROS'];
+export function fiscalFamily(docType: string): string {
+  const t = (docType || '').toUpperCase();
+  if (t.startsWith('NFE') || t === 'NF-E' || t.startsWith('NFISCAL')) return 'NFE';
+  if (t.startsWith('NFSE') || t.startsWith('NFS')) return 'NFSE';
+  if (t.startsWith('CTE') || t.startsWith('CT-E')) return 'CTE';
+  if (t.startsWith('MDFE') || t.startsWith('MDF-E')) return 'MDFE';
+  if (t.startsWith('SPED')) return 'SPED';
+  if (t.startsWith('ESOCIAL') || t.startsWith('ESOC')) return 'ESOCIAL';
+  if (t.startsWith('EFDREINF') || t.startsWith('REINF')) return 'EFDREINF';
+  if (t.startsWith('BILLING')) return 'BILLING';
+  return 'OUTROS';
+}
+
+export async function getFiscal(consultancyId: string, clientId?: string, family?: string) {
   const ids = clientId ? [clientId] : await clientIds(consultancyId);
-  const docs = await prisma.fiscalDoc.findMany({ where: { clientId: { in: ids } }, orderBy: { issuedAt: 'desc' }, take: 500, include: { client: { select: { name: true } } } });
+  let docs = await prisma.fiscalDoc.findMany({ where: { clientId: { in: ids } }, orderBy: { issuedAt: 'desc' }, take: 1000, include: { client: { select: { name: true } } } });
+  const withFam = docs.map((d) => ({ id: d.id, docType: d.docType, family: fiscalFamily(d.docType), number: d.number, status: d.status, sefazCode: d.sefazCode, message: d.message, amountCents: d.amountCents, remediable: d.remediable, resolved: d.resolved, issuedAt: d.issuedAt, client: d.client?.name }));
   const byStatus: Record<string, number> = {};
   let atRiskCents = 0;
   for (const d of docs) { byStatus[d.status] = (byStatus[d.status] || 0) + 1; if (!d.resolved) atRiskCents += d.amountCents; }
-  return { items: docs.map((d) => ({ id: d.id, docType: d.docType, number: d.number, status: d.status, sefazCode: d.sefazCode, message: d.message, amountCents: d.amountCents, remediable: d.remediable, resolved: d.resolved, issuedAt: d.issuedAt, client: d.client?.name })), summary: { total: docs.length, byStatus, atRiskCents, blocked: docs.filter((d) => !d.resolved).length } };
+  const byFamily = FISCAL_FAMILIES.map((f) => ({ family: f, count: withFam.filter((d) => d.family === f).length })).filter((x) => x.count > 0);
+  const items = family ? withFam.filter((d) => d.family === family) : withFam;
+  return { items: items.slice(0, 500), summary: { total: withFam.length, byStatus, byFamily, atRiskCents, blocked: docs.filter((d) => !d.resolved).length } };
 }
 
 export async function reprocessFiscal(consultancyId: string, id: string) {

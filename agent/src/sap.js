@@ -246,6 +246,12 @@ export function discoverS4() {
       { docType: 'NFSE', number: 'NFSE-7781', status: 'PENDING', message: 'Aguardando retorno da prefeitura.', amountCents: 320000, remediable: false, issuedAt: d(1) },
       { docType: 'NFE', number: '000123455', status: 'AUTHORIZED', amountCents: 560000, remediable: false, issuedAt: d(5) },
       { docType: 'CTE', number: 'CTE-5521', status: 'AUTHORIZED', amountCents: 120000, remediable: false, issuedAt: d(6) },
+      { docType: 'CTE', number: 'CTE-5544', status: 'REJECTED', sefazCode: '236', message: 'CT-e: chave de acesso com dígito verificador inválido.', amountCents: 84000, remediable: true, issuedAt: d(2) },
+      { docType: 'MDFE', number: 'MDFE-2031', status: 'PENDING', message: 'MDF-e aguardando encerramento (em trânsito).', amountCents: 0, remediable: false, issuedAt: d(1) },
+      { docType: 'MDFE', number: 'MDFE-2029', status: 'REJECTED', sefazCode: '645', message: 'MDF-e: município de descarregamento inexistente.', amountCents: 0, remediable: true, issuedAt: d(3) },
+      { docType: 'SPED_EFD_ICMS', number: 'SPED-2026-05', status: 'PENDING', message: 'SPED Fiscal: bloco H com inconsistência de inventário.', amountCents: 0, remediable: false, issuedAt: d(8) },
+      { docType: 'ESOCIAL_S1200', number: 'eSocial-S1200-0426', status: 'REJECTED', sefazCode: '301', message: 'eSocial: trabalhador sem cadastro prévio (S-2200).', amountCents: 0, remediable: true, issuedAt: d(4) },
+      { docType: 'EFDREINF_R2010', number: 'Reinf-R2010-0426', status: 'PENDING', message: 'EFD-Reinf: retenção de INSS aguardando transmissão.', amountCents: 47000, remediable: false, issuedAt: d(2) },
     ],
     cloudEvents: [
       { topic: 'sap.s4.beh.salesorder.v1.SalesOrder.Created.v1', status: 'DELIVERED', subscriber: 'ext-faturamento', lagMs: 220, occurredAt: d(1) },

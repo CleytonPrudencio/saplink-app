@@ -253,7 +253,7 @@ export async function getS4CleanCore() { const { data } = await api.get('/s4/cle
 export async function getS4Apis() { const { data } = await api.get('/s4/apis'); return data as { items: any[]; summary: { total: number; deprecated: number } }; }
 export async function getS4Comm() { const { data } = await api.get('/s4/comm'); return data as { items: any[]; summary: { total: number; errors: number; expiring: number } }; }
 export async function getS4Events() { const { data } = await api.get('/s4/events'); return data as { items: any[]; summary: { total: number; byStatus: Record<string, number>; deadLetter: number } }; }
-export async function getS4Fiscal(clientId?: string) { const { data } = await api.get('/s4/fiscal', { params: clientId ? { clientId } : {} }); return data as { items: any[]; summary: { total: number; byStatus: Record<string, number>; atRiskCents: number; blocked: number } }; }
+export async function getS4Fiscal(params: { clientId?: string; family?: string } = {}) { const { data } = await api.get('/s4/fiscal', { params }); return data as { items: any[]; summary: { total: number; byStatus: Record<string, number>; byFamily?: { family: string; count: number }[]; atRiskCents: number; blocked: number } }; }
 export async function reprocessFiscal(id: string) { const { data } = await api.post(`/s4/fiscal/${id}/reprocess`); return data; }
 export async function getS4Connections() { const { data } = await api.get('/s4/connections'); return data as { connections: any[] }; }
 export async function saveS4Connection(clientId: string, payload: Record<string, unknown>) { const { data } = await api.put(`/s4/connections/${clientId}`, payload); return data; }

@@ -25,7 +25,7 @@ router.get('/events', async (req: Request, res: Response) => {
   try { res.json(await s4.getEvents(req.consultancyId!)); } catch (e) { console.error(e); res.status(500).json({ error: 'Erro nos eventos.' }); }
 });
 router.get('/fiscal', async (req: Request, res: Response) => {
-  try { res.json(await s4.getFiscal(req.consultancyId!, req.query.clientId as string | undefined)); } catch (e) { console.error(e); res.status(500).json({ error: 'Erro no fiscal.' }); }
+  try { res.json(await s4.getFiscal(req.consultancyId!, req.query.clientId as string | undefined, req.query.family as string | undefined)); } catch (e) { console.error(e); res.status(500).json({ error: 'Erro no fiscal.' }); }
 });
 router.post('/fiscal/:id/reprocess', requireConsultancyAdmin, async (req: Request, res: Response) => {
   const r = await s4.reprocessFiscal(req.consultancyId!, req.params.id);

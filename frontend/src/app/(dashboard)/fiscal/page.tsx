@@ -14,13 +14,16 @@ const ST: Record<string, { label: string; cls: string }> = {
   CANCELLED: { label: "Cancelada", cls: "bg-white/[0.06] text-[#9b95ad]" },
 };
 
+const FAM: Record<string, string> = { NFE: "NF-e", NFSE: "NFS-e", CTE: "CT-e", MDFE: "MDF-e", SPED: "SPED", ESOCIAL: "eSocial", EFDREINF: "EFD-Reinf", BILLING: "Faturas", OUTROS: "Outros" };
+
 export default function FiscalPage() {
   const [data, setData] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [busy, setBusy] = useState("");
   const [loading, setLoading] = useState(true);
+  const [family, setFamily] = useState("");
 
-  const load = useCallback(async () => { setData(await getS4Fiscal()); }, []);
+  const load = useCallback(async () => { setData(await getS4Fiscal(family ? { family } : {})); }, [family]);
   useEffect(() => {
     getMe().then((u) => setIsAdmin(u.role === "CONSULTANCY_ADMIN" || u.role === "PLATFORM_ADMIN")).catch(() => {});
     load().catch(() => {}).finally(() => setLoading(false));
@@ -38,9 +41,16 @@ export default function FiscalPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2">🧾 Fiscal — DRC / eDocument</h1>
-        <p className="text-[#9b95ad] text-sm mt-1">NF-e, NFS-e e CT-e do S/4HANA Cloud: rejeições da SEFAZ, contingência e fila — com reprocesso.</p>
-        <div className="mt-3"><ExplainData screen="Cockpit Fiscal (DRC)" data={{ resumo: data?.summary, bloqueados: (data?.items || []).filter((d: any) => !d.resolved).slice(0, 12) }} /></div>
+        <h1 className="text-2xl font-bold flex items-center gap-2">🧾 Fiscal BR — DRC / eDocument / GRC</h1>
+        <p className="text-[#9b95ad] text-sm mt-1">NF-e, NFS-e, CT-e, MDF-e e as obrigações SPED, eSocial e EFD-Reinf: rejeições da SEFAZ, contingência e fila — com reprocesso.</p>
+        <div className="mt-3"><ExplainData screen="Cockpit Fiscal (DRC/GRC)" data={{ resumo: data?.summary, bloqueados: (data?.items || []).filter((d: any) => !d.resolved).slice(0, 12) }} /></div>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        <button onClick={() => setFamily("")} className={`text-xs px-3 py-1.5 rounded-lg cursor-pointer ${family === "" ? "bg-purple-500/20 text-purple-300" : "bg-[#1a1527] text-[#9b95ad] hover:text-white"}`}>Todos ({s.total ?? 0})</button>
+        {(s.byFamily || []).map((b: any) => (
+          <button key={b.family} onClick={() => setFamily(b.family)} className={`text-xs px-3 py-1.5 rounded-lg cursor-pointer ${family === b.family ? "bg-purple-500/20 text-purple-300" : "bg-[#1a1527] text-[#9b95ad] hover:text-white"}`}>{FAM[b.family] || b.family} ({b.count})</button>
+        ))}
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -61,7 +71,7 @@ export default function FiscalPage() {
           <tbody>
             {pag.pageItems.map((d: any) => (
               <tr key={d.id} className="border-b border-white/[0.04]">
-                <td className="px-3 py-2 font-mono text-[#c9c5d6]">{d.docType}</td>
+                <td className="px-3 py-2"><span className="text-xs px-1.5 py-0.5 rounded bg-white/[0.06] text-[#c9c5d6] mr-1">{FAM[d.family] || d.family}</span><span className="font-mono text-[10px] text-[#6b6580]">{d.docType}</span></td>
                 <td className="px-3 py-2 font-mono text-[#e2e0ea]">{d.number}</td>
                 <td className="px-3 py-2"><span className={`text-xs px-1.5 py-0.5 rounded ${ST[d.status]?.cls || ""}`}>{ST[d.status]?.label || d.status}</span></td>
                 <td className="px-3 py-2 text-[#9b95ad]">{d.sefazCode ? `${d.sefazCode}` : "—"}<span className="block text-xs max-w-xs">{d.message}</span></td>
