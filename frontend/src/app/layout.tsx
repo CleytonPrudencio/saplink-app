@@ -18,6 +18,8 @@ export const metadata: Metadata = {
   },
   description: DESC,
   applicationName: "SAPLINK",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: { capable: true, title: "SAPLINK", statusBarStyle: "black-translucent" },
   keywords: ["SAP", "integração", "monitoramento", "S/4HANA Cloud", "CPI", "IDoc", "AMS", "consultoria SAP"],
   icons: {
     icon: [{ url: "/icon.png", type: "image/png" }],

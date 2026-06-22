@@ -2,6 +2,7 @@ import prisma from '../lib/prisma';
 import { logger } from '../lib/logger';
 import { dispatch, sevRank } from './notify';
 import { createTicket, closeTicket } from './tickets';
+import { sendToConsultancy } from './push';
 
 /** Processa alertas: notifica novos (nível 1) + abre ticket; escala não resolvidos;
  *  fecha tickets de alertas resolvidos. Idempotente — guiado por flags no Alert. */
@@ -22,6 +23,11 @@ export async function processAlerts(): Promise<{ notified: number; escalated: nu
       const n = await dispatch(consultancyId, alertLike, 1);
       if (n) notified += n;
     } catch (e) { logger.warn({ err: (e as Error).message }, '[alertproc] dispatch L1'); }
+
+    // Web Push (PWA) — notifica no celular/desktop instalado
+    try {
+      await sendToConsultancy(consultancyId, { title: `SAPLINK · ${a.severity}`, body: a.message.slice(0, 140), url: '/alerts', tag: a.id });
+    } catch (e) { logger.warn({ err: (e as Error).message }, '[alertproc] push'); }
 
     // ticket (respeita minSeverity da config)
     let ticketKey: string | null = null, ticketUrl: string | null = null;

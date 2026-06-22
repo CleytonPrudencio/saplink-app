@@ -36,6 +36,10 @@ services:
       # IA local grátis via Ollama (deixe OLLAMA_URL vazio para usar Claude/mock)
       OLLAMA_URL: "http://ollama:11434"
       OLLAMA_MODEL: "qwen2.5:7b"
+      # Web Push (PWA) — chaves VAPID em /opt/saplink/.env
+      VAPID_PUBLIC_KEY: "${VAPID_PUBLIC_KEY:-}"
+      VAPID_PRIVATE_KEY: "${VAPID_PRIVATE_KEY:-}"
+      VAPID_SUBJECT: "${VAPID_SUBJECT:-mailto:ops@saplink.com.br}"
       PORT: "8080"
       SIMULATION_ENABLED: "${SIMULATION_ENABLED:-false}"
       SIMULATION_INTERVAL: "30000"

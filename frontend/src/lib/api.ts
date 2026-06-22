@@ -292,6 +292,9 @@ export async function getPartners() { const { data } = await api.get('/innovate/
 export async function getAiConfig() { const { data } = await api.get('/ai-config'); return data as any; }
 export async function saveAiConfig(payload: Record<string, unknown>) { const { data } = await api.put('/ai-config', payload); return data as any; }
 export async function testAiProvider(payload: { provider: string; key?: string; model?: string; endpoint?: string; deployment?: string }) { const { data } = await api.post('/ai-config/test', payload); return data as { ok: boolean; ms?: number; error?: string }; }
+// Web Push (PWA)
+export async function getVapidKey() { const { data } = await api.get('/push/vapid'); return data as { key: string }; }
+export async function subscribePush(subscription: unknown) { const { data } = await api.post('/push/subscribe', { subscription }); return data as { ok: boolean }; }
 
 // C1 — Canais de notificação / on-call
 export interface NotificationChannel {

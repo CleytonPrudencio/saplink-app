@@ -604,6 +604,17 @@ model AiKnowledge {
   @@index([consultancyId, topicKey])
 }
 
+// Web Push (PWA) — inscrições de notificação por usuário/consultoria.
+model PushSubscription {
+  id            String   @id @default(uuid())
+  consultancyId String
+  userId        String?
+  endpoint      String   @unique
+  keys          Json     // { p256dh, auth }
+  createdAt     DateTime @default(now())
+  @@index([consultancyId])
+}
+
 // ChatOps — token de canal (WhatsApp/Telegram) por consultoria.
 model ChatOpsConfig {
   consultancyId String   @id
