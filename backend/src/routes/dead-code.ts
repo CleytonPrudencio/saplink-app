@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import prisma from '../lib/prisma';
 import { authMiddleware } from '../middleware/auth';
 import { tenancyMiddleware } from '../middleware/tenancy';
+import { reqEnv } from '../lib/env';
 
 const router = Router();
 router.use(authMiddleware, tenancyMiddleware);
@@ -22,8 +23,9 @@ router.get('/client/:clientId', async (req: Request, res: Response) => {
       return;
     }
 
+    const dcEnv = reqEnv(req);
     const deadCode = await prisma.deadCode.findMany({
-      where: { clientId: req.params.clientId },
+      where: { clientId: req.params.clientId, ...(dcEnv ? { environment: dcEnv } : {}) },
       orderBy: { usageCount: 'asc' },
     });
 

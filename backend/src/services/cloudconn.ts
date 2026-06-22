@@ -71,11 +71,14 @@ export const PRODUCTS = Object.keys(DEFAULTS) as Product[];
 export function isProduct(p: string): p is Product { return (PRODUCTS as string[]).includes(p); }
 export function defaultBase(product: string) { return DEFAULTS[product as Product]?.base || ''; }
 
-export async function listConnectors(consultancyId: string) {
+const ENV = (e?: string) => (['DEV', 'HML', 'PRD'].includes(e || '') ? e! : 'PRD');
+
+export async function listConnectors(consultancyId: string, env?: string) {
+  const e = ENV(env);
   const clients = await prisma.client.findMany({ where: { consultancyId }, select: { id: true, name: true } });
-  const conns = await prisma.cloudConnector.findMany({ where: { clientId: { in: clients.map((c) => c.id) } } });
+  const conns = await prisma.cloudConnector.findMany({ where: { clientId: { in: clients.map((c) => c.id) }, environment: e } });
   return clients.map((c) => ({
-    clientId: c.id, client: c.name,
+    clientId: c.id, client: c.name, environment: e,
     connectors: PRODUCTS.map((p) => {
       const x = conns.find((k) => k.clientId === c.id && k.product === p);
       return { product: p, baseUrl: x?.baseUrl || DEFAULTS[p].base, status: x?.status || 'PENDING', hasKey: !!x?.apiKey, lastSyncAt: x?.lastSyncAt || null, lastResult: x?.lastResult || null };
@@ -83,20 +86,22 @@ export async function listConnectors(consultancyId: string) {
   }));
 }
 
-export async function saveConnector(consultancyId: string, clientId: string, product: string, input: { baseUrl?: string; apiKey?: string }) {
+export async function saveConnector(consultancyId: string, clientId: string, product: string, input: { baseUrl?: string; apiKey?: string }, env?: string) {
+  const e = ENV(env);
   const client = await prisma.client.findUnique({ where: { id: clientId } });
   if (!client || client.consultancyId !== consultancyId) return { error: 'NOT_FOUND' as const };
   if (!isProduct(product)) return { error: 'INVALID' as const };
-  const ex = await prisma.cloudConnector.findUnique({ where: { clientId_product: { clientId, product } } });
+  const ex = await prisma.cloudConnector.findUnique({ where: { clientId_product_environment: { clientId, product, environment: e } } });
   const apiKey = input.apiKey ? encryptValue(input.apiKey) : ex?.apiKey;
   if (!apiKey) return { error: 'NO_KEY' as const };
   const data = { baseUrl: (input.baseUrl || ex?.baseUrl || DEFAULTS[product as Product].base).replace(/\/$/, ''), apiKey, status: 'CONNECTED' };
-  await prisma.cloudConnector.upsert({ where: { clientId_product: { clientId, product } }, update: data, create: { clientId, product, ...data } });
+  await prisma.cloudConnector.upsert({ where: { clientId_product_environment: { clientId, product, environment: e } }, update: data, create: { clientId, product, environment: e, ...data } });
   return { ok: true };
 }
 
-export async function sync(consultancyId: string, clientId: string, product: string) {
-  const conn = await prisma.cloudConnector.findUnique({ where: { clientId_product: { clientId, product } }, include: { client: true } });
+export async function sync(consultancyId: string, clientId: string, product: string, env?: string) {
+  const e = ENV(env);
+  const conn = await prisma.cloudConnector.findUnique({ where: { clientId_product_environment: { clientId, product, environment: e } }, include: { client: true } });
   if (!conn || conn.client.consultancyId !== consultancyId) return { error: 'NOT_FOUND' as const };
   const apiKey = String(decryptValue(conn.apiKey) ?? '');
   if (!apiKey) return { error: 'NO_KEY' as const };
@@ -121,8 +126,8 @@ export async function sync(consultancyId: string, clientId: string, product: str
     if (ok) {
       await prisma.apiUsage.upsert({
         where: { clientId_apiName_version: { clientId, apiName: p.apiName, version: 'v1' } },
-        update: { scenario: product, calls30d: count ?? 0, deprecated: false, lastSeenAt: new Date() },
-        create: { clientId, apiName: p.apiName, version: 'v1', scenario: product, calls30d: count ?? 0, deprecated: false },
+        update: { scenario: product, calls30d: count ?? 0, deprecated: false, environment: e, lastSeenAt: new Date() },
+        create: { clientId, apiName: p.apiName, version: 'v1', scenario: product, calls30d: count ?? 0, deprecated: false, environment: e },
       });
     }
   }

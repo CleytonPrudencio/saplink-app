@@ -361,11 +361,12 @@ model CloudConnector {
   product    String    // ARIBA | SUCCESSFACTORS
   baseUrl    String
   apiKey     String    // cifrada
+  environment String   @default("PRD") // DEV | HML | PRD — conector por ambiente
   status     String    @default("PENDING") // PENDING | CONNECTED | ERROR
   lastSyncAt DateTime?
   lastResult Json?
   client     Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  @@unique([clientId, product])
+  @@unique([clientId, product, environment])
   @@index([clientId])
 }
 

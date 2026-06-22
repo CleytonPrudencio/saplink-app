@@ -4,6 +4,7 @@ import { authMiddleware } from '../middleware/auth';
 import { tenancyMiddleware } from '../middleware/tenancy';
 import { diagnose } from '../services/ai';
 import { assertWithinLimit, incrementAiUsage, LimitError } from '../services/billing';
+import { reqEnv } from '../lib/env';
 
 const router = Router();
 router.use(authMiddleware, tenancyMiddleware);
@@ -133,8 +134,9 @@ router.get('/client/:clientId', async (req: Request, res: Response) => {
       return;
     }
 
+    const dEnv = reqEnv(req);
     const diagnostics = await prisma.diagnostic.findMany({
-      where: { clientId: req.params.clientId },
+      where: { clientId: req.params.clientId, ...(dEnv ? { environment: dEnv } : {}) },
       orderBy: { createdAt: 'desc' },
     });
 

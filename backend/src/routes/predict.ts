@@ -1,12 +1,13 @@
 import { Router, Request, Response } from 'express';
 import { predict } from '../services/predict';
 import { benchmark } from '../services/benchmark';
+import { reqEnv } from '../lib/env';
 
 // E1 (previsão) + E2 (benchmark). Sob o tenantGate.
 const router = Router();
 
 router.get('/', async (req: Request, res: Response) => {
-  try { res.json(await predict(req.consultancyId!)); }
+  try { res.json(await predict(req.consultancyId!, reqEnv(req))); }
   catch (e) { console.error('Predict error:', e); res.status(500).json({ error: 'Erro ao calcular previsão.' }); }
 });
 

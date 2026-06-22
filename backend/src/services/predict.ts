@@ -31,9 +31,9 @@ export interface Prediction {
 }
 
 /** Calcula o risco de falha por integração: estado atual + tendência (quando há histórico). */
-export async function predict(consultancyId: string): Promise<{ predictions: Prediction[]; summary: { high: number; medium: number; low: number } }> {
+export async function predict(consultancyId: string, env?: string): Promise<{ predictions: Prediction[]; summary: { high: number; medium: number; low: number } }> {
   const integrations = await prisma.integration.findMany({
-    where: { client: { consultancyId } },
+    where: { client: { consultancyId }, ...(env ? { environment: env } : {}) },
     select: { id: true, name: true, status: true, latency: true, errorRate: true, uptime: true, client: { select: { name: true } } },
   });
 
