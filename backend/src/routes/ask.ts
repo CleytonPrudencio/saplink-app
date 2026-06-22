@@ -48,7 +48,7 @@ router.post('/', async (req: Request, res: Response) => {
       clientes: clients.map((c) => ({ nome: c.name, healthScore: c.healthScore })),
     };
 
-    const answer = await ask(question, context);
+    const answer = await ask(question, context, req.consultancyId!);
     res.json({ answer });
   } catch (error) {
     console.error('Ask error:', error);

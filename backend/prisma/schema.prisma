@@ -575,6 +575,35 @@ model ReconProcess {
   @@index([clientId])
 }
 
+// IA BYO — cada consultoria conecta a própria IA (Claude/ChatGPT/Copilot), define a ordem
+// (ex.: SAPLINK→Copilot) e pode deixar o Ollama aprender com a IA externa.
+model AiProviderConfig {
+  consultancyId     String   @id
+  primary           String   @default("ollama") // ollama | anthropic | openai | azure
+  fallback          String?                     // provedor reserva (opcional)
+  learnFromExternal Boolean  @default(false)    // captura respostas da IA externa p/ ensinar o Ollama
+  anthropicKey      String?  // Claude (cifrado)
+  anthropicModel    String?
+  openaiKey         String?  // ChatGPT (cifrado)
+  openaiModel       String?
+  azureKey          String?  // Copilot / Azure OpenAI (cifrado)
+  azureEndpoint     String?
+  azureDeployment   String?
+  updatedAt         DateTime @updatedAt
+}
+
+// Base de conhecimento aprendida com a IA externa (RAG leve p/ deixar o Ollama mais esperto).
+model AiKnowledge {
+  id            String   @id @default(uuid())
+  consultancyId String
+  topicKey      String   // assinatura normalizada da pergunta/erro
+  question      String
+  answer        String
+  source        String   // anthropic | openai | azure
+  createdAt     DateTime @default(now())
+  @@index([consultancyId, topicKey])
+}
+
 // ChatOps — token de canal (WhatsApp/Telegram) por consultoria.
 model ChatOpsConfig {
   consultancyId String   @id

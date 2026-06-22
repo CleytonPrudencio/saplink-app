@@ -124,7 +124,7 @@ export async function diagnoseCloudItem(consultancyId: string, id: string, force
   const query = `Esta mensagem de integração ${item.source} falhou no artefato "${item.artifact}". `
     + `Diagnostique a causa raiz com base no erro e proponha os passos de correção (no SAP/S4 e no IFlow/CPI quando couber) e como prevenir a recorrência.`;
 
-  const diagnosis = await diagnose(query, context);
+  const diagnosis = await diagnose(query, context, consultancyId);
   await prisma.cloudItem.update({ where: { id: item.id }, data: { aiDiagnosis: diagnosis, aiDiagnosedAt: new Date() } });
   return { ok: true, diagnosis, diagnosedAt: new Date(), cached: false };
 }
@@ -141,7 +141,7 @@ export async function fixCloudItem(consultancyId: string, id: string, force = fa
     plataforma: item.source === 'CPI' ? 'SAP Cloud Integration (BTP/CPI)' : 'SAP AIF',
     artefato_ou_iflow: item.artifact, status: item.status, erro: item.error || '(sem detalhe)',
   };
-  const fix = await generateFix(`falha em ${item.source} no artefato "${item.artifact}"`, context);
+  const fix = await generateFix(`falha em ${item.source} no artefato "${item.artifact}"`, context, consultancyId);
   await prisma.cloudItem.update({ where: { id: item.id }, data: { aiFix: fix } });
   return { ok: true, fix, cached: false };
 }

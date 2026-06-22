@@ -32,6 +32,7 @@ import s4Routes from './routes/s4';
 import leadRoutes from './routes/leads';
 import innovateRoutes from './routes/innovate';
 import chatopsInRoutes from './routes/chatops-in';
+import aiConfigRoutes from './routes/ai-config';
 import { authMiddleware } from './middleware/auth';
 import { tenancyMiddleware } from './middleware/tenancy';
 import { requireActiveSubscription } from './middleware/subscription';
@@ -120,6 +121,7 @@ app.use('/api/predict', ...tenantGate, predictRoutes);
 app.use('/api/cloud', ...tenantGate, cloudRoutes);
 app.use('/api/s4', ...tenantGate, s4Routes);
 app.use('/api/innovate', ...tenantGate, innovateRoutes);
+app.use('/api/ai-config', ...tenantGate, aiConfigRoutes);
 
 // Error handler global (último middleware)
 app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {

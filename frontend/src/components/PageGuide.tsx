@@ -173,6 +173,11 @@ const GUIDES: Record<string, Guide> = {
     why: "Cobra o parceiro certo e controla o gasto de nuvem.",
     actions: ["Aja sobre o parceiro com mais erros", "Veja o IFlow que mais consome BTP"],
   },
+  "/ia": {
+    what: "Conecte a IA da sua empresa (Claude/ChatGPT/Copilot) e defina a ordem de uso.",
+    why: "Você usa (e paga) a sua própria IA; e pode deixar o SAPLINK aprender com ela.",
+    actions: ["Cole a chave do provedor e teste a conexão", "Defina principal + reserva", "Ligue 'aprender com a IA externa' para o Ollama ficar mais esperto"],
+  },
   "/settings": {
     what: "Configurações da consultoria: marca (white-label), usuários e preferências.",
     why: "Deixa o SAPLINK com a sua cara — na interface, nos relatórios e no portal do cliente.",

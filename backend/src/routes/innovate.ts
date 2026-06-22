@@ -98,7 +98,7 @@ router.post('/explain', async (req: Request, res: Response) => {
   try {
     const { screen, data } = req.body || {};
     if (!screen) { res.status(400).json({ error: 'screen é obrigatório.' }); return; }
-    res.json({ text: await explainScreen(String(screen), data || {}) });
+    res.json({ text: await explainScreen(String(screen), data || {}, req.consultancyId!) });
   } catch (e) { console.error('explain', e); res.status(500).json({ error: 'Erro ao explicar a tela.' }); }
 });
 

@@ -139,7 +139,7 @@ router.post('/:id/diagnose', async (req: Request, res: Response) => {
       tipo_alerta: alert.type, severidade: alert.severity, mensagem: alert.message,
       ocorrencias_abertas_iguais: sameOpen, desde: alert.createdAt,
     };
-    const text = await diagnose(`Explique este alerta e diga o que fazer para resolver: ${alert.message}`, context);
+    const text = await diagnose(`Explique este alerta e diga o que fazer para resolver: ${alert.message}`, context, req.consultancyId!);
     res.json({ text });
   } catch (error) {
     console.error('Alert diagnose error:', error);

@@ -85,7 +85,7 @@ router.post('/', async (req: Request, res: Response) => {
     // Processamento assíncrono (não bloqueia a resposta)
     (async () => {
       try {
-        const response = await diagnose(query, context);
+        const response = await diagnose(query, context, consultancyId);
         await prisma.diagnostic.update({ where: { id: diagnostic.id }, data: { response, status: 'DONE' } });
         await incrementAiUsage(consultancyId);
       } catch (e) {

@@ -52,7 +52,7 @@ export async function run(consultancyId: string, text: string, userId?: string):
   const clients = await prisma.client.findMany({ where: { consultancyId }, select: { name: true } });
   let intent: Intent;
   try {
-    const raw = await parseIntent(text, clients.map((c) => c.name));
+    const raw = await parseIntent(text, clients.map((c) => c.name), consultancyId);
     const json = raw.replace(/```json?|```/g, '').trim();
     intent = JSON.parse(json);
     if (!intent?.action) throw new Error('no action');

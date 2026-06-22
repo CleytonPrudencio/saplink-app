@@ -67,6 +67,6 @@ export async function slaReport(consultancyId: string, clientId: string) {
   const { clients } = await computeSla(consultancyId);
   const c = clients.find((x) => x.clientId === clientId);
   if (!c) return { error: 'NOT_FOUND' as const };
-  const narrative = aiEnabled() ? await narrateSla(c) : '';
+  const narrative = aiEnabled() ? await narrateSla(c, consultancyId) : '';
   return { data: c, narrative };
 }

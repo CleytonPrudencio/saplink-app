@@ -157,7 +157,7 @@ export async function sendDigest(consultancyId: string, opts: { force?: boolean 
   if (!recipients.length) return { sent: false, to: [], reason: 'sem destinatários' };
 
   const data = await gatherDigestData(consultancyId);
-  const narrative = aiEnabled() ? await narrateDigest(data) : '';
+  const narrative = aiEnabled() ? await narrateDigest(data, consultancyId) : '';
   const html = renderDigestHtml(consultancy.name, consultancy.primaryColor, data, narrative);
 
   let anySent = false;

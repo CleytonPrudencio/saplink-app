@@ -43,6 +43,7 @@ const tenantGroups: MenuGroup[] = [
     items: [
       { href: "/diagnostics", label: "Diagnostico IA", icon: "\uD83E\uDD16" },
       { href: "/ask", label: "Pergunte \u00E0 IA", icon: "\uD83D\uDCAC" },
+      { href: "/ia", label: "Config de IA", icon: "\u2699\uFE0F", adminOnly: true },
       { href: "/predict", label: "Previs\u00E3o & Benchmark", icon: "\uD83D\uDD2E" },
     ],
   },

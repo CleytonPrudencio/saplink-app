@@ -288,6 +288,10 @@ export async function getIncidents() { const { data } = await api.get('/innovate
 export async function getTimeline(id: string) { const { data } = await api.get(`/innovate/timemachine/${id}`); return data as any; }
 export async function getAudit() { const { data } = await api.get('/innovate/audit'); return data as { summary: { changes: number; remediations: number; sodViolations: number }; ledger: any[] }; }
 export async function getPartners() { const { data } = await api.get('/innovate/partners'); return data as { partners: any[]; summary: any; finops: { flows: any[]; summary: any } }; }
+// IA BYO (config de provedores)
+export async function getAiConfig() { const { data } = await api.get('/ai-config'); return data as any; }
+export async function saveAiConfig(payload: Record<string, unknown>) { const { data } = await api.put('/ai-config', payload); return data as any; }
+export async function testAiProvider(payload: { provider: string; key?: string; model?: string; endpoint?: string; deployment?: string }) { const { data } = await api.post('/ai-config/test', payload); return data as { ok: boolean; ms?: number; error?: string }; }
 
 // C1 — Canais de notificação / on-call
 export interface NotificationChannel {

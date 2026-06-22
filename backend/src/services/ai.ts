@@ -1,4 +1,6 @@
-import Anthropic from '@anthropic-ai/sdk';
+import { generate } from './aiProviders';
+
+type AiCtx = { consultancyId?: string; learnKey?: string };
 
 const SYSTEM_PROMPT = `Você é um especialista SAP com profundo conhecimento em integrações, módulos SAP ERP (MM, SD, FI, CO, PP, WM), SAP PI/PO, SAP CPI, IDocs, BAPIs, RFCs, e conexões com sistemas legados.
 
@@ -35,69 +37,27 @@ direto e profissional. Estruture em 3 blocos curtos, sem markdown pesado:
 3) Recomendações — 2 a 3 ações priorizadas para a próxima semana (transação SAP ou passo no SAPLINK quando couber).
 Seja conciso (máx ~180 palavras). NÃO invente dados fora do contexto. Se a carteira está saudável, diga isso com clareza.`;
 
-/** Chamada genérica de IA (Ollama → Claude → fallback). Retorna texto. */
-async function runAI(systemPrompt: string, userMessage: string, numPredict = 450): Promise<string> {
-  const ollamaUrl = process.env.OLLAMA_URL;
-  if (ollamaUrl) {
-    const model = process.env.OLLAMA_MODEL || 'qwen2.5:3b';
-    try {
-      const resp = await fetch(`${ollamaUrl}/api/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model,
-          stream: false,
-          options: { num_predict: numPredict, temperature: 0.4 },
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userMessage },
-          ],
-        }),
-        signal: AbortSignal.timeout(Number(process.env.OLLAMA_TIMEOUT_MS) || 180000),
-      });
-      if (!resp.ok) throw new Error(`Ollama HTTP ${resp.status}`);
-      const data = (await resp.json()) as { message?: { content?: string } };
-      const text = data?.message?.content?.trim();
-      return text && text.length > 0 ? text : AI_UNAVAILABLE;
-    } catch (error) {
-      console.error('Ollama error:', error);
-      return AI_UNAVAILABLE;
-    }
-  }
-
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return AI_UNAVAILABLE;
-  try {
-    const client = new Anthropic({ apiKey });
-    const response = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 2048,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: userMessage }],
-    });
-    const textBlock = response.content.find((block) => block.type === 'text');
-    return textBlock && textBlock.type === 'text' ? textBlock.text : AI_UNAVAILABLE;
-  } catch (error) {
-    console.error('AI error:', error);
-    return AI_UNAVAILABLE;
-  }
+/** Chamada genérica de IA — roteia pela cadeia de provedores do tenant (BYO) + aprendizado. */
+async function runAI(systemPrompt: string, userMessage: string, numPredict = 450, ctx: AiCtx = {}): Promise<string> {
+  const text = await generate(systemPrompt, userMessage, numPredict, ctx);
+  return text && text.length > 0 ? text : AI_UNAVAILABLE;
 }
 
-export async function diagnose(query: string, context: object): Promise<string> {
+export async function diagnose(query: string, context: object, consultancyId?: string): Promise<string> {
   const userMessage = `Contexto do cliente:\n${JSON.stringify(context, null, 2)}\n\nConsulta do usuário:\n${query}`;
-  return runAI(SYSTEM_PROMPT, userMessage, 450);
+  return runAI(SYSTEM_PROMPT, userMessage, 450, { consultancyId, learnKey: query });
 }
 
 /** Copiloto: pergunta em linguagem natural sobre a carteira inteira da consultoria. */
-export async function ask(question: string, context: object): Promise<string> {
+export async function ask(question: string, context: object, consultancyId?: string): Promise<string> {
   const userMessage = `Dados da carteira (resumo):\n${JSON.stringify(context, null, 2)}\n\nPergunta: ${question}`;
-  return runAI(ASK_PROMPT, userMessage, 500);
+  return runAI(ASK_PROMPT, userMessage, 500, { consultancyId });
 }
 
 /** Digest semanal: narra o resumo de saúde da carteira para o gestor. */
-export async function narrateDigest(context: object): Promise<string> {
+export async function narrateDigest(context: object, consultancyId?: string): Promise<string> {
   const userMessage = `Dados da carteira nesta semana:\n${JSON.stringify(context, null, 2)}\n\nEscreva o resumo semanal.`;
-  return runAI(DIGEST_PROMPT, userMessage, 450);
+  return runAI(DIGEST_PROMPT, userMessage, 450, { consultancyId });
 }
 
 const SLA_PROMPT = `Você é um analista de níveis de serviço (SLA) de integrações SAP, escrevendo o
@@ -106,9 +66,9 @@ Estruture: 1) Resultado do mês (cumpriu ou não a meta, com números); 2) Princ
 ficaram abaixo da meta, com nomes); 3) Recomendações para o próximo período. Máx ~180 palavras. Use só os dados do contexto.`;
 
 /** Relatório mensal de SLA narrado por IA. */
-export async function narrateSla(context: object): Promise<string> {
+export async function narrateSla(context: object, consultancyId?: string): Promise<string> {
   const userMessage = `Dados de SLA do cliente:\n${JSON.stringify(context, null, 2)}\n\nEscreva o relatório mensal de SLA.`;
-  return runAI(SLA_PROMPT, userMessage, 420);
+  return runAI(SLA_PROMPT, userMessage, 420, { consultancyId });
 }
 
 const FIX_PROMPT = `Você é um engenheiro SAP de integração sênior. Dada uma falha, gere a CORREÇÃO PRONTA
@@ -131,19 +91,19 @@ para aplicar — não explique demais, entregue o artefato. Responda em portugu�
 Seja concreto e seguro. Se faltar dado, assuma o caso mais comum e diga a premissa.`;
 
 /** Remediação generativa: a IA escreve a correção pronta (snippet/config), não só descreve. */
-export async function generateFix(query: string, context: object): Promise<string> {
+export async function generateFix(query: string, context: object, consultancyId?: string): Promise<string> {
   const userMessage = `Contexto da falha:\n${JSON.stringify(context, null, 2)}\n\nGere a correção pronta para: ${query}`;
-  return runAI(FIX_PROMPT, userMessage, 600);
+  return runAI(FIX_PROMPT, userMessage, 600, { consultancyId, learnKey: query });
 }
 
 /** Interpreta um comando em linguagem natural (ChatOps) e retorna a intenção em JSON. */
-export async function parseIntent(text: string, context: object): Promise<string> {
+export async function parseIntent(text: string, context: object, consultancyId?: string): Promise<string> {
   const sys = `Você converte um comando em português sobre operação SAP em JSON de intenção. Responda APENAS JSON válido,
 sem texto extra, no formato {"action":"...","clientName":"...","filter":"..."}. Ações válidas:
 "list_failures" (o que está falhando), "client_health" (saúde de um cliente), "request_remediation" (pedir correção de itens de um cliente),
 "portfolio_summary" (resumo da carteira), "unknown". Use clientName quando o comando citar um cliente.`;
   const userMessage = `Clientes disponíveis: ${JSON.stringify(context)}\n\nComando: ${text}`;
-  return runAI(sys, userMessage, 150);
+  return runAI(sys, userMessage, 150, { consultancyId });
 }
 
 const EXPLAIN_PROMPT = `Você é o copiloto de operações SAP do SAPLINK. O usuário está olhando uma tela e te enviou
@@ -161,9 +121,9 @@ Bullets curtos com o que está pior / merece olhar (cite nomes/valores reais do 
 Não invente dados fora do contexto. Seja direto — o usuário quer saber "e daí?".`;
 
 /** Explica os dados de uma tela e recomenda ações. Torna qualquer tela de dados acionável. */
-export async function explainScreen(screen: string, data: object): Promise<string> {
+export async function explainScreen(screen: string, data: object, consultancyId?: string): Promise<string> {
   const userMessage = `Tela: ${screen}\n\nDados que a tela está mostrando:\n${JSON.stringify(data, null, 2)}\n\nExplique e recomende.`;
-  return runAI(EXPLAIN_PROMPT, userMessage, 480);
+  return runAI(EXPLAIN_PROMPT, userMessage, 480, { consultancyId });
 }
 
 /** Indica se algum provedor de IA está configurado (Ollama ou Claude). */
