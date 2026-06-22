@@ -8,6 +8,9 @@ import { JWT_SECRET, JWT_EXPIRES_IN } from '../config';
 import { startTrial } from '../services/billing';
 import { sendPasswordReset } from '../services/email';
 import { isValidCnpj, formatCnpj, onlyDigits } from '../lib/cnpj';
+import * as sso from '../services/ssoauth';
+
+const FRONTEND_BASE = (process.env.FRONTEND_URL || 'https://saplink.com.br').replace(/\/$/, '');
 import rateLimit from 'express-rate-limit';
 
 const router = Router();
@@ -232,6 +235,26 @@ router.post('/reset-password', async (req: Request, res: Response) => {
 });
 
 // GET /me
+// --- SSO (OIDC) público ---
+router.get('/sso/providers', async (req: Request, res: Response) => {
+  const p = await sso.providerForEmail(String(req.query.email || ''));
+  res.json({ provider: p });
+});
+router.get('/sso/start', async (req: Request, res: Response) => {
+  try {
+    const r = await sso.startUrl(String(req.query.consultancyId || ''));
+    if ('error' in r) { res.redirect(`${FRONTEND_BASE}/login?ssoError=SSO%20nao%20configurado`); return; }
+    res.redirect(r.url);
+  } catch (e) { console.error('sso start', e); res.redirect(`${FRONTEND_BASE}/login?ssoError=Erro%20no%20IdP`); }
+});
+router.get('/sso/callback', async (req: Request, res: Response) => {
+  try {
+    const r = await sso.handleCallback(String(req.query.code || ''), String(req.query.state || ''));
+    if ('error' in r) { res.redirect(`${FRONTEND_BASE}/login?ssoError=${encodeURIComponent(r.error)}`); return; }
+    res.redirect(r.redirect);
+  } catch (e) { console.error('sso callback', e); res.redirect(`${FRONTEND_BASE}/login?ssoError=Falha%20no%20SSO`); }
+});
+
 router.get('/me', authMiddleware, async (req: Request, res: Response) => {
   try {
     const user = await prisma.user.findUnique({

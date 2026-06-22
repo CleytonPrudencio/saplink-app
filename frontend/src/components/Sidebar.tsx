@@ -69,6 +69,7 @@ const tenantGroups: MenuGroup[] = [
     title: "SAP Cloud & transportes",
     items: [
       { href: "/cloud", label: "CPI & AIF", icon: "\u2601\uFE0F" },
+      { href: "/connectors", label: "Conectores (Ariba/SF)", icon: "\uD83D\uDD0C", adminOnly: true },
       { href: "/transports", label: "Transports", icon: "\uD83D\uDE9A" },
     ],
   },
@@ -101,6 +102,7 @@ const tenantGroups: MenuGroup[] = [
     items: [
       { href: "/notifications", label: "On-call & Tickets", icon: "\uD83D\uDCE3", adminOnly: true },
       { href: "/billing", label: "Cobran\u00E7a", icon: "\uD83D\uDCB3", adminOnly: true },
+      { href: "/sso", label: "SSO corporativo", icon: "\uD83D\uDD10", adminOnly: true },
       { href: "/settings", label: "Configuracoes", icon: "\u2699\uFE0F", adminOnly: true },
     ],
   },

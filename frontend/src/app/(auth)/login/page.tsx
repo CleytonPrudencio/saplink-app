@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { login } from "@/lib/api";
+import { login, ssoProviderForEmail, API_BASE } from "@/lib/api";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -11,6 +11,25 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [sso, setSso] = useState<{ consultancyId: string; provider: string } | null>(null);
+
+  // Retorno do SSO: token na URL ou erro
+  useEffect(() => {
+    const u = new URLSearchParams(window.location.search);
+    const tok = u.get("ssoToken");
+    if (tok) { localStorage.setItem("token", tok); router.replace("/dashboard"); return; }
+    const err = u.get("ssoError");
+    if (err) setError(decodeURIComponent(err));
+  }, [router]);
+
+  // Detecta SSO pelo domínio do e-mail digitado
+  useEffect(() => {
+    if (!email.includes("@") || email.split("@")[1].length < 3) { setSso(null); return; }
+    const t = setTimeout(() => { ssoProviderForEmail(email).then((r) => setSso(r.provider)).catch(() => setSso(null)); }, 400);
+    return () => clearTimeout(t);
+  }, [email]);
+
+  function goSso() { if (sso) window.location.href = `${API_BASE}/auth/sso/start?consultancyId=${encodeURIComponent(sso.consultancyId)}`; }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -85,6 +104,16 @@ export default function LoginPage() {
           >
             {loading ? "Entrando..." : "Entrar"}
           </button>
+
+          {sso && (
+            <button
+              type="button"
+              onClick={goSso}
+              className="w-full py-2.5 bg-[#0f0b1a] border border-purple-500/40 text-purple-200 font-semibold rounded-lg hover:bg-purple-500/10 transition-colors cursor-pointer"
+            >
+              🔐 Entrar com SSO ({sso.provider === "azure" ? "Microsoft" : sso.provider === "google" ? "Google" : "Okta"})
+            </button>
+          )}
         </form>
 
         <p className="text-center text-sm text-[#9b95ad] mt-6">

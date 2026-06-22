@@ -306,6 +306,16 @@ export async function deleteRunbook(id: string) { const { data } = await api.del
 export async function installRunbook(id: string) { const { data } = await api.post(`/runbooks/${id}/install`); return data; }
 export async function uninstallRunbook(id: string) { const { data } = await api.delete(`/runbooks/${id}/install`); return data; }
 export async function rateRunbook(id: string, rating: number) { const { data } = await api.post(`/runbooks/${id}/rate`, { rating }); return data; }
+export async function recommendRunbooks(source: string, message: string) { const { data } = await api.get('/runbooks/recommend', { params: { source, message } }); return data as { runbooks: any[] }; }
+// SSO (OIDC) BYO
+export const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
+export async function getSsoConfig() { const { data } = await api.get('/sso'); return data as { provider: string; enabled: boolean; clientId: string; issuer: string; emailDomain: string; hasSecret: boolean; redirectUri: string }; }
+export async function saveSsoConfig(payload: Record<string, unknown>) { const { data } = await api.post('/sso', payload); return data; }
+export async function ssoProviderForEmail(email: string) { const { data } = await api.get('/auth/sso/providers', { params: { email } }); return data as { provider: { consultancyId: string; provider: string } | null }; }
+// Conectores SAP Cloud (Ariba / SuccessFactors)
+export async function getConnectors() { const { data } = await api.get('/connectors'); return data as { clients: any[] }; }
+export async function saveConnector(clientId: string, product: string, payload: Record<string, unknown>) { const { data } = await api.post(`/connectors/${clientId}/${product}`, payload); return data; }
+export async function syncConnector(clientId: string, product: string) { const { data } = await api.post(`/connectors/${clientId}/${product}/sync`); return data; }
 
 // C1 — Canais de notificação / on-call
 export interface NotificationChannel {

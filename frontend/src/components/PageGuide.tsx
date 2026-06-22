@@ -173,6 +173,16 @@ const GUIDES: Record<string, Guide> = {
     why: "Cobra o parceiro certo e controla o gasto de nuvem.",
     actions: ["Aja sobre o parceiro com mais erros", "Veja o IFlow que mais consome BTP"],
   },
+  "/connectors": {
+    what: "Conecta Ariba e SuccessFactors de cada cliente com a chave (API Key) dele.",
+    why: "Amplia o monitoramento além do S/4 — uma só tela pra todo o portfólio SAP Cloud do cliente.",
+    actions: ["Conectar: cole a API Key do produto do cliente", "Sincronizar pra inventariar as APIs ao vivo", "Veja o inventário no Catálogo vivo"],
+  },
+  "/sso": {
+    what: "Login corporativo (SSO) via Azure AD, Google ou Okta — seu time entra com a conta da empresa.",
+    why: "Menos senhas, provisionamento centralizado e a segurança (MFA) do seu IdP. Requisito de muitos clientes enterprise.",
+    actions: ["Cadastre o Redirect URI no seu IdP", "Cole Client ID/Secret/Issuer", "Habilite e teste o login pelo domínio"],
+  },
   "/marketplace": {
     what: "Loja de runbooks: playbooks de correção SAP prontos (diagnóstico → ação → validação).",
     why: "Instale a expertise da comunidade em vez de começar do zero; publique a sua e ganhe reputação.",

@@ -83,6 +83,7 @@ model Client {
   fiscalDocs      FiscalDoc[]
   cloudEvents     CloudEvent[]
   cpiConfig       CpiConfig?
+  cloudConnectors CloudConnector[]
   integrations  Integration[]
   alerts        Alert[]
   diagnostics   Diagnostic[]
@@ -305,6 +306,21 @@ model S4Connection {
   status        String   @default("PENDING") // PENDING | CONNECTED | ERROR
   lastSyncAt    DateTime?
   createdAt     DateTime @default(now())
+}
+
+// Conectores SAP Cloud BYO (Ariba / SuccessFactors) — uma chave por cliente, espelha o do S/4.
+model CloudConnector {
+  id         String    @id @default(uuid())
+  clientId   String
+  product    String    // ARIBA | SUCCESSFACTORS
+  baseUrl    String
+  apiKey     String    // cifrada
+  status     String    @default("PENDING") // PENDING | CONNECTED | ERROR
+  lastSyncAt DateTime?
+  lastResult Json?
+  client     Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  @@unique([clientId, product])
+  @@index([clientId])
 }
 
 // S1.1 — Achados de impacto de upgrade/release.
@@ -602,6 +618,18 @@ model AiKnowledge {
   source        String   // anthropic | openai | azure
   createdAt     DateTime @default(now())
   @@index([consultancyId, topicKey])
+}
+
+// SSO (OIDC) BYO — cada consultoria conecta o próprio IdP (Azure AD / Google / Okta).
+model SsoConfig {
+  consultancyId String   @id
+  provider      String   // azure | google | okta
+  enabled       Boolean  @default(false)
+  clientId      String
+  clientSecret  String   // cifrado
+  issuer        String   // base de discovery (.well-known/openid-configuration)
+  emailDomain   String?  // mapeia o login por domínio (ex.: empresa.com)
+  updatedAt     DateTime @updatedAt
 }
 
 // Marketplace de Runbooks — playbooks de correção publicados/instalados entre consultorias.

@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, useCallback, Fragment } from "react";
-import { getCloud, diagnoseCloud, fixCloud, type CloudItem } from "@/lib/api";
+import Link from "next/link";
+import { getCloud, diagnoseCloud, fixCloud, recommendRunbooks, type CloudItem } from "@/lib/api";
 import { AiReport } from "@/components/AiReport";
 import { usePaginate, Pagination } from "@/components/Pagination";
 
@@ -21,6 +22,7 @@ export default function CloudPage() {
   const [loading, setLoading] = useState(true);
   const [diag, setDiag] = useState<Record<string, { loading: boolean; text?: string; at?: string | null; err?: boolean }>>({});
   const [fix, setFix] = useState<Record<string, { loading: boolean; text?: string; err?: boolean }>>({});
+  const [rbs, setRbs] = useState<Record<string, any[]>>({});
   const [open, setOpen] = useState<Record<string, boolean>>({});
 
   const load = useCallback(async () => { setData(await getCloud(filters)); }, [filters]);
@@ -28,6 +30,7 @@ export default function CloudPage() {
 
   const runDiagnose = useCallback(async (it: CloudItem, force = false) => {
     setOpen((o) => ({ ...o, [it.id]: true }));
+    recommendRunbooks(it.source, it.error || it.status || "").then((r) => setRbs((m) => ({ ...m, [it.id]: r.runbooks }))).catch(() => {});
     if (!force && it.aiDiagnosis) { setDiag((d) => ({ ...d, [it.id]: { loading: false, text: it.aiDiagnosis!, at: it.aiDiagnosedAt } })); return; }
     setDiag((d) => ({ ...d, [it.id]: { loading: true } }));
     try {
@@ -142,6 +145,19 @@ export default function CloudPage() {
                               <AiReport text={(fx?.text || i.aiFix) as string} title="Correção pronta (generativa)" subtitle="Artefato pronto para aplicar" onRefresh={() => runFix(i, true)} refreshing={fx?.loading} />
                             ) : null
                           ); })()}
+                          {rbs[i.id]?.length > 0 && (
+                            <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/[0.05] p-3">
+                              <p className="text-xs font-semibold text-emerald-300 mb-2">🛒 Runbooks que resolvem isso</p>
+                              <div className="space-y-1.5">
+                                {rbs[i.id].map((r: any) => (
+                                  <Link key={r.id} href="/marketplace" className="flex items-center justify-between gap-2 bg-[#0f0b1a] rounded px-2.5 py-1.5 hover:bg-white/[0.04]">
+                                    <span className="text-sm text-[#e2e0ea]">{r.name} <span className="text-xs text-[#9b95ad]">· {r.category}</span></span>
+                                    <span className="text-xs text-[#9b95ad] shrink-0">{r.installs}↓ · ★{r.rating} →</span>
+                                  </Link>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
                     </td>
