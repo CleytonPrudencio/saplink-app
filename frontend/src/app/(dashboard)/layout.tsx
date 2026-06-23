@@ -113,17 +113,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="min-h-screen flex">
       <Sidebar user={user} consultancy={user?.consultancy} />
       <main className="flex-1 ml-0 md:ml-64 min-h-screen overflow-auto">
-        <div className="sticky top-0 z-20 flex items-center justify-end gap-3 pl-16 pr-4 md:px-8 py-3 bg-[#0f0b1a]/80 backdrop-blur border-b border-white/[0.06] no-print">
-          <div className="mr-auto"><EnvSwitcher /></div>
+        <div className="sticky top-0 z-20 flex items-center gap-2 sm:gap-3 pl-16 pr-3 md:px-8 py-3 bg-[#0f0b1a]/80 backdrop-blur border-b border-white/[0.06] no-print">
+          <div className="mr-auto min-w-0"><EnvSwitcher /></div>
           <LangSwitcher compact />
-          <PushSetup />
-          <span className="text-sm text-[#9b95ad] truncate max-w-[42vw] md:max-w-none">
+          <div className="hidden sm:block"><PushSetup /></div>
+          <span className="hidden sm:inline text-sm text-[#9b95ad] truncate max-w-[30vw] md:max-w-none">
             {user?.name}
-            {user?.role ? <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-white/[0.06] hidden sm:inline">{user.role}</span> : null}
+            {user?.role ? <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-white/[0.06] hidden md:inline">{user.role}</span> : null}
           </span>
           <button
             onClick={handleLogout}
-            className="text-sm px-3 py-1.5 rounded-lg text-[#e2e0ea] bg-white/[0.06] hover:bg-rose-500/15 hover:text-rose-300 transition-colors cursor-pointer"
+            className="hidden sm:inline-flex text-sm px-3 py-1.5 rounded-lg text-[#e2e0ea] bg-white/[0.06] hover:bg-rose-500/15 hover:text-rose-300 transition-colors cursor-pointer"
           >
             {tUI(UI.shell.logout, lang)}
           </button>

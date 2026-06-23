@@ -371,15 +371,22 @@ export default function LandingPage() {
             {L.nav.map((n) => <a key={n.id} href={`#${n.id}`} className="hover:text-white transition">{n.label}</a>)}
           </nav>
           <div className="flex items-center gap-2 shrink-0">
-            <LangSwitcher compact />
-            <Link href="/login" className="px-3 sm:px-4 py-2 text-sm text-[#e2e0ea] hover:text-white transition">{L.footer.login}</Link>
-            <button onClick={() => setInterest(true)} className="px-3 sm:px-4 py-2 text-sm font-semibold rounded-lg bg-gradient-to-r from-purple-600 to-cyan-500 text-white hover:opacity-90 transition cursor-pointer whitespace-nowrap">{L.interest.title}</button>
-            <button onClick={() => setMenuOpen(!menuOpen)} aria-label="Menu" className="lg:hidden text-[#e2e0ea] p-1 cursor-pointer">☰</button>
+            <div className="hidden lg:block"><LangSwitcher compact /></div>
+            <Link href="/login" className="hidden lg:inline px-3 sm:px-4 py-2 text-sm text-[#e2e0ea] hover:text-white transition">{L.footer.login}</Link>
+            <button onClick={() => setInterest(true)} className="hidden sm:inline-flex px-3 sm:px-4 py-2 text-sm font-semibold rounded-lg bg-gradient-to-r from-purple-600 to-cyan-500 text-white hover:opacity-90 transition cursor-pointer whitespace-nowrap">{L.interest.title}</button>
+            <button onClick={() => setMenuOpen(!menuOpen)} aria-label="Menu" className="lg:hidden text-[#e2e0ea] p-1.5 -mr-1 cursor-pointer text-xl leading-none">{menuOpen ? "✕" : "☰"}</button>
           </div>
         </div>
         {menuOpen && (
-          <nav className="lg:hidden border-t border-white/[0.06] bg-[#0f0b1a] px-4 py-3 flex flex-col gap-2 text-sm text-[#9b95ad]">
-            {L.nav.map((n) => <a key={n.id} href={`#${n.id}`} onClick={() => setMenuOpen(false)} className="py-1.5 hover:text-white">{n.label}</a>)}
+          <nav className="lg:hidden border-t border-white/[0.06] bg-[#0f0b1a] px-4 py-3 flex flex-col gap-1 text-sm text-[#9b95ad]">
+            {L.nav.map((n) => <a key={n.id} href={`#${n.id}`} onClick={() => setMenuOpen(false)} className="py-2 hover:text-white border-b border-white/[0.04]">{n.label}</a>)}
+            <div className="flex items-center justify-between gap-3 pt-3">
+              <LangSwitcher />
+              <div className="flex items-center gap-2">
+                <Link href="/login" onClick={() => setMenuOpen(false)} className="px-3 py-2 rounded-lg bg-white/[0.06] text-[#e2e0ea] hover:bg-white/[0.12] transition">{L.footer.login}</Link>
+                <button onClick={() => { setMenuOpen(false); setInterest(true); }} className="px-3 py-2 rounded-lg font-semibold bg-gradient-to-r from-purple-600 to-cyan-500 text-white transition cursor-pointer">{L.interest.title}</button>
+              </div>
+            </div>
           </nav>
         )}
       </header>
