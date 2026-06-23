@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePersistedState } from "@/lib/usePersistedState";
 import { getClients, getDeadCode, getDeadCodeStats } from "@/lib/api";
 import { usePaginate, Pagination } from "@/components/Pagination";
 import DetailSheet from "@/components/DetailSheet";
@@ -40,7 +41,7 @@ export default function DeadCodePage() {
   const [dataLoading, setDataLoading] = useState(false);
   const [error, setError] = useState("");
   const [sel, setSel] = useState<any>(null);
-  const [filterRec, setFilterRec] = useState<string>("ALL");
+  const [filterRec, setFilterRec] = usePersistedState<string>("slk:dead-code:filterRec", "ALL");
 
   useEffect(() => {
     getClients()

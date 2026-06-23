@@ -39,7 +39,7 @@ export default function ClientsPage() {
   async function openPortal(clientId: string) {
     if (activePortal === clientId) { setActivePortal(""); return; }
     setActivePortal(clientId); setPortalInfo(null); setCopied(false);
-    try { setPortalInfo(await getPortalStatus(clientId)); } catch { setPortalInfo({ enabled: false, url: null }); }
+    try { const s = await getPortalStatus(clientId); setPortalInfo({ enabled: s.portalEnabled, url: s.url }); } catch { setPortalInfo({ enabled: false, url: null }); }
   }
   async function togglePortal(clientId: string, enable: boolean) {
     setPortalBusy(true);

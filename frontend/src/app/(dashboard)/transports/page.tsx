@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { usePersistedState } from "@/lib/usePersistedState";
 import { getTransports, getClients } from "@/lib/api";
 import ExplainData from "@/components/ExplainData";
 import DetailSheet from "@/components/DetailSheet";
@@ -13,7 +14,7 @@ type TData = Awaited<ReturnType<typeof getTransports>>;
 export default function TransportsPage() {
   const [data, setData] = useState<TData | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
-  const [clientId, setClientId] = useState("");
+  const [clientId, setClientId] = usePersistedState("slk:transports:clientId", "");
   const [loading, setLoading] = useState(true);
   const [sel, setSel] = useState<any>(null);
   const { lang } = useLang();

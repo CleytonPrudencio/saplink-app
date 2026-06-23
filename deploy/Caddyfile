@@ -1,13 +1,14 @@
 # SAPLINK — proxy reverso com HTTPS automático (Let's Encrypt)
 saplink.com.br {
 	encode gzip
-	# API → backend (preserva o prefixo /api)
+	# API → backend (preserva o prefixo /api). Usa o container_name único:
+	# o dev também registra os aliases "backend"/"frontend" na rede saplink_default.
 	handle /api/* {
-		reverse_proxy backend:8080
+		reverse_proxy saplink-backend:8080
 	}
 	# resto → frontend
 	handle {
-		reverse_proxy frontend:3000
+		reverse_proxy saplink-frontend:3000
 	}
 }
 

@@ -29,7 +29,9 @@ services:
       context: ./backend
     container_name: saplink-backend
     environment:
-      DATABASE_URL: "postgresql://saplink:saplink123@postgres:5432/saplink"
+      # Conecta pelo container_name único (NÃO use o alias de serviço "postgres":
+      # o dev (saplink-dev-db) também usa esse alias na rede saplink_default e o DNS alterna).
+      DATABASE_URL: "postgresql://saplink:saplink123@saplink-db:5432/saplink"
       JWT_SECRET: "saplink-jwt-secret-2026-super-seguro"
       ENCRYPTION_KEY: "saplink-encryption-key-2026-troque-em-producao"
       ANTHROPIC_API_KEY: ""
@@ -67,9 +69,13 @@ services:
   frontend:
     build:
       context: ./frontend
+      dockerfile: Dockerfile.prod
+      args:
+        # baked no bundle: browser chama /api (mesma origem, via Caddy) — NÃO localhost:8080
+        NEXT_PUBLIC_API_URL: "/api"
     container_name: saplink-frontend
     environment:
-      NEXT_PUBLIC_API_URL: "http://localhost:8080/api"
+      NEXT_PUBLIC_API_URL: "/api"
     ports:
       - "3000:3000"
     depends_on:

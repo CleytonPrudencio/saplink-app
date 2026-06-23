@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { usePersistedState } from "@/lib/usePersistedState";
 import { getMe, getS4Fiscal, reprocessFiscal } from "@/lib/api";
 import ExplainData from "@/components/ExplainData";
 import DetailSheet from "@/components/DetailSheet";
@@ -28,7 +29,7 @@ export default function FiscalPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [busy, setBusy] = useState("");
   const [loading, setLoading] = useState(true);
-  const [family, setFamily] = useState("");
+  const [family, setFamily] = usePersistedState("slk:fiscal:family", "");
   const [sel, setSel] = useState<any>(null);
 
   const load = useCallback(async () => { setData(await getS4Fiscal(family ? { family } : {})); }, [family]);

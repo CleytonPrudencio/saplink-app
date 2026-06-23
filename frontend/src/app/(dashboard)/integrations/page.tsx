@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePersistedState } from "@/lib/usePersistedState";
 import { useRouter } from "next/navigation";
 import { getAllIntegrations, testIntegration, deleteIntegration, syncIntegration, syncAllIntegrations, updateIntegration } from "@/lib/api";
 import { Modal, Field, inputClass } from "@/components/Modal";
@@ -82,11 +83,11 @@ export default function IntegrationsPage() {
   const { notify } = useToast();
 
   // Filtros
-  const [search, setSearch] = useState("");
-  const [filterClient, setFilterClient] = useState("");
-  const [filterType, setFilterType] = useState("");
-  const [filterStatus, setFilterStatus] = useState("");
-  const [filterEnv, setFilterEnv] = useState("");
+  const [search, setSearch] = usePersistedState("slk:integrations:search", "");
+  const [filterClient, setFilterClient] = usePersistedState("slk:integrations:filterClient", "");
+  const [filterType, setFilterType] = usePersistedState("slk:integrations:filterType", "");
+  const [filterStatus, setFilterStatus] = usePersistedState("slk:integrations:filterStatus", "");
+  const [filterEnv, setFilterEnv] = usePersistedState("slk:integrations:filterEnv", "");
 
   useEffect(() => {
     loadIntegrations();

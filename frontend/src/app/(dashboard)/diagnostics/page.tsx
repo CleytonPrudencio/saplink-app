@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, Suspense } from "react";
+import { usePersistedState } from "@/lib/usePersistedState";
 import { useSearchParams } from "next/navigation";
 import {
   getClients,
@@ -95,7 +96,7 @@ function DiagnosticsContent() {
 
   const [clients, setClients] = useState<Client[]>([]);
   const [presets, setPresets] = useState<Preset[]>([]);
-  const [selectedClient, setSelectedClient] = useState(initialClientId);
+  const [selectedClient, setSelectedClient] = usePersistedState("slk:diagnostics:selectedClient", initialClientId);
   const [query, setQuery] = useState("");
   const [response, setResponse] = useState("");
   const [history, setHistory] = useState<DiagnosticEntry[]>([]);

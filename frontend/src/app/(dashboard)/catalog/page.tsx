@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { usePersistedState } from "@/lib/usePersistedState";
 import ExplainData from "@/components/ExplainData";
 import DetailSheet from "@/components/DetailSheet";
 import { getCatalog, getClients, type CatalogItem } from "@/lib/api";
@@ -38,7 +39,7 @@ export default function CatalogPage() {
   const [data, setData] = useState<{ items: CatalogItem[]; summary: { total: number; active: number; byKind: Record<string, number> } } | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState({ clientId: "", kind: "", q: "" });
+  const [filters, setFilters] = usePersistedState("slk:catalog:filters", { clientId: "", kind: "", q: "" });
   const [sel, setSel] = useState<CatalogItem | null>(null);
   const st = SHEET_T[lang];
 

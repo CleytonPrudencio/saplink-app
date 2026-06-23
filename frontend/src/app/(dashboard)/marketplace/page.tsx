@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { usePersistedState } from "@/lib/usePersistedState";
 import { getMarketplace, getMyRunbooks, getRunbook, createRunbook, publishRunbook, deleteRunbook, installRunbook, uninstallRunbook, rateRunbook, getMe } from "@/lib/api";
 import { useLang } from "@/i18n/I18n";
 import { T } from "./i18n";
@@ -18,11 +19,11 @@ function Stars({ value, onRate }: { value: number; onRate?: (n: number) => void 
 export default function MarketplacePage() {
   const { lang } = useLang();
   const t = T[lang];
-  const [tab, setTab] = useState<"explore" | "mine">("explore");
+  const [tab, setTab] = usePersistedState<"explore" | "mine">("slk:marketplace:tab", "explore");
   const [isAdmin, setIsAdmin] = useState(false);
   const [items, setItems] = useState<any[]>([]);
   const [mineData, setMineData] = useState<{ authored: any[]; installed: any[] } | null>(null);
-  const [q, setQ] = useState(""); const [cat, setCat] = useState("");
+  const [q, setQ] = usePersistedState("slk:marketplace:q", ""); const [cat, setCat] = usePersistedState("slk:marketplace:cat", "");
   const [detail, setDetail] = useState<any>(null);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<any>({ name: "", description: "", category: "GERAL", triggerKeywords: "", steps: [{ kind: "DIAGNOSE", title: "", detail: "" }], published: true });
