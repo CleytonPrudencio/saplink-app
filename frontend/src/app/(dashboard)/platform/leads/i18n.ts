@@ -21,7 +21,7 @@ export const T: Record<
 > = {
   pt: {
     title: "Leads (interesse)",
-    subtitle: "Manifestações de interesse vindas da landing (cadastro fechado).",
+    subtitle: "Manifestações de interesse vindas da landing (cadastro self-service também disponível).",
     all: "Todos",
     loading: "Carregando...",
     empty: "Nenhum lead ainda.",
@@ -37,7 +37,7 @@ export const T: Record<
   },
   en: {
     title: "Leads (interest)",
-    subtitle: "Interest submissions coming from the landing page (sign-up closed).",
+    subtitle: "Interest submissions coming from the landing page (self-service sign-up also available).",
     all: "All",
     loading: "Loading...",
     empty: "No leads yet.",
@@ -53,7 +53,7 @@ export const T: Record<
   },
   es: {
     title: "Leads (interés)",
-    subtitle: "Manifestaciones de interés provenientes de la landing (registro cerrado).",
+    subtitle: "Manifestaciones de interés provenientes de la landing (registro self-service también disponible).",
     all: "Todos",
     loading: "Cargando...",
     empty: "Aún no hay leads.",

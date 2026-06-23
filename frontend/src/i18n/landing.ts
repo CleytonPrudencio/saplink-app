@@ -3,6 +3,7 @@ import type { Lang } from "./I18n";
 // Conteúdo da landing em 3 idiomas. A página lê pick(LANDING, lang).
 export interface LandingContent {
   nav: { id: string; label: string }[];
+  signup: string;
   hero: { badge: string; titleA: string; titleB: string; rotate: string[]; subtitle: string; ctaPrimary: string; ctaSecondary: string; micro: string[]; live: { title: string; health: string; risk: string; cur: string; feed: string[]; rows: string[] } };
   metrics: [string, string][];
   feitoPara: string;
@@ -45,6 +46,7 @@ const COV_SUB_ES = ["Upgrade, Clean Core, APIs", "vía Agente (RFC/IDoc)", "Mess
 export const LANDING: Record<Lang, LandingContent> = {
   pt: {
     nav: [{ id: "problema", label: "Problema" }, { id: "cobertura", label: "Cobertura" }, { id: "produto", label: "Por dentro" }, { id: "roi", label: "ROI" }, { id: "comparativo", label: "Comparativo" }, { id: "planos", label: "Planos" }, { id: "faq", label: "FAQ" }],
+    signup: "Criar conta grátis",
     hero: { badge: "18+ produtos SAP · IA no seu idioma (PT/EN/ES) · white-label", titleA: "Inove a operação", titleB: "da sua consultoria", rotate: ["S/4HANA Cloud", "Ariba & SF", "CPI & AIF", "BTP", "fiscal BR", "todo o SAP"], subtitle: "Um só painel que monitora, prevê, corrige e prova valor em R$ em todo o landscape SAP do cliente — do IDoc clássico ao S/4HANA Cloud, Ariba, SuccessFactors, BTP e fiscal brasileiro.", ctaPrimary: "Quero inovar minha operação →", ctaSecondary: "Ver tudo que cobrimos", micro: ["✓ Sem abrir portas no cliente", "✓ Multi-cliente", "✓ Pronto em dias, não meses"], live: { title: "SAPLINK · carteira ao vivo", health: "Saúde da carteira", risk: "Em risco agora", cur: "R$", feed: ["IA corrigiu 3 IDocs travados · sem intervenção", "Alerta CRITICAL em CPI · diagnóstico em 4s", "NF-e rejeitada reprocessada · SEFAZ OK", "Fila qRFC destravada · 0 pendências", "Runbook aplicado · 'Sold-to not found'"], rows: ["S/4HANA Cloud · OData", "CPI · Pedidos B2B", "IDoc · INVOIC02", "RFC · PI_PROD", "Event Mesh · BP"] } },
     metrics: [["18+", "produtos SAP cobertos"], ["20+", "capacidades na plataforma"], ["13", "diferenciais que ninguém tem"], ["0", "portas abertas no cliente"]],
     feitoPara: "Feito para",
@@ -117,6 +119,7 @@ export const LANDING: Record<Lang, LandingContent> = {
   },
   en: {
     nav: [{ id: "problema", label: "Problem" }, { id: "cobertura", label: "Coverage" }, { id: "produto", label: "Inside" }, { id: "roi", label: "ROI" }, { id: "comparativo", label: "Compare" }, { id: "planos", label: "Pricing" }, { id: "faq", label: "FAQ" }],
+    signup: "Create free account",
     hero: { badge: "18+ SAP products · AI in your language (PT/EN/ES) · white-label", titleA: "Modernize the operations", titleB: "of your consultancy", rotate: ["S/4HANA Cloud", "Ariba & SF", "CPI & AIF", "BTP", "BR tax", "all of SAP"], subtitle: "One dashboard that monitors, predicts, fixes and proves value in $ across the client's entire SAP landscape — from classic IDoc to S/4HANA Cloud, Ariba, SuccessFactors, BTP and Brazilian tax.", ctaPrimary: "Modernize my operation →", ctaSecondary: "See everything we cover", micro: ["✓ No inbound ports on the client", "✓ Multi-client", "✓ Live in days, not months"], live: { title: "SAPLINK · portfolio live", health: "Portfolio health", risk: "At risk now", cur: "$", feed: ["AI fixed 3 stuck IDocs · no intervention", "CRITICAL CPI alert · diagnosed in 4s", "Rejected e-invoice reprocessed · OK", "qRFC queue unblocked · 0 pending", "Runbook applied · 'Sold-to not found'"], rows: ["S/4HANA Cloud · OData", "CPI · B2B Orders", "IDoc · INVOIC02", "RFC · PI_PROD", "Event Mesh · BP"] } },
     metrics: [["18+", "SAP products covered"], ["20+", "platform capabilities"], ["13", "differentiators nobody else has"], ["0", "inbound ports on the client"]],
     feitoPara: "Built for",
@@ -189,6 +192,7 @@ export const LANDING: Record<Lang, LandingContent> = {
   },
   es: {
     nav: [{ id: "problema", label: "Problema" }, { id: "cobertura", label: "Cobertura" }, { id: "produto", label: "Por dentro" }, { id: "roi", label: "ROI" }, { id: "comparativo", label: "Comparativa" }, { id: "planos", label: "Planes" }, { id: "faq", label: "FAQ" }],
+    signup: "Crear cuenta gratis",
     hero: { badge: "18+ productos SAP · IA en tu idioma (PT/EN/ES) · white-label", titleA: "Moderniza la operación", titleB: "de tu consultora", rotate: ["S/4HANA Cloud", "Ariba & SF", "CPI & AIF", "BTP", "fiscal BR", "todo el SAP"], subtitle: "Un solo panel que monitorea, anticipa, corrige y prueba valor en $ en todo el landscape SAP del cliente — del IDoc clásico al S/4HANA Cloud, Ariba, SuccessFactors, BTP y fiscal brasileño.", ctaPrimary: "Quiero modernizar mi operación →", ctaSecondary: "Ver todo lo que cubrimos", micro: ["✓ Sin abrir puertos en el cliente", "✓ Multicliente", "✓ Listo en días, no meses"], live: { title: "SAPLINK · cartera en vivo", health: "Salud de la cartera", risk: "En riesgo ahora", cur: "$", feed: ["La IA corrigió 3 IDocs trabados · sin intervención", "Alerta CRITICAL en CPI · diagnóstico en 4s", "Factura rechazada reprocesada · OK", "Cola qRFC desbloqueada · 0 pendientes", "Runbook aplicado · 'Sold-to not found'"], rows: ["S/4HANA Cloud · OData", "CPI · Pedidos B2B", "IDoc · INVOIC02", "RFC · PI_PROD", "Event Mesh · BP"] } },
     metrics: [["18+", "productos SAP cubiertos"], ["20+", "capacidades en la plataforma"], ["13", "diferenciales que nadie tiene"], ["0", "puertos abiertos en el cliente"]],
     feitoPara: "Hecho para",
