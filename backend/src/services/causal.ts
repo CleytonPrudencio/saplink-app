@@ -1,4 +1,5 @@
 import prisma from '../lib/prisma';
+import { consultancyClientIds } from '../lib/scope';
 
 // Correlação causal cross-camada: liga TRANSPORTS (STMS/on-prem) a FALHAS (CPI/IDoc/alertas)
 // que apareceram logo depois. Usa dados que só o SAPLINK tem nas duas camadas juntas.
@@ -24,7 +25,7 @@ export async function causeForFailure(clientId: string, occurredAt: Date) {
 export async function causalOverview(consultancyId: string, clientId?: string) {
   const ids = clientId
     ? [clientId]
-    : (await prisma.client.findMany({ where: { consultancyId }, select: { id: true } })).map((c) => c.id);
+    : await consultancyClientIds(consultancyId);
 
   // falhas recentes de nuvem (CPI/AIF)
   const fails = await prisma.cloudItem.findMany({

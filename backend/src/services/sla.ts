@@ -1,4 +1,5 @@
 import prisma from '../lib/prisma';
+import { consultancyClientIds } from '../lib/scope';
 import { narrateSla, aiEnabled, type Lang } from './ai';
 
 export interface SlaClient {
@@ -16,8 +17,9 @@ export interface SlaClient {
 
 /** Calcula o SLA de cada cliente da consultoria (uptime/latência vs meta). */
 export async function computeSla(consultancyId: string, env?: string): Promise<{ clients: SlaClient[]; overall: number }> {
+  const scoped = await consultancyClientIds(consultancyId);
   const clients = await prisma.client.findMany({
-    where: { consultancyId },
+    where: { id: { in: scoped } },
     select: {
       id: true, name: true, slaUptimeTarget: true, slaMaxLatencyMs: true,
       integrations: { where: env ? { environment: env } : {}, select: { name: true, type: true, uptime: true, latency: true, status: true } },

@@ -1,4 +1,5 @@
 import prisma from '../lib/prisma';
+import { consultancyClientIds, scopeWithClient } from '../lib/scope';
 
 // Reform Readiness Radar — prontidão CBS/IBS. SÓ monitora (não calcula, não transmite).
 const AREA_LABEL: Record<string, string> = {
@@ -11,8 +12,8 @@ const AREA_LABEL: Record<string, string> = {
 };
 
 export async function getReform(consultancyId: string, clientId?: string, env?: string) {
-  const clientIds = (await prisma.client.findMany({ where: { consultancyId }, select: { id: true } })).map((c) => c.id);
-  const scope = clientId ? [clientId] : clientIds;
+  const clientIds = await consultancyClientIds(consultancyId);
+  const scope = scopeWithClient(clientId, clientIds);
   const where: any = { clientId: { in: scope } };
   if (env) where.environment = env;
 

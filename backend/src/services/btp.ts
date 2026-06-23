@@ -1,4 +1,5 @@
 import prisma from '../lib/prisma';
+import { consultancyClientIds, scopeWithClient } from '../lib/scope';
 
 // BTP Cockpit — inventário e radar de validade de recursos da SAP BTP por cliente.
 // Entrada manual ou via importação; status de expiração calculado na leitura.
@@ -15,7 +16,8 @@ function expiryStatus(expiresAt: Date | null, base: string): string {
 }
 
 export async function listBtp(consultancyId: string, clientId?: string, env?: string) {
-  const clients = await prisma.client.findMany({ where: { consultancyId, ...(clientId ? { id: clientId } : {}) }, select: { id: true, name: true } });
+  const ids = scopeWithClient(clientId, await consultancyClientIds(consultancyId));
+  const clients = await prisma.client.findMany({ where: { id: { in: ids } }, select: { id: true, name: true } });
   const ids = clients.map((c) => c.id);
   const rows = ids.length ? await prisma.btpResource.findMany({ where: { clientId: { in: ids }, ...(env ? { environment: env } : {}) }, orderBy: [{ expiresAt: 'asc' }] }) : [];
   const items = rows.map((r) => ({

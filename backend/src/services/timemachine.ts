@@ -1,10 +1,11 @@
 import prisma from '../lib/prisma';
+import { consultancyClientIds } from '../lib/scope';
 
 // Time machine de incidente: reconstrói a linha do tempo (transports, falhas, alertas)
 // em torno de um alerta e calcula o contrafactual ("se detectado em X min, R$ salvo").
 
 export async function listIncidents(consultancyId: string) {
-  const ids = (await prisma.client.findMany({ where: { consultancyId }, select: { id: true } })).map((c) => c.id);
+  const ids = await consultancyClientIds(consultancyId);
   const alerts = await prisma.alert.findMany({
     where: { clientId: { in: ids } }, orderBy: { createdAt: 'desc' }, take: 40,
     include: { client: { select: { name: true } }, integration: { select: { name: true } } },

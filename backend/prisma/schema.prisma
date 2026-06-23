@@ -46,11 +46,25 @@ model User {
   email         String               @unique
   password      String
   name          String
-  role          String               @default("CONSULTANCY_USER") // PLATFORM_ADMIN | CONSULTANCY_ADMIN | CONSULTANCY_USER
+  role          String               @default("CONSULTANCY_USER") // PLATFORM_ADMIN | CONSULTANCY_ADMIN | CONSULTANCY_ANALYST | CONSULTANCY_VIEWER (CONSULTANCY_USER = legado/analista)
   consultancyId String?              // PLATFORM_ADMIN não pertence a nenhuma consultoria
   consultancy   Consultancy?         @relation(fields: [consultancyId], references: [id])
+  allClients    Boolean              @default(true) // true = vê todos os clientes da consultoria; false = só os de clientAccess
+  clientAccess  UserClient[]
   createdAt     DateTime             @default(now())
   resetTokens   PasswordResetToken[]
+}
+
+// Acesso por cliente: quais clientes um usuário (analista/consulta restrito) pode ver.
+model UserClient {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  @@unique([userId, clientId])
+  @@index([clientId])
 }
 
 model PasswordResetToken {
@@ -79,6 +93,7 @@ model Client {
   transports    Transport[]
   reformItems     ReformReadiness[]
   licenseItems    LicenseItem[]
+  userAccess      UserClient[]
   s4Connections   S4Connection[]
   upgradeFindings UpgradeFinding[]
   cleanCoreItems  CleanCoreItem[]

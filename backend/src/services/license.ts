@@ -1,9 +1,10 @@
 import prisma from '../lib/prisma';
+import { consultancyClientIds, scopeWithClient } from '../lib/scope';
 
 // Indirect Access / Licensing Radar — uso x direito de licença. Puro monitoramento.
 export async function getLicense(consultancyId: string, clientId?: string, env?: string) {
-  const clientIds = (await prisma.client.findMany({ where: { consultancyId }, select: { id: true } })).map((c) => c.id);
-  const scope = clientId ? [clientId] : clientIds;
+  const clientIds = await consultancyClientIds(consultancyId);
+  const scope = scopeWithClient(clientId, clientIds);
   const where: any = { clientId: { in: scope } };
   if (env) where.environment = env;
 

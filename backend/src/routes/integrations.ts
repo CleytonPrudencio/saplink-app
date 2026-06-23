@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import prisma from '../lib/prisma';
 import { authMiddleware } from '../middleware/auth';
 import { tenancyMiddleware } from '../middleware/tenancy';
+import { clientInScope } from '../lib/scope';
 import { syncIntegration, isMonitorable, probe, probeUrl, analyzeFix } from '../services/connectors';
 import { encryptConfig, decryptConfig, maskConfig, SENSITIVE, generateAgentToken } from '../lib/crypto';
 import { requireConsultancyAdmin } from '../middleware/roles';
@@ -25,7 +26,7 @@ router.post('/:id/diagnose', async (req: Request, res: Response) => {
     where: { id: req.params.id },
     include: { client: true },
   });
-  if (!integration || integration.client.consultancyId !== req.consultancyId!) {
+  if (!integration || integration.client.consultancyId !== req.consultancyId! || !clientInScope(integration.clientId)) {
     res.status(404).json({ error: 'Integração não encontrada' });
     return;
   }
@@ -44,7 +45,7 @@ router.post('/:id/agent-token', requireConsultancyAdmin, async (req: Request, re
     where: { id: req.params.id },
     include: { client: true },
   });
-  if (!integration || integration.client.consultancyId !== req.consultancyId!) {
+  if (!integration || integration.client.consultancyId !== req.consultancyId! || !clientInScope(integration.clientId)) {
     res.status(404).json({ error: 'Integração não encontrada' });
     return;
   }
@@ -63,7 +64,7 @@ router.post('/:id/auto-fix', requireConsultancyAdmin, async (req: Request, res: 
     where: { id: req.params.id },
     include: { client: true },
   });
-  if (!integration || integration.client.consultancyId !== req.consultancyId!) {
+  if (!integration || integration.client.consultancyId !== req.consultancyId! || !clientInScope(integration.clientId)) {
     res.status(404).json({ error: 'Integração não encontrada' });
     return;
   }
@@ -110,7 +111,7 @@ router.post('/:id/sync', async (req: Request, res: Response) => {
     where: { id: req.params.id },
     include: { client: true },
   });
-  if (!integration || integration.client.consultancyId !== req.consultancyId!) {
+  if (!integration || integration.client.consultancyId !== req.consultancyId! || !clientInScope(integration.clientId)) {
     res.status(404).json({ error: 'Integração não encontrada' });
     return;
   }
@@ -315,7 +316,7 @@ router.post('/:id/test', async (req: Request, res: Response) => {
       where: { id: req.params.id },
       include: { client: true },
     });
-    if (!integration || integration.client.consultancyId !== req.consultancyId!) {
+    if (!integration || integration.client.consultancyId !== req.consultancyId! || !clientInScope(integration.clientId)) {
       res.status(404).json({ error: 'Integração não encontrada' }); return;
     }
 
@@ -379,7 +380,7 @@ router.put('/:id', async (req: Request, res: Response) => {
       where: { id: req.params.id },
       include: { client: true },
     });
-    if (!integration || integration.client.consultancyId !== req.consultancyId!) {
+    if (!integration || integration.client.consultancyId !== req.consultancyId! || !clientInScope(integration.clientId)) {
       res.status(404).json({ error: 'Integração não encontrada' }); return;
     }
 
@@ -425,7 +426,7 @@ router.delete('/:id', async (req: Request, res: Response) => {
       where: { id: req.params.id },
       include: { client: true },
     });
-    if (!integration || integration.client.consultancyId !== req.consultancyId!) {
+    if (!integration || integration.client.consultancyId !== req.consultancyId! || !clientInScope(integration.clientId)) {
       res.status(404).json({ error: 'Integração não encontrada' }); return;
     }
 

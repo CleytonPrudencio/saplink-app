@@ -1,4 +1,5 @@
 import prisma from '../lib/prisma';
+import { consultancyClientIds, scopeWithClient } from '../lib/scope';
 import { encryptValue, decryptValue } from '../lib/crypto';
 
 // Conectores SAP Cloud BYO (Ariba / SuccessFactors). Mesmo modelo do S/4: 1 chave por cliente,
@@ -75,7 +76,8 @@ const ENV = (e?: string) => (['DEV', 'HML', 'PRD'].includes(e || '') ? e! : 'PRD
 
 export async function listConnectors(consultancyId: string, env?: string) {
   const e = ENV(env);
-  const clients = await prisma.client.findMany({ where: { consultancyId }, select: { id: true, name: true } });
+  const ids = await consultancyClientIds(consultancyId);
+  const clients = await prisma.client.findMany({ where: { id: { in: ids } }, select: { id: true, name: true } });
   const conns = await prisma.cloudConnector.findMany({ where: { clientId: { in: clients.map((c) => c.id) }, environment: e } });
   return clients.map((c) => ({
     clientId: c.id, client: c.name, environment: e,

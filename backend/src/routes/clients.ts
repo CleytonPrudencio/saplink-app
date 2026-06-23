@@ -13,7 +13,7 @@ router.use(authMiddleware, tenancyMiddleware);
 router.get('/', async (req: Request, res: Response) => {
   try {
     const clients = await prisma.client.findMany({
-      where: { consultancyId: req.consultancyId! },
+      where: { consultancyId: req.consultancyId!, ...(req.allowedClientIds ? { id: { in: req.allowedClientIds } } : {}) },
       include: {
         integrations: true,
         _count: { select: { alerts: true } },
@@ -31,6 +31,10 @@ router.get('/', async (req: Request, res: Response) => {
 // GET /:id — client detail
 router.get('/:id', async (req: Request, res: Response) => {
   try {
+    if (req.allowedClientIds && !req.allowedClientIds.includes(req.params.id)) {
+      res.status(404).json({ error: 'Cliente não encontrado' });
+      return;
+    }
     const client = await prisma.client.findFirst({
       where: {
         id: req.params.id,

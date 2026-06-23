@@ -1,5 +1,6 @@
 import tls from 'node:tls';
 import prisma from '../lib/prisma';
+import { consultancyClientIds } from '../lib/scope';
 import { logger } from '../lib/logger';
 import { decryptConfig } from '../lib/crypto';
 import { probeUrl } from './connectors';
@@ -141,8 +142,9 @@ export interface ValidityItem {
 
 /** Monta o radar de validade da consultoria (cert + segredos), ordenado por urgência. */
 export async function scanValidity(consultancyId: string, env?: string): Promise<ValidityItem[]> {
+  const scoped = await consultancyClientIds(consultancyId);
   const integrations = await prisma.integration.findMany({
-    where: { client: { consultancyId }, ...(env ? { environment: env } : {}) },
+    where: { client: { id: { in: scoped } }, ...(env ? { environment: env } : {}) },
     select: {
       id: true, name: true, type: true, certExpiresAt: true, certCheckedAt: true, certHost: true,
       secretExpiresAt: true, secretLabel: true, client: { select: { name: true } },

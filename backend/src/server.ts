@@ -44,6 +44,7 @@ import licenseRoutes from './routes/license';
 import { statusPublic, statusAdmin } from './routes/status';
 import { authMiddleware } from './middleware/auth';
 import { tenancyMiddleware } from './middleware/tenancy';
+import { blockViewerWrites } from './middleware/roles';
 import { requireActiveSubscription } from './middleware/subscription';
 import { simulateIntegrationData } from './services/simulator';
 import { syncIntegration, isMonitorable } from './services/connectors';
@@ -111,7 +112,7 @@ app.use('/api/leads', leadRoutes); // POST público (interesse); GET/PATCH só p
 app.use('/api/chatops', chatopsInRoutes); // webhook público do ChatOps (auth por token)
 
 // Rotas de negócio: exigem assinatura ATIVA (corte do inadimplente)
-const tenantGate = [authMiddleware, tenancyMiddleware, requireActiveSubscription];
+const tenantGate = [authMiddleware, tenancyMiddleware, blockViewerWrites, requireActiveSubscription];
 app.use('/api/clients', ...tenantGate, clientRoutes);
 app.use('/api/integrations', ...tenantGate, integrationRoutes);
 app.use('/api/alerts', ...tenantGate, alertRoutes);
