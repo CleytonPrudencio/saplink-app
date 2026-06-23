@@ -29,7 +29,9 @@ services:
       context: ./backend
     container_name: saplink-backend
     environment:
-      DATABASE_URL: "postgresql://saplink:saplink123@postgres:5432/saplink"
+      # Conecta pelo container_name único (NÃO use o alias de serviço "postgres":
+      # o dev (saplink-dev-db) também usa esse alias na rede saplink_default e o DNS alterna).
+      DATABASE_URL: "postgresql://saplink:saplink123@saplink-db:5432/saplink"
       JWT_SECRET: "saplink-jwt-secret-2026-super-seguro"
       ENCRYPTION_KEY: "saplink-encryption-key-2026-troque-em-producao"
       ANTHROPIC_API_KEY: ""
