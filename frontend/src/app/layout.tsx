@@ -4,6 +4,7 @@ import "./globals.css";
 import { ToastProvider } from "@/components/Toast";
 import TechBackground from "@/components/TechBackground";
 import TopProgress from "@/components/TopProgress";
+import DevBanner from "@/components/DevBanner";
 import { I18nProvider } from "@/i18n/I18n";
 
 const inter = Inter({
@@ -59,6 +60,7 @@ export default function RootLayout({
         <TechBackground />
         <TopProgress />
         <I18nProvider>
+          <DevBanner />
           <ToastProvider>{children}</ToastProvider>
         </I18nProvider>
       </body>
