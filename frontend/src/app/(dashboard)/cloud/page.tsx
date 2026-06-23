@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, Fragment } from "react";
 import Link from "next/link";
+import { usePersistedState } from "@/lib/usePersistedState";
 import { getCloud, diagnoseCloud, fixCloud, recommendRunbooks, type CloudItem } from "@/lib/api";
 import { AiReport } from "@/components/AiReport";
 import ExplainData from "@/components/ExplainData";
@@ -64,7 +65,7 @@ export default function CloudPage() {
   const { lang } = useLang();
   const t = T[lang];
   const [data, setData] = useState<{ items: CloudItem[]; summary: { total: number; failed: number; bySource: Record<string, number> } } | null>(null);
-  const [filters, setFilters] = useState({ source: "", status: "", q: "" });
+  const [filters, setFilters] = usePersistedState("slk:cloud:filters", { source: "", status: "", q: "" });
   const [loading, setLoading] = useState(true);
   const [diag, setDiag] = useState<Record<string, { loading: boolean; text?: string; at?: string | null; err?: boolean }>>({});
   const [fix, setFix] = useState<Record<string, { loading: boolean; text?: string; err?: boolean }>>({});

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePersistedState } from "@/lib/usePersistedState";
 import { getAlerts, resolveAlert, resolveAlertGroup, diagnoseAlert } from "@/lib/api";
 import { useToast } from "@/components/Toast";
 import { AiReport } from "@/components/AiReport";
@@ -72,8 +73,8 @@ export default function AlertsPage() {
   const t = T[lang];
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [loading, setLoading] = useState(true);
-  const [severityFilter, setSeverityFilter] = useState("ALL");
-  const [statusFilter, setStatusFilter] = useState("ACTIVE");
+  const [severityFilter, setSeverityFilter] = usePersistedState("slk:alerts:severityFilter", "ALL");
+  const [statusFilter, setStatusFilter] = usePersistedState("slk:alerts:statusFilter", "ACTIVE");
   const [diag, setDiag] = useState<Record<string, { loading: boolean; text?: string }>>({});
   const [confirm, setConfirm] = useState<Group | null>(null);
   const [sel, setSel] = useState<Group | null>(null);

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { usePersistedState } from "@/lib/usePersistedState";
 import { getOps, resolveOps, getMe } from "@/lib/api";
 import { usePaginate, Pagination } from "@/components/Pagination";
 import ExplainData from "@/components/ExplainData";
@@ -64,7 +65,7 @@ export default function OpsPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [cat, setCat] = useState("");
+  const [cat, setCat] = usePersistedState("slk:ops:cat", "");
   const [sel, setSel] = useState<any>(null);
   const st = SHEET_T[lang];
 

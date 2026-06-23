@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePersistedState } from "@/lib/usePersistedState";
 import { getBilling, getPlans, checkoutPlan, updateAddons, payInvoice, setAutoRenew, payNow, billingPortal } from "@/lib/api";
 import { useLang } from "@/i18n/I18n";
 import { tPlanDesc } from "@/i18n/ui";
@@ -139,7 +140,7 @@ export default function BillingPage() {
   const [busy, setBusy] = useState("");
   const [xInt, setXInt] = useState(0);
   const [xUsr, setXUsr] = useState(0);
-  const [mode, setMode] = useState<"auto" | "now">("auto");
+  const [mode, setMode] = usePersistedState<"auto" | "now">("slk:billing:mode", "auto");
 
   async function load() {
     setLoading(true);
