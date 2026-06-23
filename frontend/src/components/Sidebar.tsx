@@ -66,6 +66,7 @@ const tenantGroups: MenuGroup[] = [
       { href: "/upgrade", label: "Radar de Upgrade", icon: "\uD83D\uDE80" },
       { href: "/cleancore", label: "Clean Core", icon: "\uD83E\uDDFC" },
       { href: "/fiscal", label: "Fiscal (DRC)", icon: "\uD83E\uDDFE" },
+      { href: "/reform", label: "Reforma (CBS/IBS)", icon: "\uD83D\uDCCB" },
       { href: "/events", label: "Event Mesh", icon: "\uD83D\uDCE8" },
     ],
   },
@@ -99,6 +100,7 @@ const tenantGroups: MenuGroup[] = [
     title: "Valor & relat\u00F3rios",
     items: [
       { href: "/sla", label: "SLA & Impacto", icon: "\uD83D\uDCC8" },
+      { href: "/licensing", label: "Licenciamento", icon: "\uD83D\uDD11" },
       { href: "/reports", label: "Relatorios", icon: "\uD83D\uDCC4" },
     ],
   },

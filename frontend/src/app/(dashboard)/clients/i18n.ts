@@ -28,6 +28,12 @@ export const T: Record<Lang, {
   disablePortal: string;
   portalPitch: string;
   enablePortal: string;
+  statusTitle: string;
+  statusAria: (name: string) => string;
+  statusActive: string;
+  statusPitch: string;
+  enableStatus: string;
+  disableStatus: string;
   noClients: string;
   registerFirst: string;
 }> = {
@@ -59,6 +65,12 @@ export const T: Record<Lang, {
     disablePortal: "Desativar portal",
     portalPitch: "Gere um link público read-only com a saúde deste cliente (white-label).",
     enablePortal: "Ativar portal do cliente",
+    statusTitle: "Status page",
+    statusAria: (name) => `Status page de ${name}`,
+    statusActive: "Status page ativo (público, com sua marca).",
+    statusPitch: "Gere uma página pública de saúde das integrações deste cliente, com a sua marca.",
+    enableStatus: "Ativar status page",
+    disableStatus: "Desativar status page",
     noClients: "Nenhum cliente cadastrado ainda.",
     registerFirst: "+ Cadastrar primeiro cliente",
   },
@@ -90,6 +102,12 @@ export const T: Record<Lang, {
     disablePortal: "Disable portal",
     portalPitch: "Generate a public read-only link with this client's health (white-label).",
     enablePortal: "Enable client portal",
+    statusTitle: "Status page",
+    statusAria: (name) => `${name}'s status page`,
+    statusActive: "Status page active (public, your brand).",
+    statusPitch: "Generate a public health page for this client's integrations, with your brand.",
+    enableStatus: "Enable status page",
+    disableStatus: "Disable status page",
     noClients: "No clients registered yet.",
     registerFirst: "+ Register first client",
   },
@@ -121,6 +139,12 @@ export const T: Record<Lang, {
     disablePortal: "Desactivar portal",
     portalPitch: "Genera un enlace público de solo lectura con la salud de este cliente (white-label).",
     enablePortal: "Activar portal del cliente",
+    statusTitle: "Status page",
+    statusAria: (name) => `Status page de ${name}`,
+    statusActive: "Status page activo (público, con tu marca).",
+    statusPitch: "Genera una página pública de salud de las integraciones de este cliente, con tu marca.",
+    enableStatus: "Activar status page",
+    disableStatus: "Desactivar status page",
     noClients: "Aún no hay clientes registrados.",
     registerFirst: "+ Registrar el primer cliente",
   },

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import ExplainData from "@/components/ExplainData";
-import { getClients, createClient, deleteClient, getPortalStatus, enableClientPortal, disableClientPortal } from "@/lib/api";
+import { getClients, createClient, deleteClient, getPortalStatus, enableClientPortal, disableClientPortal, setStatusPage } from "@/lib/api";
 import HealthScoreRing from "@/components/HealthScoreRing";
 import { useLang } from "@/i18n/I18n";
 import { T } from "./i18n";
@@ -35,6 +35,21 @@ export default function ClientsPage() {
   const [portalInfo, setPortalInfo] = useState<{ enabled: boolean; url: string | null } | null>(null);
   const [portalBusy, setPortalBusy] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  // status page white-label por cliente (otimista, sem GET admin)
+  const [activeStatus, setActiveStatus] = useState("");
+  const [statusInfo, setStatusInfo] = useState<{ enabled: boolean; token: string | null } | null>(null);
+  const [statusBusy, setStatusBusy] = useState(false);
+  const [statusCopied, setStatusCopied] = useState(false);
+
+  function openStatus(clientId: string) {
+    if (activeStatus === clientId) { setActiveStatus(""); return; }
+    setActiveStatus(clientId); setStatusInfo(null); setStatusCopied(false);
+  }
+  async function toggleStatus(clientId: string, enable: boolean) {
+    setStatusBusy(true);
+    try { const r = await setStatusPage(clientId, enable); setStatusInfo(r); } catch { /* ignore */ } finally { setStatusBusy(false); }
+  }
 
   async function openPortal(clientId: string) {
     if (activePortal === clientId) { setActivePortal(""); return; }
@@ -181,6 +196,7 @@ export default function ClientsPage() {
                 >
                   🔗
                 </button>
+                <button onClick={() => openStatus(client.id)} aria-label={t.statusAria(client.name)} className="text-[#9b95ad] hover:text-emerald-300 text-lg px-1" title={t.statusTitle}>📊</button>
                 <button
                   onClick={() => onDelete(client.id, client.name)}
                   aria-label={t.deleteAria(client.name)}
@@ -209,6 +225,26 @@ export default function ClientsPage() {
                   <div className="space-y-2">
                     <p className="text-xs text-[#9b95ad]">{t.portalPitch}</p>
                     <button onClick={() => togglePortal(client.id, true)} disabled={portalBusy} className="text-xs px-3 py-1.5 rounded-lg bg-purple-500/20 text-purple-200 hover:bg-purple-500/30 cursor-pointer disabled:opacity-40">{portalBusy ? "..." : t.enablePortal}</button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeStatus === client.id && (
+              <div className="mt-3 pt-3 border-t border-white/[0.06] text-sm">
+                {statusInfo?.enabled && statusInfo.token ? (
+                  <div className="space-y-2">
+                    <p className="text-xs text-emerald-400">{t.statusActive}</p>
+                    <div className="flex gap-1">
+                      <input readOnly value={`${typeof window !== "undefined" ? window.location.origin : ""}/status/${statusInfo.token}`} className="flex-1 bg-[#0f0b1a] border border-white/[0.1] rounded-lg px-2 py-1 text-xs text-[#c9c5d6]" />
+                      <button onClick={() => { navigator.clipboard?.writeText(`${window.location.origin}/status/${statusInfo!.token}`); setStatusCopied(true); }} className="text-xs px-2 py-1 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] cursor-pointer">{statusCopied ? "✓" : t.copy}</button>
+                    </div>
+                    <button onClick={() => toggleStatus(client.id, false)} disabled={statusBusy} className="text-xs text-rose-300 hover:underline cursor-pointer disabled:opacity-40">{t.disableStatus}</button>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <p className="text-xs text-[#9b95ad]">{t.statusPitch}</p>
+                    <button onClick={() => toggleStatus(client.id, true)} disabled={statusBusy} className="text-xs px-3 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-200 hover:bg-emerald-500/30 cursor-pointer disabled:opacity-40">{statusBusy ? "..." : t.enableStatus}</button>
                   </div>
                 )}
               </div>

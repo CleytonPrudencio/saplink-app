@@ -719,4 +719,28 @@ export async function getDeadCodeStats(clientId: string) {
   return data;
 }
 
+// Reform Readiness Radar — prontidão CBS/IBS
+export async function getReform(clientId?: string) {
+  const { data } = await api.get('/reform', { params: clientId ? { clientId } : {} });
+  return data as {
+    items: { id: string; area: string; areaLabel: string; title: string; status: string; phase?: string | null; detail?: string | null; client?: string; environment?: string }[];
+    summary: { total: number; ok: number; risk: number; pending: number; readiness: number; byClient: { client: string; ok: number; total: number; readiness: number }[] };
+  };
+}
+
+// Indirect Access / Licensing Radar
+export async function getLicense(clientId?: string) {
+  const { data } = await api.get('/license', { params: clientId ? { clientId } : {} });
+  return data as {
+    items: { id: string; metric: string; used: number; entitled: number; unit?: string | null; riskLevel: string; estCostBrl: number; detail?: string | null; client?: string; environment?: string; pct: number }[];
+    summary: { total: number; atRisk: number; warn: number; totalExposure: number };
+  };
+}
+
+// Status page white-label — ativar/desativar por cliente (admin)
+export async function setStatusPage(clientId: string, enable: boolean) {
+  const { data } = await api.post(`/status-admin/${clientId}`, { enable });
+  return data as { enabled: boolean; token: string | null };
+}
+
 export default api;
