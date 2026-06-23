@@ -506,10 +506,10 @@ export default function LandingPage() {
                 {L.hero.titleA}<br /><RotatingWord words={L.hero.rotate} /><br />{L.hero.titleB}
               </h1>
               <p className="text-base sm:text-lg text-[#c9c5d6] max-w-xl mx-auto lg:mx-0 mt-6 leading-relaxed">{L.hero.subtitle}</p>
-              <div className="flex flex-wrap gap-3 justify-center lg:justify-start mt-8">
-                {signupLink(L.signup, true, "shadow-[0_0_30px_rgba(124,58,237,0.35)]")}
-                {cta(L.hero.ctaPrimary, false)}
-                <a href="#cobertura" className="px-6 py-3 rounded-lg bg-white/[0.06] text-[#e2e0ea] font-semibold hover:bg-white/[0.12] transition">{L.hero.ctaSecondary}</a>
+              <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 items-stretch sm:items-center justify-center lg:justify-start mt-8">
+                {signupLink(L.signup, true, "w-full sm:w-auto shadow-[0_0_30px_rgba(124,58,237,0.35)]")}
+                {cta(L.hero.ctaPrimary, false, "w-full sm:w-auto")}
+                <a href="#cobertura" className="w-full sm:w-auto text-center px-6 py-3 rounded-lg bg-white/[0.06] text-[#e2e0ea] font-semibold hover:bg-white/[0.12] transition">{L.hero.ctaSecondary}</a>
               </div>
               <div className="flex flex-wrap gap-x-5 gap-y-2 justify-center lg:justify-start mt-7 text-xs text-[#6b6580]">
                 {L.hero.micro.map((m) => <span key={m}>{m}</span>)}
@@ -871,7 +871,7 @@ export default function LandingPage() {
           <div className="rounded-2xl p-8 sm:p-12 text-center bg-gradient-to-br from-purple-600/20 to-cyan-500/15 border border-purple-500/30">
             <h2 className="text-2xl sm:text-4xl font-bold">{L.ctaFinal.title}</h2>
             <p className="text-[#c9c5d6] mt-3 max-w-xl mx-auto">{L.ctaFinal.sub}</p>
-            <div className="mt-7 flex flex-wrap gap-3 justify-center">{signupLink(L.signup)}{cta(L.ctaFinal.btn, false)}</div>
+            <div className="mt-7 flex flex-col sm:flex-row gap-3 justify-center items-stretch sm:items-center max-w-md sm:max-w-none mx-auto">{signupLink(L.signup, true, "w-full sm:w-auto")}{cta(L.ctaFinal.btn, false, "w-full sm:w-auto")}</div>
           </div>
         </section>
       </main>
