@@ -5,11 +5,11 @@
 set -euo pipefail
 cd /opt/saplink-dev
 
-echo "==> Atualizando código a partir de origin/dev..."
+echo "==> Atualizando código a partir de origin/staging..."
 git fetch origin --quiet
-# DEV segue a branch 'dev' (integração). Garante que o worktree fique idêntico ao remoto.
-git checkout dev 2>/dev/null || git checkout -b dev origin/dev
-git reset --hard origin/dev
+# O ambiente DEV (dev.saplink.com.br) roda a branch de integração 'staging'.
+git checkout staging 2>/dev/null || git checkout -b staging origin/staging
+git reset --hard origin/staging
 
 echo "==> Rebuild + up da stack DEV..."
 docker compose -p saplink-dev -f docker-compose.dev.yml --env-file .env up -d --build backend frontend
