@@ -1,6 +1,8 @@
 "use client";
 
 import { ReactNode, useEffect } from "react";
+import { useLang } from "@/i18n/I18n";
+import { UI, tUI } from "@/i18n/ui";
 
 export function Modal({
   open,
@@ -15,6 +17,7 @@ export function Modal({
   children: ReactNode;
   size?: "md" | "lg";
 }) {
+  const { lang } = useLang();
   useEffect(() => {
     function onEsc(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
@@ -31,7 +34,7 @@ export function Modal({
       <div className={`relative bg-[#1a1527] border border-white/[0.1] rounded-t-2xl sm:rounded-2xl w-full ${size === "lg" ? "max-w-3xl" : "max-w-lg"} max-h-[90vh] sm:max-h-[85vh] overflow-auto shadow-2xl`}>
         <div className="flex items-center justify-between px-4 sm:px-5 py-4 border-b border-white/[0.06] sticky top-0 bg-[#1a1527] z-10">
           <h3 className="font-semibold pr-2">{title}</h3>
-          <button onClick={onClose} aria-label="Fechar" className="text-[#9b95ad] hover:text-white text-xl leading-none shrink-0 cursor-pointer">✕</button>
+          <button onClick={onClose} aria-label={tUI(UI.comp.close, lang)} className="text-[#9b95ad] hover:text-white text-xl leading-none shrink-0 cursor-pointer">✕</button>
         </div>
         <div className="p-4 sm:p-5">{children}</div>
       </div>

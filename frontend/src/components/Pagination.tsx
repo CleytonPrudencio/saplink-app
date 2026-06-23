@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useLang } from "@/i18n/I18n";
+import { UI, tUI } from "@/i18n/ui";
 
 /** Paginação client-side: pagina uma lista já carregada. */
 export function usePaginate<T>(items: T[], pageSize = 20) {
@@ -14,6 +16,7 @@ export function usePaginate<T>(items: T[], pageSize = 20) {
 }
 
 export function Pagination({ page, setPage, totalPages, total, pageSize, start }: { page: number; setPage: (n: number) => void; totalPages: number; total: number; pageSize: number; start: number }) {
+  const { lang } = useLang();
   if (total <= pageSize) return null;
   const from = total === 0 ? 0 : start + 1;
   const to = Math.min(total, start + pageSize);
@@ -27,7 +30,7 @@ export function Pagination({ page, setPage, totalPages, total, pageSize, start }
   const btn = "min-w-[34px] h-[34px] px-2 rounded-lg text-sm cursor-pointer disabled:opacity-40 disabled:cursor-default";
   return (
     <div className="flex items-center justify-between gap-3 flex-wrap mt-3">
-      <span className="text-xs text-[#9b95ad]">{from}–{to} de {total}</span>
+      <span className="text-xs text-[#9b95ad]">{from}–{to} {tUI(UI.comp.of, lang)} {total}</span>
       <div className="flex items-center gap-1">
         <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page <= 1} className={`${btn} bg-white/[0.06] text-[#e2e0ea] hover:bg-white/[0.12]`}>‹</button>
         {a > 1 && <span className="text-[#6b6580] px-1">…</span>}

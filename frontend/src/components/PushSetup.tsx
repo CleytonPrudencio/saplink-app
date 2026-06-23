@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { getVapidKey, subscribePush } from "@/lib/api";
+import { useLang } from "@/i18n/I18n";
+import { UI, tUI } from "@/i18n/ui";
 
 function urlB64ToUint8Array(base64: string) {
   const padding = "=".repeat((4 - (base64.length % 4)) % 4);
@@ -13,6 +15,7 @@ function urlB64ToUint8Array(base64: string) {
 }
 
 export default function PushSetup() {
+  const { lang } = useLang();
   const [state, setState] = useState<"idle" | "unsupported" | "granted" | "denied" | "loading">("idle");
 
   useEffect(() => {
@@ -44,9 +47,9 @@ export default function PushSetup() {
       onClick={enable}
       disabled={state === "loading"}
       className="text-xs px-3 py-1.5 rounded-lg bg-purple-500/20 text-purple-200 hover:bg-purple-500/30 cursor-pointer disabled:opacity-50 no-print"
-      title="Receber alertas no celular/desktop"
+      title={tUI(UI.comp.pushTitle, lang)}
     >
-      {state === "loading" ? "Ativando…" : state === "denied" ? "🔔 Notificações bloqueadas" : "🔔 Ativar alertas"}
+      {state === "loading" ? tUI(UI.comp.pushActivating, lang) : state === "denied" ? tUI(UI.comp.pushBlocked, lang) : tUI(UI.comp.pushActivate, lang)}
     </button>
   );
 }

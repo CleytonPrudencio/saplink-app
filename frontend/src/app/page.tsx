@@ -42,7 +42,7 @@ function InterestModal({ open, onClose, t }: { open: boolean; onClose: () => voi
                 <h3 className="text-xl font-bold text-white">{t.title}</h3>
                 <p className="text-sm text-[#9b95ad] mt-1">{t.sub}</p>
               </div>
-              <button onClick={onClose} aria-label="Fechar" className="text-[#9b95ad] hover:text-white text-2xl leading-none cursor-pointer">×</button>
+              <button onClick={onClose} aria-label={t.close} className="text-[#9b95ad] hover:text-white text-2xl leading-none cursor-pointer">×</button>
             </div>
             <form onSubmit={send} className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-5">
               <input required value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder={t.name} className="inp sm:col-span-2" />

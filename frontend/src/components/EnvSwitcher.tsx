@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useLang } from "@/i18n/I18n";
+import { UI, tUI } from "@/i18n/ui";
 
 // Seletor global de ambiente — filtra TODO o painel por DEV/HML/PRD (ou Todos).
 // Persiste em localStorage e recarrega a tela para reaplicar o filtro em tudo.
-const OPTS: [string, string][] = [["", "Todos"], ["DEV", "DEV"], ["HML", "HML"], ["PRD", "PRD"]];
 const cls: Record<string, string> = {
   "": "text-[#9b95ad]",
   DEV: "text-sky-300",
@@ -13,8 +14,10 @@ const cls: Record<string, string> = {
 };
 
 export default function EnvSwitcher() {
+  const { lang } = useLang();
   const [env, setEnv] = useState<string>("");
   useEffect(() => { setEnv(localStorage.getItem("slk_env") || ""); }, []);
+  const OPTS: [string, string][] = [["", tUI(UI.comp.envAll, lang)], ["DEV", "DEV"], ["HML", "HML"], ["PRD", "PRD"]];
 
   function pick(v: string) {
     localStorage.setItem("slk_env", v);
@@ -24,8 +27,8 @@ export default function EnvSwitcher() {
   }
 
   return (
-    <div className="flex items-center gap-1 rounded-lg bg-[#1a1527] border border-white/[0.1] p-0.5" title="Ambiente — filtra todo o painel">
-      <span className="text-[10px] text-[#6b6580] px-1.5 hidden sm:inline">Ambiente</span>
+    <div className="flex items-center gap-1 rounded-lg bg-[#1a1527] border border-white/[0.1] p-0.5" title={tUI(UI.comp.envSwitchTitle, lang)}>
+      <span className="text-[10px] text-[#6b6580] px-1.5 hidden sm:inline">{tUI(UI.comp.envLabel, lang)}</span>
       {OPTS.map(([v, l]) => (
         <button
           key={v || "all"}
