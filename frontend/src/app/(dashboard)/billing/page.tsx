@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { getBilling, getPlans, checkoutPlan, updateAddons, payInvoice, setAutoRenew, payNow, billingPortal } from "@/lib/api";
 import { useLang } from "@/i18n/I18n";
+import { tPlanDesc } from "@/i18n/ui";
 import { T } from "./i18n";
 
 type Tr = (typeof T)[keyof typeof T];
@@ -419,7 +420,7 @@ export default function BillingPage() {
                 {p.highlight && <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full text-[10px] font-bold bg-gradient-to-r from-purple-600 to-cyan-500 text-white">{t.mostPopular}</span>}
                 <h3 className="text-lg font-semibold">{p.name}</h3>
                 <p className="text-2xl font-bold mt-1">{brl(p.priceCents)}<span className="text-sm font-normal text-[#9b95ad]">{t.monthSuffix}</span></p>
-                {p.description && <p className="text-xs text-[#9b95ad] mt-2 min-h-[32px]">{p.description}</p>}
+                {tPlanDesc(p.key, p.description, lang) && <p className="text-xs text-[#9b95ad] mt-2 min-h-[32px]">{tPlanDesc(p.key, p.description, lang)}</p>}
                 <ul className="text-sm text-[#c9c5d6] mt-4 space-y-1.5 flex-1">
                   <li>✓ {p.maxClients >= 999 ? t.unlimitedClients : t.clientsN(p.maxClients)}</li>
                   <li>✓ {p.maxIntegrations >= 999 ? t.unlimitedIntegrations : t.integrationsN(p.maxIntegrations)}</li>

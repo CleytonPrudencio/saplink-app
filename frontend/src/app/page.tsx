@@ -6,6 +6,7 @@ import { getPublicPlans, submitLead } from "@/lib/api";
 import FeatureModal from "@/components/landing/FeatureModal";
 import Logo from "@/components/Logo";
 import { useLang, pick } from "@/i18n/I18n";
+import { tPlanDesc } from "@/i18n/ui";
 import { LANDING, type LandingContent } from "@/i18n/landing";
 import LangSwitcher from "@/components/LangSwitcher";
 
@@ -725,7 +726,7 @@ export default function LandingPage() {
                 ) : (
                   <p className="text-2xl font-bold mt-1">{brl(p.priceCents)}<span className="text-sm font-normal text-[#9b95ad]">{L.roi.perMonth}</span></p>
                 )}
-                {p.description && <p className="text-xs text-[#9b95ad] mt-2 min-h-[32px]">{p.description}</p>}
+                {tPlanDesc(p.key, p.description, lang) && <p className="text-xs text-[#9b95ad] mt-2 min-h-[32px]">{tPlanDesc(p.key, p.description, lang)}</p>}
                 <ul className="text-sm text-[#c9c5d6] mt-4 space-y-1.5 flex-1">
                   <li>✓ {p.maxClients >= 999 ? "∞" : p.maxClients} {lang === "en" ? "clients" : "clientes"}</li>
                   <li>✓ {p.maxIntegrations >= 999 ? "∞" : p.maxIntegrations} {lang === "en" ? "integrations" : lang === "es" ? "integraciones" : "integrações"}</li>

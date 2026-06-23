@@ -133,8 +133,17 @@ export const UI = {
     "/platform/leads": t("Leads", "Leads", "Leads"),
     "/platform/revenue": t("Receita", "Revenue", "Ingresos"),
   } as Record<string, Tri>,
+  // Descrições dos planos (vêm do banco em PT) — localizadas por key no frontend
+  planDesc: {
+    STARTER: t("Para começar a operar. Fidelidade mínima de 3 meses.", "To start operating. 3-month minimum.", "Para empezar a operar. Permanencia mínima de 3 meses."),
+    PRO: t("O mais popular. 1ª mensalidade com 50% OFF. Fidelidade mínima de 3 meses.", "The most popular. 50% OFF the first month. 3-month minimum.", "El más popular. 50% OFF el primer mes. Permanencia mínima de 3 meses."),
+    BUSINESS: t("1ª mensalidade GRÁTIS. Fidelidade mínima de 3 meses.", "First month FREE. 3-month minimum.", "1er mes GRATIS. Permanencia mínima de 3 meses."),
+    ENTERPRISE: t("1ª mensalidade GRÁTIS + gerente dedicado. Fidelidade mínima de 3 meses.", "First month FREE + dedicated manager. 3-month minimum.", "1er mes GRATIS + gerente dedicado. Permanencia mínima de 3 meses."),
+  } as Record<string, Tri>,
 } as const;
 
 export function tUI(tri: Record<Lang, string>, lang: Lang): string { return tri[lang] ?? tri.pt; }
 export function tNav(href: string, lang: Lang): string { const x = UI.nav[href]; return x ? (x[lang] ?? x.pt) : href; }
 export function tGroup(title: string, lang: Lang): string { const x = UI.groups[title]; return x ? (x[lang] ?? x.pt) : title; }
+// Descrição de plano localizada; cai pro texto da API se a key não estiver mapeada.
+export function tPlanDesc(key: string, apiDesc: string | undefined, lang: Lang): string { const x = UI.planDesc[key]; return x ? (x[lang] ?? x.pt) : (apiDesc || ""); }
