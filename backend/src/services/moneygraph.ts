@@ -7,7 +7,6 @@ import { consultancyClientIds, scopeWithClient } from '../lib/scope';
 export async function moneyGraph(consultancyId: string) {
   const ids = await consultancyClientIds(consultancyId);
   const clients = await prisma.client.findMany({ where: { id: { in: ids } }, select: { id: true, name: true } });
-  const ids = clients.map((c) => c.id);
   const names = new Map(clients.map((c) => [c.id, c.name]));
 
   const integrations = await prisma.integration.findMany({

@@ -31,7 +31,6 @@ export async function ingestOps(integrationId: string, clientId: string, signals
 export async function listOps(consultancyId: string, f: { clientId?: string; category?: string; env?: string } = {}) {
   const ids = scopeWithClient(f.clientId, await consultancyClientIds(consultancyId));
   const clients = await prisma.client.findMany({ where: { id: { in: ids } }, select: { id: true, name: true } });
-  const ids = clients.map((c) => c.id);
   const where: Record<string, unknown> = { clientId: { in: ids }, resolved: false };
   if (f.category) where.category = f.category;
   if (f.env) where.environment = f.env;

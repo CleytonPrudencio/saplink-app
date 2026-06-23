@@ -18,7 +18,6 @@ function expiryStatus(expiresAt: Date | null, base: string): string {
 export async function listBtp(consultancyId: string, clientId?: string, env?: string) {
   const ids = scopeWithClient(clientId, await consultancyClientIds(consultancyId));
   const clients = await prisma.client.findMany({ where: { id: { in: ids } }, select: { id: true, name: true } });
-  const ids = clients.map((c) => c.id);
   const rows = ids.length ? await prisma.btpResource.findMany({ where: { clientId: { in: ids }, ...(env ? { environment: env } : {}) }, orderBy: [{ expiresAt: 'asc' }] }) : [];
   const items = rows.map((r) => ({
     id: r.id, clientId: r.clientId, client: clients.find((c) => c.id === r.clientId)?.name,
