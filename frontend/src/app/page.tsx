@@ -273,30 +273,33 @@ function TryDemo({ t }: { t: { fail: string; btn: string; btnRunning: string; hi
 function BeforeAfter({ t }: { t: { beforeTag: string; beforeText: string; beforeChips: string[]; afterTag: string; afterText: string; afterChips: string[]; drag: string } }) {
   const [pos, setPos] = useState(50);
   const boxRef = useRef<HTMLDivElement | null>(null);
-  const setFromX = (clientX: number) => {
+  // Padrão canônico de comparador: listeners NATIVOS no elemento + pointer capture.
+  // Garante arraste contínuo no mouse, toque e caneta (com {passive:false} pro preventDefault valer no toque).
+  useEffect(() => {
     const el = boxRef.current; if (!el) return;
-    const r = el.getBoundingClientRect();
-    setPos(Math.max(0, Math.min(100, ((clientX - r.left) / r.width) * 100)));
-  };
-  // Arraste robusto: ao pressionar, escuta move/up na janela (mouse + toque + caneta).
-  const start = (e: React.PointerEvent) => {
-    e.preventDefault();
-    setFromX(e.clientX);
-    const move = (ev: PointerEvent) => setFromX(ev.clientX);
-    const end = () => {
-      window.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerup", end);
-      window.removeEventListener("pointercancel", end);
+    let active = false;
+    const apply = (clientX: number) => {
+      const r = el.getBoundingClientRect();
+      setPos(Math.max(0, Math.min(100, ((clientX - r.left) / r.width) * 100)));
     };
-    window.addEventListener("pointermove", move);
-    window.addEventListener("pointerup", end);
-    window.addEventListener("pointercancel", end);
-  };
+    const down = (e: PointerEvent) => { active = true; try { el.setPointerCapture(e.pointerId); } catch {} apply(e.clientX); e.preventDefault(); };
+    const move = (e: PointerEvent) => { if (active) { apply(e.clientX); e.preventDefault(); } };
+    const up = (e: PointerEvent) => { active = false; try { el.releasePointerCapture(e.pointerId); } catch {} };
+    el.addEventListener("pointerdown", down, { passive: false });
+    el.addEventListener("pointermove", move, { passive: false });
+    el.addEventListener("pointerup", up);
+    el.addEventListener("pointercancel", up);
+    return () => {
+      el.removeEventListener("pointerdown", down);
+      el.removeEventListener("pointermove", move);
+      el.removeEventListener("pointerup", up);
+      el.removeEventListener("pointercancel", up);
+    };
+  }, []);
   return (
     <div className="relative max-w-3xl mx-auto select-none">
       <div
         ref={boxRef}
-        onPointerDown={start}
         role="slider" aria-label={t.drag} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(pos)} tabIndex={0}
         onKeyDown={(e) => { if (e.key === "ArrowLeft") setPos((p) => Math.max(0, p - 3)); if (e.key === "ArrowRight") setPos((p) => Math.min(100, p + 3)); }}
         className="relative h-64 sm:h-72 rounded-2xl overflow-hidden border border-white/[0.1] cursor-ew-resize"
