@@ -15,7 +15,7 @@ function langDirective(lang: Lang): string {
 
 const SYSTEM_PROMPT = `Você é um especialista SAP com profundo conhecimento em integrações, módulos SAP ERP (MM, SD, FI, CO, PP, WM), SAP PI/PO, SAP CPI, IDocs, BAPIs, RFCs, e conexões com sistemas legados.
 
-Responda em português brasileiro de forma clara e estruturada.
+Responda de forma clara e estruturada.
 
 Para cada diagnóstico, forneça:
 1) **Causa Raiz** — Identifique a origem do problema com base nos dados fornecidos
@@ -56,12 +56,12 @@ Mientras tanto, usa los datos de monitoreo (estado, latencia, tasa de error, ale
 
 const ASK_PROMPT = `Você é o copiloto de operações SAP de uma consultoria, dentro do SAPLINK.
 Você enxerga a carteira inteira (clientes, integrações, status, métricas e alertas).
-Responda em português brasileiro, de forma OBJETIVA e acionável, citando clientes e integrações
+Responda de forma OBJETIVA e acionável, citando clientes e integrações
 específicos pelo nome quando relevante. Se a pergunta pedir uma ação, sugira a transação SAP ou o
 passo no SAPLINK. Não invente dados que não estão no contexto.`;
 
 const DIGEST_PROMPT = `Você é o analista de operações SAP do SAPLINK, escrevendo o resumo SEMANAL
-de saúde da carteira para o gestor de uma consultoria. Escreva em português brasileiro, tom executivo,
+de saúde da carteira para o gestor de uma consultoria. Tom executivo,
 direto e profissional. Estruture em 3 blocos curtos, sem markdown pesado:
 1) Panorama — uma frase sobre o estado geral da carteira na semana.
 2) Pontos de atenção — bullets curtos com os clientes/integrações que pioraram ou seguem críticos (cite nomes).
@@ -72,7 +72,9 @@ Seja conciso (máx ~180 palavras). NÃO invente dados fora do contexto. Se a car
 async function runAI(systemPrompt: string, userMessage: string, numPredict = 450, ctx: AiCtx = {}): Promise<string> {
   const lang: Lang = ctx.lang || 'pt';
   const sys = langDirective(lang) + systemPrompt;
-  const text = await generate(sys, userMessage, numPredict, ctx);
+  // Reforço no fim da mensagem (tokens recentes pesam mais em modelos menores)
+  const user = `${userMessage}\n\n---\nReminder: write the ENTIRE answer in ${LANG_NAME[lang]} (keep SAP terms/codes as-is).`;
+  const text = await generate(sys, user, numPredict, ctx);
   return text && text.length > 0 ? text : AI_UNAVAILABLE[lang];
 }
 
@@ -94,7 +96,7 @@ export async function narrateDigest(context: object, consultancyId?: string, lan
 }
 
 const SLA_PROMPT = `Você é um analista de níveis de serviço (SLA) de integrações SAP, escrevendo o
-relatório mensal de SLA de um cliente para apresentação executiva. Português brasileiro, tom formal e objetivo.
+relatório mensal de SLA de um cliente para apresentação executiva. Tom formal e objetivo.
 Estruture: 1) Resultado do mês (cumpriu ou não a meta, com números); 2) Principais quebras (integrações que
 ficaram abaixo da meta, com nomes); 3) Recomendações para o próximo período. Máx ~180 palavras. Use só os dados do contexto.`;
 
@@ -105,7 +107,7 @@ export async function narrateSla(context: object, consultancyId?: string, lang: 
 }
 
 const FIX_PROMPT = `Você é um engenheiro SAP de integração sênior. Dada uma falha, gere a CORREÇÃO PRONTA
-para aplicar — não explique demais, entregue o artefato. Responda em português brasileiro, neste formato:
+para aplicar — não explique demais, entregue o artefato. Responda neste formato:
 
 ### Resumo
 (1 linha: o que a correção faz)
@@ -140,7 +142,7 @@ sem texto extra, no formato {"action":"...","clientName":"...","filter":"..."}. 
 }
 
 const EXPLAIN_PROMPT = `Você é o copiloto de operações SAP do SAPLINK. O usuário está olhando uma tela e te enviou
-os dados que ela mostra. Explique em português, de forma OBJETIVA e prática, em 3 blocos curtos (sem markdown pesado):
+os dados que ela mostra. Explique de forma OBJETIVA e prática, em 3 blocos curtos (sem markdown pesado):
 
 ### Leitura
 2-3 frases: o que esses números querem dizer, em linguagem de negócio (não repita os dados, interprete).
