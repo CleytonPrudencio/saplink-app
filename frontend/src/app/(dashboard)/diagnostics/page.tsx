@@ -12,6 +12,7 @@ import {
   autoFixIntegration,
 } from "@/lib/api";
 import { AiReport } from "@/components/AiReport";
+import Loading from "@/components/Loading";
 import { useLang } from "@/i18n/I18n";
 import { T } from "./i18n";
 
@@ -496,7 +497,7 @@ function DiagnosticsContent() {
 
 export default function DiagnosticsPage() {
   return (
-    <Suspense fallback={<div className="text-[#9b95ad]">Carregando...</div>}>
+    <Suspense fallback={<Loading full={false} />}>
       <DiagnosticsContent />
     </Suspense>
   );

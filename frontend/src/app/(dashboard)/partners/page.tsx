@@ -5,6 +5,7 @@ import { getPartners } from "@/lib/api";
 import ExplainData from "@/components/ExplainData";
 import { usePaginate, Pagination } from "@/components/Pagination";
 import { useLang } from "@/i18n/I18n";
+import { UI, tUI } from "@/i18n/ui";
 import { T } from "./i18n";
 
 function brl(c: number) { return (c / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }); }
@@ -18,7 +19,7 @@ export default function PartnersPage() {
 
   const pagP = usePaginate<any>(data?.partners || [], 15);
   const pagF = usePaginate<any>(data?.finops?.flows || [], 15);
-  if (loading) return <div className="text-[#9b95ad]">Carregando...</div>;
+  if (loading) return <div className="text-[#9b95ad]">{tUI(UI.comp.loading, lang)}</div>;
   const fin = data?.finops;
 
   return (
