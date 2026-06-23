@@ -6,7 +6,8 @@ set -euo pipefail
 cd /opt/saplink-dev
 
 echo "==> Atualizando código a partir de origin/staging..."
-git fetch origin --quiet
+# Fetch EXPLÍCITO da staging (o clone da VM é single-branch; fetch normal só traz main).
+git fetch origin "+refs/heads/staging:refs/remotes/origin/staging" --quiet
 # O ambiente DEV (dev.saplink.com.br) roda a branch de integração 'staging'.
 git checkout staging 2>/dev/null || git checkout -b staging origin/staging
 git reset --hard origin/staging
