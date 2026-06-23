@@ -29,6 +29,8 @@ export const T: Record<Lang, {
   portalPitch: string;
   enablePortal: string;
   statusTitle: string;
+  portalShort: string;
+  statusShort: string;
   statusAria: (name: string) => string;
   statusActive: string;
   statusPitch: string;
@@ -66,6 +68,8 @@ export const T: Record<Lang, {
     portalPitch: "Gere um link público read-only com a saúde deste cliente (white-label).",
     enablePortal: "Ativar portal do cliente",
     statusTitle: "Status page",
+    portalShort: "Portal",
+    statusShort: "Status",
     statusAria: (name) => `Status page de ${name}`,
     statusActive: "Status page ativo (público, com sua marca).",
     statusPitch: "Gere uma página pública de saúde das integrações deste cliente, com a sua marca.",
@@ -103,6 +107,8 @@ export const T: Record<Lang, {
     portalPitch: "Generate a public read-only link with this client's health (white-label).",
     enablePortal: "Enable client portal",
     statusTitle: "Status page",
+    portalShort: "Portal",
+    statusShort: "Status",
     statusAria: (name) => `${name}'s status page`,
     statusActive: "Status page active (public, your brand).",
     statusPitch: "Generate a public health page for this client's integrations, with your brand.",
@@ -140,6 +146,8 @@ export const T: Record<Lang, {
     portalPitch: "Genera un enlace público de solo lectura con la salud de este cliente (white-label).",
     enablePortal: "Activar portal del cliente",
     statusTitle: "Status page",
+    portalShort: "Portal",
+    statusShort: "Status",
     statusAria: (name) => `Status page de ${name}`,
     statusActive: "Status page activo (público, con tu marca).",
     statusPitch: "Genera una página pública de salud de las integraciones de este cliente, con tu marca.",

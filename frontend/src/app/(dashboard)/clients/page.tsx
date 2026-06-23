@@ -43,6 +43,7 @@ export default function ClientsPage() {
   const [statusCopied, setStatusCopied] = useState(false);
 
   function openStatus(clientId: string) {
+    setActivePortal(""); // fecha o painel de portal — só um aberto por vez
     if (activeStatus === clientId) { setActiveStatus(""); return; }
     setActiveStatus(clientId); setStatusInfo(null); setStatusCopied(false);
   }
@@ -52,6 +53,7 @@ export default function ClientsPage() {
   }
 
   async function openPortal(clientId: string) {
+    setActiveStatus(""); // fecha o painel de status — só um aberto por vez
     if (activePortal === clientId) { setActivePortal(""); return; }
     setActivePortal(clientId); setPortalInfo(null); setCopied(false);
     try { const s = await getPortalStatus(clientId); setPortalInfo({ enabled: s.portalEnabled, url: s.url }); } catch { setPortalInfo({ enabled: false, url: null }); }
@@ -187,21 +189,28 @@ export default function ClientsPage() {
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5 shrink-0">
                 <button
                   onClick={() => openPortal(client.id)}
                   aria-label={t.portalAria(client.name)}
-                  className="text-[#9b95ad] hover:text-cyan-300 text-lg px-1"
                   title={t.portalTitle}
+                  className={`flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border cursor-pointer transition ${activePortal === client.id ? "bg-cyan-500/20 border-cyan-500/40 text-cyan-200" : "bg-white/[0.04] border-white/[0.08] text-[#9b95ad] hover:bg-white/[0.1] hover:text-cyan-200"}`}
                 >
-                  🔗
+                  🔗 <span className="hidden sm:inline">{t.portalShort}</span>
                 </button>
-                <button onClick={() => openStatus(client.id)} aria-label={t.statusAria(client.name)} className="text-[#9b95ad] hover:text-emerald-300 text-lg px-1" title={t.statusTitle}>📊</button>
+                <button
+                  onClick={() => openStatus(client.id)}
+                  aria-label={t.statusAria(client.name)}
+                  title={t.statusTitle}
+                  className={`flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border cursor-pointer transition ${activeStatus === client.id ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-200" : "bg-white/[0.04] border-white/[0.08] text-[#9b95ad] hover:bg-white/[0.1] hover:text-emerald-200"}`}
+                >
+                  📊 <span className="hidden sm:inline">{t.statusShort}</span>
+                </button>
                 <button
                   onClick={() => onDelete(client.id, client.name)}
                   aria-label={t.deleteAria(client.name)}
-                  className="text-[#9b95ad] hover:text-rose-400 text-lg px-1"
                   title={t.deleteTitle}
+                  className="text-[#9b95ad] hover:text-rose-400 hover:bg-white/[0.06] text-base px-2 py-1.5 rounded-lg cursor-pointer transition"
                 >
                   ✕
                 </button>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { usePersistedState } from "@/lib/usePersistedState";
+import { usePaginate, Pagination } from "@/components/Pagination";
 import { getReform, getClients } from "@/lib/api";
 import ExplainData from "@/components/ExplainData";
 import DetailSheet from "@/components/DetailSheet";
@@ -34,6 +35,8 @@ export default function ReformPage() {
 
   const s = data?.summary;
   const byClient = s ? [...s.byClient].sort((a, b) => a.readiness - b.readiness) : [];
+  const byClientPag = usePaginate<typeof byClient[number]>(byClient, 6);
+  const itemsPag = usePaginate<NonNullable<RData>["items"][number]>(data?.items || [], 20);
 
   return (
     <div className="space-y-6">
@@ -63,9 +66,9 @@ export default function ReformPage() {
 
       {byClient.length > 0 && (
         <section>
-          <h2 className="text-lg font-semibold mb-2">{t.byClient}</h2>
+          <h2 className="text-lg font-semibold mb-2">{t.byClient} <span className="text-xs font-normal text-[#6b6580]">({byClient.length})</span></h2>
           <div className="space-y-2">
-            {byClient.map((c) => (
+            {byClientPag.pageItems.map((c) => (
               <div key={c.client} className="bg-[#1a1527] border border-white/[0.08] rounded-xl px-4 py-3 flex items-center gap-3">
                 <div className="w-40 shrink-0 text-sm text-[#c9c5d6] truncate">{c.client}</div>
                 <div className="flex-1 h-2 rounded-full bg-white/[0.08] overflow-hidden">
@@ -76,6 +79,7 @@ export default function ReformPage() {
               </div>
             ))}
           </div>
+          <div className="mt-2"><Pagination {...byClientPag} /></div>
         </section>
       )}
 
@@ -100,7 +104,7 @@ export default function ReformPage() {
                   <th className="px-3 py-2 font-medium">{t.colClient}</th>
                 </tr></thead>
                 <tbody>
-                  {data.items.map((it) => (
+                  {itemsPag.pageItems.map((it) => (
                     <tr key={it.id} onClick={() => setSel(it)} className="border-b border-white/[0.04] cursor-pointer hover:bg-white/[0.03] transition-colors">
                       <td className="px-3 py-2 text-[#9b95ad]">{it.areaLabel}</td>
                       <td className="px-3 py-2 text-[#c9c5d6]">{it.title}</td>
@@ -113,6 +117,7 @@ export default function ReformPage() {
                   ))}
                 </tbody>
               </table>
+              <div className="px-3 pb-3 pt-2"><Pagination {...itemsPag} /></div>
             </div>
           )}
         </section>
@@ -147,9 +152,9 @@ export default function ReformPage() {
 
 function Stat({ label, value, accent }: { label: string; value: number; accent: string }) {
   return (
-    <div className="bg-[#1a1527] border border-white/[0.08] rounded-xl p-3 text-center">
-      <div className={`text-2xl font-bold ${accent}`}>{value}</div>
-      <div className="text-[11px] text-[#9b95ad] mt-0.5">{label}</div>
+    <div className="bg-[#1a1527] border border-white/[0.08] rounded-xl p-4 text-center flex flex-col justify-center">
+      <div className={`text-4xl font-bold ${accent}`}>{value}</div>
+      <div className="text-xs text-[#9b95ad] mt-1">{label}</div>
     </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { usePersistedState } from "@/lib/usePersistedState";
+import { usePaginate, Pagination } from "@/components/Pagination";
 import { getLicense, getClients } from "@/lib/api";
 import ExplainData from "@/components/ExplainData";
 import DetailSheet from "@/components/DetailSheet";
@@ -40,6 +41,7 @@ export default function LicensingPage() {
   useEffect(() => { setLoading(true); load().catch(() => {}).finally(() => setLoading(false)); }, [load]);
 
   const s = data?.summary;
+  const itemsPag = usePaginate<LItem>(data?.items || [], 20);
   const riskLabel = (r: string) => r === "OK" ? t.riskOk : r === "WARN" ? t.riskWarn : t.riskRisk;
 
   return (
@@ -55,7 +57,7 @@ export default function LicensingPage() {
           <Stat label={t.total} value={String(s.total)} accent="text-[#e2e0ea]" />
           <Stat label={t.atRisk} value={String(s.atRisk)} accent="text-rose-300" />
           <Stat label={t.warn} value={String(s.warn)} accent="text-amber-300" />
-          <Stat label={t.exposure} value={brl(s.totalExposure)} accent="text-amber-300" highlight />
+          <Stat label={t.exposure} value={brl(s.totalExposure)} accent="text-amber-300" highlight small />
         </div>
       )}
 
@@ -80,7 +82,7 @@ export default function LicensingPage() {
                   <th className="px-3 py-2 font-medium">{t.colClient}</th>
                 </tr></thead>
                 <tbody>
-                  {data.items.map((it) => (
+                  {itemsPag.pageItems.map((it) => (
                     <tr key={it.id} onClick={() => setSel(it)} className="border-b border-white/[0.04] cursor-pointer hover:bg-white/[0.03] transition-colors">
                       <td className="px-3 py-2 text-[#e2e0ea]">{it.metric}</td>
                       <td className="px-3 py-2 min-w-[180px]">
@@ -101,6 +103,7 @@ export default function LicensingPage() {
                   ))}
                 </tbody>
               </table>
+              <div className="px-3 pb-3 pt-2"><Pagination {...itemsPag} /></div>
             </div>
           )}
         </section>
@@ -134,11 +137,11 @@ export default function LicensingPage() {
   );
 }
 
-function Stat({ label, value, accent, highlight }: { label: string; value: string; accent: string; highlight?: boolean }) {
+function Stat({ label, value, accent, highlight, small }: { label: string; value: string; accent: string; highlight?: boolean; small?: boolean }) {
   return (
-    <div className={`bg-[#1a1527] rounded-xl p-3 text-center ${highlight ? "border border-amber-500/30" : "border border-white/[0.08]"}`}>
-      <div className={`text-2xl font-bold ${accent}`}>{value}</div>
-      <div className="text-[11px] text-[#9b95ad] mt-0.5">{label}</div>
+    <div className={`bg-[#1a1527] rounded-xl p-4 text-center flex flex-col justify-center min-w-0 ${highlight ? "border border-amber-500/30" : "border border-white/[0.08]"}`}>
+      <div className={`font-bold ${accent} leading-tight tabular-nums break-words ${small ? "text-lg sm:text-xl" : "text-3xl"}`}>{value}</div>
+      <div className="text-xs text-[#9b95ad] mt-1">{label}</div>
     </div>
   );
 }
