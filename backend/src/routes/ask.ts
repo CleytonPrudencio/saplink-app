@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import prisma from '../lib/prisma';
 import { ask } from '../services/ai';
+import { reqLang } from '../lib/env';
 
 // Copiloto "Pergunte ao SAPLINK" — Q&A em linguagem natural sobre a carteira da consultoria.
 // Montado sob o tenantGate (auth + tenancy + assinatura ativa).
@@ -48,7 +49,7 @@ router.post('/', async (req: Request, res: Response) => {
       clientes: clients.map((c) => ({ nome: c.name, healthScore: c.healthScore })),
     };
 
-    const answer = await ask(question, context, req.consultancyId!);
+    const answer = await ask(question, context, req.consultancyId!, reqLang(req));
     res.json({ answer });
   } catch (error) {
     console.error('Ask error:', error);

@@ -13,6 +13,9 @@ api.interceptors.request.use((config) => {
     // Ambiente global selecionado (DEV/HML/PRD); vazio = Todos
     const env = localStorage.getItem('slk_env');
     if (env) config.headers['x-environment'] = env;
+    // Idioma do usuário (pt/en/es) — faz a IA responder no idioma certo
+    const lang = localStorage.getItem('slk_lang');
+    if (lang) config.headers['x-lang'] = lang;
   }
   return config;
 });

@@ -9,6 +9,7 @@ import { getProcesses, saveProcess, deleteProcess, reconcile } from '../services
 import { detectAnomalies } from '../services/bizanomaly';
 import { getConfig as getChatops, rotateToken, run as runChatops } from '../services/chatops';
 import { explainScreen } from '../services/ai';
+import { reqLang } from '../lib/env';
 import { listTransports as pfList, blastRadius } from '../services/preflight';
 import { listIncidents, timeline } from '../services/timemachine';
 import { auditLedger } from '../services/audit';
@@ -98,7 +99,7 @@ router.post('/explain', async (req: Request, res: Response) => {
   try {
     const { screen, data } = req.body || {};
     if (!screen) { res.status(400).json({ error: 'screen é obrigatório.' }); return; }
-    res.json({ text: await explainScreen(String(screen), data || {}, req.consultancyId!) });
+    res.json({ text: await explainScreen(String(screen), data || {}, req.consultancyId!, reqLang(req)) });
   } catch (e) { console.error('explain', e); res.status(500).json({ error: 'Erro ao explicar a tela.' }); }
 });
 

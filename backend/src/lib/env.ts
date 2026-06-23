@@ -11,3 +11,9 @@ export function envWhere(req: Request): { environment?: string } {
   const e = reqEnv(req);
   return e ? { environment: e } : {};
 }
+
+// Idioma escolhido pelo usuário (header x-lang). Default pt. Faz a IA responder no idioma certo.
+export function reqLang(req: Request): 'pt' | 'en' | 'es' {
+  const l = (req.header('x-lang') || '').toLowerCase();
+  return l === 'en' || l === 'es' ? l : 'pt';
+}

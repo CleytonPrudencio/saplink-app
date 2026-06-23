@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { requireConsultancyAdmin } from '../middleware/roles';
 import { computeSla, setSlaTargets, slaReport } from '../services/sla';
 import { computeImpact, setCost, listForCost } from '../services/impact';
-import { reqEnv } from '../lib/env';
+import { reqEnv, reqLang } from '../lib/env';
 
 // D1 + D2 — SLA por cliente e impacto em R$. Sob o tenantGate.
 const router = Router();
@@ -19,7 +19,7 @@ router.put('/:clientId', requireConsultancyAdmin, async (req: Request, res: Resp
 });
 
 router.get('/:clientId/report', async (req: Request, res: Response) => {
-  const r = await slaReport(req.consultancyId!, req.params.clientId);
+  const r = await slaReport(req.consultancyId!, req.params.clientId, reqLang(req));
   if ('error' in r) { res.status(404).json({ error: 'Cliente não encontrado.' }); return; }
   res.json(r);
 });

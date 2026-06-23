@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { getCloud, diagnoseCloudItem, fixCloudItem } from '../services/cloud';
-import { reqEnv } from '../lib/env';
+import { reqEnv, reqLang } from '../lib/env';
 
 // F1/F2 — CPI / AIF. Sob o tenantGate.
 const router = Router();
@@ -23,7 +23,7 @@ router.get('/', async (req: Request, res: Response) => {
 // IA: diagnostica uma falha CPI/AIF (causa raiz + correção). ?force=1 refaz.
 router.post('/:id/diagnose', async (req: Request, res: Response) => {
   try {
-    const r = await diagnoseCloudItem(req.consultancyId!, req.params.id, req.query.force === '1');
+    const r = await diagnoseCloudItem(req.consultancyId!, req.params.id, req.query.force === '1', reqLang(req));
     if ('error' in r) { res.status(404).json({ error: 'Mensagem não encontrada.' }); return; }
     res.json(r);
   } catch (e) {
@@ -35,7 +35,7 @@ router.post('/:id/diagnose', async (req: Request, res: Response) => {
 // IA generativa: escreve a correção pronta para a falha. ?force=1 refaz.
 router.post('/:id/fix', async (req: Request, res: Response) => {
   try {
-    const r = await fixCloudItem(req.consultancyId!, req.params.id, req.query.force === '1');
+    const r = await fixCloudItem(req.consultancyId!, req.params.id, req.query.force === '1', reqLang(req));
     if ('error' in r) { res.status(404).json({ error: 'Mensagem não encontrada.' }); return; }
     res.json(r);
   } catch (e) {

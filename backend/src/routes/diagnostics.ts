@@ -4,7 +4,7 @@ import { authMiddleware } from '../middleware/auth';
 import { tenancyMiddleware } from '../middleware/tenancy';
 import { diagnose } from '../services/ai';
 import { assertWithinLimit, incrementAiUsage, LimitError } from '../services/billing';
-import { reqEnv } from '../lib/env';
+import { reqEnv, reqLang } from '../lib/env';
 
 const router = Router();
 router.use(authMiddleware, tenancyMiddleware);
@@ -78,6 +78,7 @@ router.post('/', async (req: Request, res: Response) => {
 
     // Cria o job PENDENTE e responde NA HORA (202). A IA roda em background.
     const consultancyId = req.consultancyId!;
+    const lang = reqLang(req);
     const diagnostic = await prisma.diagnostic.create({
       data: { query, clientId, status: 'PENDING', response: '' },
     });
@@ -86,7 +87,7 @@ router.post('/', async (req: Request, res: Response) => {
     // Processamento assíncrono (não bloqueia a resposta)
     (async () => {
       try {
-        const response = await diagnose(query, context, consultancyId);
+        const response = await diagnose(query, context, consultancyId, lang);
         await prisma.diagnostic.update({ where: { id: diagnostic.id }, data: { response, status: 'DONE' } });
         await incrementAiUsage(consultancyId);
       } catch (e) {

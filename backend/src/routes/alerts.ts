@@ -3,7 +3,7 @@ import prisma from '../lib/prisma';
 import { authMiddleware } from '../middleware/auth';
 import { tenancyMiddleware } from '../middleware/tenancy';
 import { diagnose } from '../services/ai';
-import { reqEnv } from '../lib/env';
+import { reqEnv, reqLang } from '../lib/env';
 
 const router = Router();
 router.use(authMiddleware, tenancyMiddleware);
@@ -144,7 +144,7 @@ router.post('/:id/diagnose', async (req: Request, res: Response) => {
       tipo_alerta: alert.type, severidade: alert.severity, mensagem: alert.message,
       ocorrencias_abertas_iguais: sameOpen, desde: alert.createdAt,
     };
-    const text = await diagnose(`Explique este alerta e diga o que fazer para resolver: ${alert.message}`, context, req.consultancyId!);
+    const text = await diagnose(`Explique este alerta e diga o que fazer para resolver: ${alert.message}`, context, req.consultancyId!, reqLang(req));
     res.json({ text });
   } catch (error) {
     console.error('Alert diagnose error:', error);

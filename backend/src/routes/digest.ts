@@ -4,6 +4,7 @@ import { requireConsultancyAdmin } from '../middleware/roles';
 import { sendDigest, gatherDigestData } from '../services/digest';
 import { narrateDigest, aiEnabled } from '../services/ai';
 import { emailEnabled } from '../services/email';
+import { reqLang } from '../lib/env';
 
 // Digest semanal por IA — preferências + envio sob demanda. Sob o tenantGate.
 const router = Router();
@@ -33,7 +34,7 @@ router.post('/toggle', requireConsultancyAdmin, async (req: Request, res: Respon
 router.get('/preview', requireConsultancyAdmin, async (req: Request, res: Response) => {
   try {
     const data = await gatherDigestData(req.consultancyId!);
-    const narrative = aiEnabled() ? await narrateDigest(data) : '';
+    const narrative = aiEnabled() ? await narrateDigest(data, undefined, reqLang(req)) : '';
     res.json({ data, narrative });
   } catch (e) {
     console.error('Digest preview error:', e);

@@ -1,5 +1,5 @@
 import prisma from '../lib/prisma';
-import { narrateSla, aiEnabled } from './ai';
+import { narrateSla, aiEnabled, type Lang } from './ai';
 
 export interface SlaClient {
   clientId: string;
@@ -63,10 +63,10 @@ export async function setSlaTargets(consultancyId: string, clientId: string, upt
 }
 
 /** Relatório mensal narrado por IA para um cliente. */
-export async function slaReport(consultancyId: string, clientId: string) {
+export async function slaReport(consultancyId: string, clientId: string, lang: Lang = 'pt') {
   const { clients } = await computeSla(consultancyId);
   const c = clients.find((x) => x.clientId === clientId);
   if (!c) return { error: 'NOT_FOUND' as const };
-  const narrative = aiEnabled() ? await narrateSla(c, consultancyId) : '';
+  const narrative = aiEnabled() ? await narrateSla(c, consultancyId, lang) : '';
   return { data: c, narrative };
 }

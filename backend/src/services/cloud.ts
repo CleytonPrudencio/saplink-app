@@ -1,5 +1,5 @@
 import prisma from '../lib/prisma';
-import { diagnose, generateFix } from './ai';
+import { diagnose, generateFix, type Lang } from './ai';
 import { recordFailure } from './federated';
 
 export interface CloudItemInput {
@@ -91,7 +91,7 @@ export async function ingestCloud(integrationId: string, clientId: string, items
  * Diagnóstico de IA para uma falha de CPI/AIF: causa raiz + passos de correção + prevenção.
  * Salva no próprio CloudItem (cache) — re-chama a IA com `force` se já houver diagnóstico.
  */
-export async function diagnoseCloudItem(consultancyId: string, id: string, force = false) {
+export async function diagnoseCloudItem(consultancyId: string, id: string, force = false, lang: Lang = 'pt') {
   const item = await prisma.cloudItem.findUnique({ where: { id } });
   if (!item) return { error: 'NOT_FOUND' as const };
   // valida o tenant pelo cliente do item
@@ -126,13 +126,13 @@ export async function diagnoseCloudItem(consultancyId: string, id: string, force
   const query = `Esta mensagem de integração ${item.source} falhou no artefato "${item.artifact}". `
     + `Diagnostique a causa raiz com base no erro e proponha os passos de correção (no SAP/S4 e no IFlow/CPI quando couber) e como prevenir a recorrência.`;
 
-  const diagnosis = await diagnose(query, context, consultancyId);
+  const diagnosis = await diagnose(query, context, consultancyId, lang);
   await prisma.cloudItem.update({ where: { id: item.id }, data: { aiDiagnosis: diagnosis, aiDiagnosedAt: new Date() } });
   return { ok: true, diagnosis, diagnosedAt: new Date(), cached: false };
 }
 
 /** Remediação generativa: a IA escreve a correção pronta (snippet/config) para a falha. */
-export async function fixCloudItem(consultancyId: string, id: string, force = false) {
+export async function fixCloudItem(consultancyId: string, id: string, force = false, lang: Lang = 'pt') {
   const item = await prisma.cloudItem.findUnique({ where: { id } });
   if (!item) return { error: 'NOT_FOUND' as const };
   const client = await prisma.client.findFirst({ where: { id: item.clientId, consultancyId }, select: { name: true } });
@@ -143,7 +143,7 @@ export async function fixCloudItem(consultancyId: string, id: string, force = fa
     plataforma: item.source === 'CPI' ? 'SAP Cloud Integration (BTP/CPI)' : 'SAP AIF',
     artefato_ou_iflow: item.artifact, status: item.status, erro: item.error || '(sem detalhe)',
   };
-  const fix = await generateFix(`falha em ${item.source} no artefato "${item.artifact}"`, context, consultancyId);
+  const fix = await generateFix(`falha em ${item.source} no artefato "${item.artifact}"`, context, consultancyId, lang);
   await prisma.cloudItem.update({ where: { id: item.id }, data: { aiFix: fix } });
   return { ok: true, fix, cached: false };
 }
