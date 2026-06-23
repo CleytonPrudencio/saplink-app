@@ -71,8 +71,11 @@ function statusColor(s: string): string {
 }
 
 /** Monta o HTML do e-mail do digest (white-label pelo nome/cor da consultoria). */
-export function renderDigestHtml(name: string, primaryColor: string | null, data: DigestData, narrative: string): string {
+export function renderDigestHtml(name: string, primaryColor: string | null, data: DigestData, narrative: string, logoUrl?: string | null): string {
   const accent = primaryColor || '#a78bfa';
+  // Logo: usa a marca da consultoria (white-label) se for URL/data absoluta; senão a do SAPLINK.
+  // Fallback com URL de produção fixa pra imagem nunca quebrar no e-mail (não depende de FRONTEND_URL).
+  const logo = logoUrl && /^(https?:|data:)/.test(logoUrl) ? logoUrl : 'https://saplink.com.br/icon.png';
   const statusBadges = Object.entries(data.porStatus)
     .map(([s, n]) => `<span style="display:inline-block;background:#1a1527;border:1px solid #2a2440;border-radius:8px;padding:4px 10px;margin:0 6px 6px 0;font-size:13px;color:${statusColor(s)}">${s}: <b>${n}</b></span>`)
     .join('');
@@ -94,11 +97,13 @@ export function renderDigestHtml(name: string, primaryColor: string | null, data
     .join('');
 
   return `<div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;max-width:600px;margin:0 auto;background:#0f0b1a;color:#e2e0ea;border-radius:16px;overflow:hidden;border:1px solid #2a2440">
-    <div style="padding:20px 24px;border-bottom:1px solid #2a2440;font-size:18px;font-weight:700;color:${accent}">◆ ${name}</div>
+    <div style="background:linear-gradient(135deg,#241a44 0%,#0f0b1a 75%);padding:28px 24px;text-align:center;border-bottom:1px solid #2a2440">
+      <img src="${logo}" alt="${name}" width="46" height="46" style="border-radius:11px;vertical-align:middle;border:0" />
+      <span style="font-size:22px;font-weight:800;color:#ffffff;vertical-align:middle;margin-left:10px;letter-spacing:.3px">${name}</span>
+      <div style="font-size:11px;font-weight:700;letter-spacing:2px;color:${accent};margin-top:14px;text-transform:uppercase">Resumo semanal de saúde</div>
+      <div style="font-size:12px;color:#9b95ad;margin-top:4px">Carteira de integrações SAP · últimos 7 dias</div>
+    </div>
     <div style="padding:24px">
-      <h2 style="margin:0 0 4px;font-size:18px;color:#fff">Resumo semanal de saúde</h2>
-      <p style="color:#9b95ad;font-size:13px;margin:0 0 16px">Carteira de integrações SAP — últimos 7 dias</p>
-
       <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
         <div style="flex:1;min-width:90px;background:#1a1527;border:1px solid #2a2440;border-radius:12px;padding:12px;text-align:center">
           <div style="font-size:22px;font-weight:700;color:${accent}">${data.healthMedio}</div>
@@ -158,7 +163,7 @@ export async function sendDigest(consultancyId: string, opts: { force?: boolean 
 
   const data = await gatherDigestData(consultancyId);
   const narrative = aiEnabled() ? await narrateDigest(data, consultancyId) : '';
-  const html = renderDigestHtml(consultancy.name, consultancy.primaryColor, data, narrative);
+  const html = renderDigestHtml(consultancy.name, consultancy.primaryColor, data, narrative, consultancy.logoUrl);
 
   let anySent = false;
   for (const to of recipients) {
