@@ -107,6 +107,7 @@ const tenantGroups: MenuGroup[] = [
   {
     title: "Resposta & conta",
     items: [
+      { href: "/users", label: "Usu\u00E1rios", icon: "\uD83D\uDC65", adminOnly: true },
       { href: "/notifications", label: "On-call & Tickets", icon: "\uD83D\uDCE3", adminOnly: true },
       { href: "/billing", label: "Cobran\u00E7a", icon: "\uD83D\uDCB3", adminOnly: true },
       { href: "/sso", label: "SSO corporativo", icon: "\uD83D\uDD10", adminOnly: true },

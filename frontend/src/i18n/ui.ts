@@ -127,6 +127,7 @@ export const UI = {
     "/sla": t("SLA & Impacto", "SLA & Impact", "SLA & Impacto"),
     "/licensing": t("Licenciamento", "Licensing", "Licenciamiento"),
     "/reports": t("Relatórios", "Reports", "Informes"),
+    "/users": t("Usuários", "Users", "Usuarios"),
     "/notifications": t("On-call & Tickets", "On-call & Tickets", "On-call & Tickets"),
     "/billing": t("Cobrança", "Billing", "Facturación"),
     "/sso": t("SSO corporativo", "Corporate SSO", "SSO corporativo"),

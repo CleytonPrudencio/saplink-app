@@ -565,15 +565,36 @@ export async function updateBranding(payload: { name?: string; logoUrl?: string 
   return data;
 }
 
-// Usuários do tenant
+// Usuários do tenant (gestão de perfis/escopo por cliente)
+export interface TenantUser {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  allClients: boolean;
+  clientIds: string[];
+  createdAt: string;
+}
+export interface UserUpsertPayload {
+  name?: string;
+  email?: string;
+  role?: string;
+  allClients?: boolean;
+  clientIds?: string[];
+}
 export async function getUsers() {
   const { data } = await api.get('/users');
-  return data;
+  return data as TenantUser[];
 }
 
-export async function createUser(payload: { name: string; email: string; role?: string }) {
+export async function createUser(payload: UserUpsertPayload) {
   const { data } = await api.post('/users', payload);
-  return data;
+  return data as TenantUser & { invited?: boolean; tempPassword?: string };
+}
+
+export async function updateUser(id: string, payload: UserUpsertPayload) {
+  const { data } = await api.patch(`/users/${id}`, payload);
+  return data as TenantUser;
 }
 
 export async function deleteUser(id: string) {

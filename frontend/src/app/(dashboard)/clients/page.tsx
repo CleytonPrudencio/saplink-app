@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import ExplainData from "@/components/ExplainData";
-import { getClients, createClient, deleteClient, getPortalStatus, enableClientPortal, disableClientPortal, setStatusPage } from "@/lib/api";
+import { getMe, getClients, createClient, deleteClient, getPortalStatus, enableClientPortal, disableClientPortal, setStatusPage } from "@/lib/api";
 import HealthScoreRing from "@/components/HealthScoreRing";
 import { useLang } from "@/i18n/I18n";
 import { T } from "./i18n";
@@ -23,6 +23,8 @@ export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  // Perfil Consulta (CONSULTANCY_VIEWER) é somente leitura: esconde ações de escrita
+  const [isViewer, setIsViewer] = useState(false);
 
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
@@ -81,6 +83,7 @@ export default function ClientsPage() {
 
   useEffect(() => {
     load();
+    getMe().then((me) => setIsViewer(me?.role === "CONSULTANCY_VIEWER")).catch(() => {});
   }, []);
 
   async function onCreate(e: React.FormEvent) {
@@ -122,12 +125,14 @@ export default function ClientsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">{t.title}</h1>
-        <button
-          onClick={() => setShowForm((s) => !s)}
-          className="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-cyan-400 text-white text-sm font-semibold"
-        >
-          {showForm ? t.cancel : t.newClient}
-        </button>
+        {!isViewer && (
+          <button
+            onClick={() => setShowForm((s) => !s)}
+            className="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-cyan-400 text-white text-sm font-semibold"
+          >
+            {showForm ? t.cancel : t.newClient}
+          </button>
+        )}
       </div>
       <ExplainData screen="Carteira de clientes" data={{ clientes: clients.map((c: any) => ({ nome: c.name, health: c.healthScore, integracoes: c.integrationCount ?? c._count?.integrations, alertas: c.alertCount ?? c._count?.alerts })) }} label={t.explainLabel} />
 
@@ -189,6 +194,7 @@ export default function ClientsPage() {
                   </div>
                 </div>
               </div>
+              {!isViewer && (
               <div className="flex items-center gap-1.5 shrink-0">
                 <button
                   onClick={() => openPortal(client.id)}
@@ -215,6 +221,7 @@ export default function ClientsPage() {
                   ✕
                 </button>
               </div>
+              )}
             </div>
 
             {activePortal === client.id && (
@@ -265,12 +272,14 @@ export default function ClientsPage() {
       {clients.length === 0 && !showForm && (
         <div className="text-center py-12">
           <p className="text-[#9b95ad] mb-3">{t.noClients}</p>
-          <button
-            onClick={() => setShowForm(true)}
-            className="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-cyan-400 text-white text-sm font-semibold"
-          >
-            {t.registerFirst}
-          </button>
+          {!isViewer && (
+            <button
+              onClick={() => setShowForm(true)}
+              className="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-cyan-400 text-white text-sm font-semibold"
+            >
+              {t.registerFirst}
+            </button>
+          )}
         </div>
       )}
     </div>

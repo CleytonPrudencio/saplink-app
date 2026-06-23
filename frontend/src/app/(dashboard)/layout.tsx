@@ -108,6 +108,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // Cobrança e Configurações são exclusivas do admin da consultoria
   const restrictedForUser =
     user?.role === "CONSULTANCY_USER" && onAllowedPage;
+  // Faixa sutil de modo somente leitura para o perfil Consulta
+  const isViewer = user?.role === "CONSULTANCY_VIEWER";
+  const readOnlyBanner = { pt: "Modo somente leitura — perfil Consulta", en: "Read-only mode — Viewer role", es: "Modo solo lectura — perfil Consulta" } as const;
 
   return (
     <div className="min-h-screen flex">
@@ -160,6 +163,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
           ) : (
             <>
+              {isViewer && (
+                <div className="mb-4 flex items-center gap-2 rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-sm text-sky-200 no-print">
+                  <span aria-hidden>👁️</span>
+                  <span>{readOnlyBanner[lang] ?? readOnlyBanner.pt}</span>
+                </div>
+              )}
               <PageGuide />
               {children}
             </>
