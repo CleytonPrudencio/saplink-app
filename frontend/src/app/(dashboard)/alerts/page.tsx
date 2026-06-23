@@ -5,8 +5,52 @@ import { getAlerts, resolveAlert, resolveAlertGroup, diagnoseAlert } from "@/lib
 import { useToast } from "@/components/Toast";
 import { AiReport } from "@/components/AiReport";
 import ExplainData from "@/components/ExplainData";
-import { useLang } from "@/i18n/I18n";
+import DetailSheet from "@/components/DetailSheet";
+import { useLang, type Lang } from "@/i18n/I18n";
 import { T } from "./i18n";
+
+const SHEET_T: Record<Lang, {
+  occurrences: string; severity: string; type: string; message: string; client: string;
+  integration: string; first: string; last: string; status: string; active: string; resolved: string;
+  guideTitle: string; guideSteps: string[]; guideTx: string;
+}> = {
+  pt: {
+    occurrences: "Ocorrências", severity: "Severidade", type: "Tipo", message: "Mensagem", client: "Cliente",
+    integration: "Integração", first: "Primeira", last: "Última", status: "Status", active: "Ativo", resolved: "Resolvido",
+    guideTitle: "O que fazer",
+    guideSteps: [
+      "Investigue a integração afetada e a causa na origem (SAP/agente).",
+      "Trate a causa raiz antes de fechar o alerta.",
+      "Resolva o alerta aqui só depois de confirmar a correção.",
+      "Se persistir, um novo alerta é criado no próximo ciclo.",
+    ],
+    guideTx: "SM21 · SLG1 (logs)",
+  },
+  en: {
+    occurrences: "Occurrences", severity: "Severity", type: "Type", message: "Message", client: "Client",
+    integration: "Integration", first: "First", last: "Last", status: "Status", active: "Active", resolved: "Resolved",
+    guideTitle: "What to do",
+    guideSteps: [
+      "Investigate the affected integration and the source cause (SAP/agent).",
+      "Handle the root cause before closing the alert.",
+      "Resolve the alert here only after confirming the fix.",
+      "If it persists, a new alert is created on the next cycle.",
+    ],
+    guideTx: "SM21 · SLG1 (logs)",
+  },
+  es: {
+    occurrences: "Ocurrencias", severity: "Severidad", type: "Tipo", message: "Mensaje", client: "Cliente",
+    integration: "Integración", first: "Primera", last: "Última", status: "Status", active: "Activo", resolved: "Resuelto",
+    guideTitle: "Qué hacer",
+    guideSteps: [
+      "Investiga la integración afectada y la causa en el origen (SAP/agente).",
+      "Trata la causa raíz antes de cerrar la alerta.",
+      "Resuelve la alerta aquí solo tras confirmar la corrección.",
+      "Si persiste, se crea una nueva alerta en el próximo ciclo.",
+    ],
+    guideTx: "SM21 · SLG1 (logs)",
+  },
+};
 
 interface Alert {
   id: string; severity: string; type: string; message: string; resolved: boolean;
@@ -32,7 +76,9 @@ export default function AlertsPage() {
   const [statusFilter, setStatusFilter] = useState("ACTIVE");
   const [diag, setDiag] = useState<Record<string, { loading: boolean; text?: string }>>({});
   const [confirm, setConfirm] = useState<Group | null>(null);
+  const [sel, setSel] = useState<Group | null>(null);
   const { notify } = useToast();
+  const st = SHEET_T[lang];
 
   useEffect(() => { load(); }, []);
   async function load() {
@@ -99,7 +145,7 @@ export default function AlertsPage() {
           const d = diag[g.key];
           return (
             <div key={g.key} className="bg-[#1a1527] rounded-xl border border-white/[0.08] overflow-hidden">
-              <div className="p-4 flex items-start gap-4 flex-wrap">
+              <div onClick={() => setSel(g)} className="p-4 flex items-start gap-4 flex-wrap cursor-pointer hover:bg-white/[0.03] transition-colors">
                 <span className={`px-2.5 py-1 rounded-full text-xs font-semibold uppercase shrink-0 ${sevBadge(g.severity)}`}>{g.severity}</span>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-[#e2e0ea]">{g.message}{g.count > 1 && <span className="ml-2 text-xs font-bold text-rose-300">×{g.count}</span>}</p>
@@ -113,8 +159,8 @@ export default function AlertsPage() {
                 </div>
                 {statusFilter !== "RESOLVED" && (
                   <div className="flex gap-2 shrink-0">
-                    <button onClick={() => (d ? setDiag((x) => { const c = { ...x }; delete c[g.key]; return c; }) : runDiagnose(g))} className="px-3 py-1.5 text-xs font-medium bg-violet-500/15 text-violet-300 rounded-lg hover:bg-violet-500/25 cursor-pointer">{d ? t.hide : t.diagnose}</button>
-                    <button onClick={() => setConfirm(g)} className="px-3 py-1.5 text-xs font-medium bg-emerald-500/20 text-emerald-400 rounded-lg hover:bg-emerald-500/30 cursor-pointer">{t.resolve}{g.count > 1 ? ` (${g.count})` : ""}</button>
+                    <button onClick={(e) => { e.stopPropagation(); d ? setDiag((x) => { const c = { ...x }; delete c[g.key]; return c; }) : runDiagnose(g); }} className="px-3 py-1.5 text-xs font-medium bg-violet-500/15 text-violet-300 rounded-lg hover:bg-violet-500/25 cursor-pointer">{d ? t.hide : t.diagnose}</button>
+                    <button onClick={(e) => { e.stopPropagation(); setConfirm(g); }} className="px-3 py-1.5 text-xs font-medium bg-emerald-500/20 text-emerald-400 rounded-lg hover:bg-emerald-500/30 cursor-pointer">{t.resolve}{g.count > 1 ? ` (${g.count})` : ""}</button>
                   </div>
                 )}
               </div>
@@ -144,6 +190,38 @@ export default function AlertsPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {sel && (
+        <DetailSheet
+          open={!!sel}
+          onClose={() => setSel(null)}
+          icon="🔔"
+          title={sel.message}
+          subtitle={`${sel.type}${sel.integrationName ? ` · ${sel.integrationName}` : ""}`}
+          badge={<span className={`px-2.5 py-1 rounded-full text-xs font-semibold uppercase shrink-0 ${sevBadge(sel.severity)}`}>{sel.severity}</span>}
+          fields={[
+            { label: st.severity, value: sel.severity },
+            { label: st.type, value: sel.type },
+            { label: st.message, value: sel.message },
+            { label: st.occurrences, value: sel.count },
+            { label: st.client, value: sel.client },
+            { label: st.integration, value: sel.integrationName },
+            { label: st.first, value: new Date(sel.first).toLocaleString("pt-BR") },
+            { label: st.last, value: new Date(sel.last).toLocaleString("pt-BR") },
+          ]}
+          guideTitle={st.guideTitle}
+          guideSteps={st.guideSteps}
+          guideTx={st.guideTx}
+          actions={statusFilter !== "RESOLVED" ? (
+            <>
+              <button onClick={() => runDiagnose(sel)} className="px-3 py-1.5 text-xs font-medium bg-violet-500/15 text-violet-300 rounded-lg hover:bg-violet-500/25 cursor-pointer">{t.diagnose}</button>
+              <button onClick={() => { setConfirm(sel); setSel(null); }} className="px-3 py-1.5 text-xs font-medium bg-emerald-500/20 text-emerald-400 rounded-lg hover:bg-emerald-500/30 cursor-pointer">{t.resolve}{sel.count > 1 ? ` (${sel.count})` : ""}</button>
+            </>
+          ) : undefined}
+        >
+          <ExplainData screen="Alertas — item" data={{ severidade: sel.severity, tipo: sel.type, mensagem: sel.message, ocorrencias: sel.count, cliente: sel.client, integracao: sel.integrationName, primeira: sel.first, ultima: sel.last }} />
+        </DetailSheet>
       )}
     </div>
   );

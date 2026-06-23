@@ -7,10 +7,41 @@ import {
 } from "@/lib/api";
 import { AiReport } from "@/components/AiReport";
 import ExplainData from "@/components/ExplainData";
+import DetailSheet from "@/components/DetailSheet";
 import { useLang, type Lang } from "@/i18n/I18n";
 import { T } from "./i18n";
 
 type Dict = (typeof T)[Lang];
+
+const SHEET_T: Record<Lang, {
+  client: string; process: string; status: string; perHour: string; hoursDown: string; accumulated: string;
+  guide: string; gReport: string; gCost: string; gFix: string; diagnose: string;
+}> = {
+  pt: {
+    client: "Cliente", process: "Processo de negócio", status: "Status", perHour: "Custo R$/h",
+    hoursDown: "Horas fora do ar", accumulated: "Exposição acumulada",
+    guide: "O que fazer", gReport: "Gere o relatório de SLA do cliente para o C-level.",
+    gCost: "Defina o custo/hora da parada se ainda não houver.",
+    gFix: "Para integrações que quebraram, abra o diagnóstico de IA e corrija.",
+    diagnose: "Diagnosticar com IA",
+  },
+  en: {
+    client: "Client", process: "Business process", status: "Status", perHour: "Cost R$/h",
+    hoursDown: "Hours down", accumulated: "Accumulated exposure",
+    guide: "What to do", gReport: "Generate the client's SLA report for the C-level.",
+    gCost: "Set the downtime cost/hour if not defined yet.",
+    gFix: "For broken integrations, open the AI diagnosis and fix it.",
+    diagnose: "Diagnose with AI",
+  },
+  es: {
+    client: "Cliente", process: "Proceso de negocio", status: "Status", perHour: "Costo R$/h",
+    hoursDown: "Horas fuera de servicio", accumulated: "Exposición acumulada",
+    guide: "Qué hacer", gReport: "Genera el informe de SLA del cliente para el C-level.",
+    gCost: "Define el costo/hora de la parada si aún no existe.",
+    gFix: "Para integraciones caídas, abre el diagnóstico de IA y corrige.",
+    diagnose: "Diagnosticar con IA",
+  },
+};
 
 function brl(cents: number) {
   return (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -31,6 +62,8 @@ export default function SlaPage() {
   const [costList, setCostList] = useState<{ id: string; name: string; type: string; client?: string; costPerHourCents: number; businessProcess: string | null }[]>([]);
   const [report, setReport] = useState<{ client: string; text: string } | null>(null);
   const [busy, setBusy] = useState("");
+  const [sel, setSel] = useState<ImpactItem | null>(null);
+  const st = SHEET_T[lang];
 
   async function load() {
     setSla(await getSla());
@@ -107,7 +140,7 @@ export default function SlaPage() {
               </tr></thead>
               <tbody>
                 {impact.items.map((i) => (
-                  <tr key={i.integrationId} className="border-b border-white/[0.04]">
+                  <tr key={i.integrationId} onClick={() => setSel(i)} className="border-b border-white/[0.04] cursor-pointer hover:bg-white/[0.03] transition-colors">
                     <td className="px-3 py-2 text-[#e2e0ea]">{i.integration}<span className="block text-xs text-[#9b95ad]">{i.client}</span></td>
                     <td className="px-3 py-2 text-[#9b95ad]">{i.businessProcess || "—"}</td>
                     <td className="px-3 py-2"><span className={i.atRisk ? "text-rose-400" : "text-emerald-400"}>{i.status}</span></td>
@@ -130,6 +163,34 @@ export default function SlaPage() {
           </details>
         )}
       </section>
+
+      {sel && (
+        <DetailSheet
+          open={!!sel}
+          onClose={() => setSel(null)}
+          icon="📈"
+          title={sel.integration}
+          subtitle={sel.client}
+          badge={<span className={`text-xs px-2 py-0.5 rounded-full ${sel.atRisk ? "bg-rose-500/15 text-rose-300" : "bg-emerald-500/15 text-emerald-300"}`}>{sel.status}</span>}
+          fields={[
+            { label: st.client, value: sel.client },
+            { label: st.process, value: sel.businessProcess || undefined },
+            { label: st.status, value: <span className={sel.atRisk ? "text-rose-400" : "text-emerald-400"}>{sel.status}</span> },
+            { label: st.perHour, value: brl(sel.costPerHourCents) },
+            { label: st.hoursDown, value: `${sel.hoursDown}h` },
+            { label: st.accumulated, value: brl(sel.accumulatedCents) },
+          ]}
+          guideTitle={sel.atRisk ? st.guide : undefined}
+          guideSteps={sel.atRisk ? [st.gReport, st.gCost, st.gFix] : undefined}
+          actions={
+            sel.atRisk ? (
+              <a href={`/diagnostics?integrationId=${sel.integrationId}&auto=1`} className="text-xs px-3 py-1.5 rounded-lg bg-purple-500/15 text-purple-200 hover:bg-purple-500/25 cursor-pointer">🤖 {st.diagnose}</a>
+            ) : undefined
+          }
+        >
+          <ExplainData screen="SLA & Impacto financeiro — item" data={{ integration: sel.integration, client: sel.client, status: sel.status, businessProcess: sel.businessProcess, costPerHourCents: sel.costPerHourCents, atRisk: sel.atRisk, hoursDown: sel.hoursDown, accumulatedCents: sel.accumulatedCents }} />
+        </DetailSheet>
+      )}
     </div>
   );
 }

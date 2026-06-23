@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { getClients, getDeadCode, getDeadCodeStats } from "@/lib/api";
 import { usePaginate, Pagination } from "@/components/Pagination";
+import DetailSheet from "@/components/DetailSheet";
+import ExplainData from "@/components/ExplainData";
 import { useLang } from "@/i18n/I18n";
 import { T } from "./i18n";
 
@@ -37,7 +39,7 @@ export default function DeadCodePage() {
   const [loading, setLoading] = useState(true);
   const [dataLoading, setDataLoading] = useState(false);
   const [error, setError] = useState("");
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [sel, setSel] = useState<any>(null);
   const [filterRec, setFilterRec] = useState<string>("ALL");
 
   useEffect(() => {
@@ -51,7 +53,7 @@ export default function DeadCodePage() {
     if (!selectedClient) return;
     setDataLoading(true);
     setError("");
-    setExpandedId(null);
+    setSel(null);
     Promise.all([getDeadCode(selectedClient), getDeadCodeStats(selectedClient)])
       .then(([codeData, statsData]) => {
         setEntries(Array.isArray(codeData) ? codeData : codeData.data || []);
@@ -133,11 +135,13 @@ export default function DeadCodePage() {
           {pag.pageItems.map((entry: any) => {
             const rec = recInfo[entry.recommendation?.toUpperCase()] || recInfo.RETIRE;
             const type = getType(entry);
-            const isExpanded = expandedId === entry.id;
             return (
-              <div key={entry.id} className={`bg-[#1a1527] rounded-xl border overflow-hidden transition-all ${isExpanded ? rec.borderColor : 'border-white/[0.08]'}`}>
-                {/* Row header — clickable */}
-                <button onClick={() => setExpandedId(isExpanded ? null : entry.id)} className="w-full p-4 text-left hover:bg-[#231d35] transition cursor-pointer">
+              <div
+                key={entry.id}
+                onClick={() => setSel(entry)}
+                className="bg-[#1a1527] rounded-xl border border-white/[0.08] overflow-hidden cursor-pointer hover:bg-white/[0.03] transition-colors"
+              >
+                <div className="w-full p-4 text-left">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <div className="flex items-center gap-2 flex-wrap min-w-0">
                       <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${rec.bgColor} ${rec.color}`}>{rec.label}</span>
@@ -147,69 +151,9 @@ export default function DeadCodePage() {
                     <div className="flex items-center gap-4 shrink-0 pl-1">
                       <span className="text-xs text-[#9b95ad]">{daysSinceLastUse(entry.lastUsed)}</span>
                       <span className="text-xs text-[#9b95ad] whitespace-nowrap">{entry.usageCount} {t.execShort}</span>
-                      <span className="text-[#9b95ad]">{isExpanded ? '−' : '+'}</span>
                     </div>
                   </div>
-                </button>
-
-                {/* Expanded details */}
-                {isExpanded && (
-                  <div className="px-4 pb-4 border-t border-white/[0.05]">
-                    <div className="grid md:grid-cols-2 gap-4 mt-4">
-                      {/* Info do objeto */}
-                      <div className="space-y-4">
-                        <div>
-                          <h4 className="text-xs font-bold text-[#9b95ad] uppercase tracking-wider mb-2">{t.detailsTitle}</h4>
-                          <div className="bg-[#0f0b1a] rounded-lg p-4 space-y-2">
-                            <div className="flex justify-between"><span className="text-xs text-[#9b95ad]">{t.fieldName}</span><span className="text-sm font-mono text-[#e2e0ea]">{entry.objectName}</span></div>
-                            <div className="flex justify-between"><span className="text-xs text-[#9b95ad]">{t.fieldType}</span><span className="text-sm text-[#e2e0ea]">{type} — {typeDescriptions[type] || t.customAbapObject}</span></div>
-                            <div className="flex justify-between"><span className="text-xs text-[#9b95ad]">{t.fieldLastUse}</span><span className="text-sm text-[#e2e0ea]">{entry.lastUsed ? new Date(entry.lastUsed).toLocaleDateString(lang === 'pt' ? 'pt-BR' : lang === 'es' ? 'es' : 'en-US') : t.neverExecuted}</span></div>
-                            <div className="flex justify-between"><span className="text-xs text-[#9b95ad]">{t.fieldExecutions}</span><span className="text-sm text-[#e2e0ea]">{t.executionsUnit(entry.usageCount)}</span></div>
-                            <div className="flex justify-between"><span className="text-xs text-[#9b95ad]">{t.fieldInactivity}</span><span className="text-sm text-[#e2e0ea]">{daysSinceLastUse(entry.lastUsed)}</span></div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Recomendação */}
-                      <div className="space-y-4">
-                        <div>
-                          <h4 className="text-xs font-bold text-[#9b95ad] uppercase tracking-wider mb-2">{t.recommendationTitle}</h4>
-                          <div className={`rounded-lg p-4 ${rec.bgColor} border ${rec.borderColor}`}>
-                            <div className="flex items-center gap-2 mb-2">
-                              <span className="text-lg">{rec.icon}</span>
-                              <span className={`text-sm font-semibold ${rec.color}`}>{rec.title}</span>
-                            </div>
-                            <p className="text-xs text-[#9b95ad] leading-relaxed">{rec.description}</p>
-                          </div>
-                        </div>
-
-                        <div>
-                          <h4 className="text-xs font-bold text-[#9b95ad] uppercase tracking-wider mb-2">{t.suggestedActionTitle}</h4>
-                          <div className="bg-[#0f0b1a] rounded-lg p-4">
-                            <p className="text-xs text-[#e2e0ea] leading-relaxed">💡 {rec.action}</p>
-                          </div>
-                        </div>
-
-                        <div>
-                          <h4 className="text-xs font-bold text-[#9b95ad] uppercase tracking-wider mb-2">{t.riskTitle}</h4>
-                          <div className="bg-[#0f0b1a] rounded-lg p-4">
-                            <p className="text-xs text-[#9b95ad] leading-relaxed">⚖️ {rec.risk}</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Action buttons */}
-                    <div className="flex gap-3 mt-4 pt-4 border-t border-white/[0.05]">
-                      <a href={`/diagnostics?clientId=${selectedClient}`} className="px-4 py-2 rounded-lg bg-purple-500/15 border border-purple-500/20 text-purple-400 text-xs font-medium hover:bg-purple-500/20 transition">
-                        {t.analyzeWithAi}
-                      </a>
-                      <button className="px-4 py-2 rounded-lg bg-white/5 border border-white/[0.08] text-[#9b95ad] text-xs font-medium hover:text-white transition cursor-pointer">
-                        {t.copyObjectName}
-                      </button>
-                    </div>
-                  </div>
-                )}
+                </div>
               </div>
             );
           })}
@@ -238,6 +182,46 @@ export default function DeadCodePage() {
           </div>
         </div>
       )}
+
+      {sel && (() => {
+        const rec = recInfo[sel.recommendation?.toUpperCase()] || recInfo.RETIRE;
+        const type = getType(sel);
+        return (
+          <DetailSheet
+            open={!!sel}
+            onClose={() => setSel(null)}
+            icon={rec.icon}
+            title={sel.objectName}
+            subtitle={`${type} — ${typeDescriptions[type] || t.customAbapObject}`}
+            badge={<span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${rec.bgColor} ${rec.color}`}>{rec.label}</span>}
+            fields={[
+              { label: t.fieldName, value: <span className="font-mono">{sel.objectName}</span> },
+              { label: t.fieldType, value: `${type} — ${typeDescriptions[type] || t.customAbapObject}` },
+              { label: t.fieldLastUse, value: sel.lastUsed ? new Date(sel.lastUsed).toLocaleDateString(lang === 'pt' ? 'pt-BR' : lang === 'es' ? 'es' : 'en-US') : t.neverExecuted },
+              { label: t.fieldExecutions, value: t.executionsUnit(sel.usageCount) },
+              { label: t.fieldInactivity, value: daysSinceLastUse(sel.lastUsed) },
+              { label: t.recommendationTitle, value: rec.title },
+              { label: t.suggestedActionTitle, value: rec.action },
+              { label: t.riskTitle, value: rec.risk },
+            ]}
+            guideTitle={t.sheetGuideTitle}
+            guideSteps={t.sheetSteps}
+            guideTx="SE24 / SE37 / SE80 · $TMP"
+            actions={
+              <>
+                <a href={`/diagnostics?clientId=${selectedClient}`} className="px-4 py-2 rounded-lg bg-purple-500/15 border border-purple-500/20 text-purple-400 text-xs font-medium hover:bg-purple-500/20 transition">
+                  {t.analyzeWithAi}
+                </a>
+                <button onClick={() => navigator.clipboard?.writeText(sel.objectName)} className="px-4 py-2 rounded-lg bg-white/5 border border-white/[0.08] text-[#9b95ad] text-xs font-medium hover:text-white transition cursor-pointer">
+                  {t.copyObjectName}
+                </button>
+              </>
+            }
+          >
+            <ExplainData screen="Dead Code Scanner — item" data={{ objectName: sel.objectName, type, lastUsed: sel.lastUsed, usageCount: sel.usageCount, recommendation: sel.recommendation }} />
+          </DetailSheet>
+        );
+      })()}
     </div>
   );
 }

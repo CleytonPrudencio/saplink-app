@@ -42,6 +42,8 @@ export const T: Record<Lang, {
   monthsNoUse: (n: number) => string;
   daysNoUse: (n: number) => string;
   customAbapObject: string;
+  sheetGuideTitle: string;
+  sheetSteps: string[];
   rec: Record<string, RecText>;
   typeDescriptions: Record<string, string>;
 }> = {
@@ -85,6 +87,12 @@ export const T: Record<Lang, {
     monthsNoUse: (n) => `${n} meses sem uso`,
     daysNoUse: (n) => `${n} dias sem uso`,
     customAbapObject: "Objeto ABAP customizado",
+    sheetGuideTitle: "O que fazer",
+    sheetSteps: [
+      "Verifique onde o objeto é chamado (Where-Used List) antes de qualquer decisão.",
+      "Confirme com a equipe funcional se ainda há processo dependente.",
+      "Se confirmado sem uso, mova para $TMP ou aposente após backup.",
+    ],
     rec: {
       RETIRE: {
         label: "APOSENTAR",
@@ -157,6 +165,12 @@ export const T: Record<Lang, {
     monthsNoUse: (n) => `${n} months unused`,
     daysNoUse: (n) => `${n} days unused`,
     customAbapObject: "Custom ABAP object",
+    sheetGuideTitle: "What to do",
+    sheetSteps: [
+      "Check where the object is called (Where-Used List) before any decision.",
+      "Confirm with the functional team whether any dependent process remains.",
+      "If confirmed unused, move it to $TMP or retire it after a backup.",
+    ],
     rec: {
       RETIRE: {
         label: "RETIRE",
@@ -229,6 +243,12 @@ export const T: Record<Lang, {
     monthsNoUse: (n) => `${n} meses sin uso`,
     daysNoUse: (n) => `${n} días sin uso`,
     customAbapObject: "Objeto ABAP personalizado",
+    sheetGuideTitle: "Qué hacer",
+    sheetSteps: [
+      "Verifica dónde se llama el objeto (Where-Used List) antes de cualquier decisión.",
+      "Confirma con el equipo funcional si todavía hay algún proceso dependiente.",
+      "Si se confirma sin uso, muévelo a $TMP o retíralo después de un backup.",
+    ],
     rec: {
       RETIRE: {
         label: "RETIRAR",

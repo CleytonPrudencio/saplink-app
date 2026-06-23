@@ -3,8 +3,62 @@
 import { useEffect, useState } from "react";
 import { getConnectors, saveConnector, syncConnector, getMe } from "@/lib/api";
 import EnvLabel from "@/components/EnvLabel";
-import { useLang } from "@/i18n/I18n";
+import ExplainData from "@/components/ExplainData";
+import DetailSheet from "@/components/DetailSheet";
+import { useLang, type Lang } from "@/i18n/I18n";
 import { T } from "./i18n";
+
+const SHEET_T: Record<Lang, {
+  fClient: string; fProduct: string; fStatus: string; fKey: string; fBaseUrl: string;
+  fLastSync: string; fApis: string; yes: string; no: string;
+  guideTitle: string; revalidate: string; errorSteps: string[]; pendingSteps: string[];
+}> = {
+  pt: {
+    fClient: "Cliente", fProduct: "Produto", fStatus: "Status", fKey: "Chave", fBaseUrl: "Base URL",
+    fLastSync: "Último sync", fApis: "APIs", yes: "Configurada", no: "Sem chave",
+    guideTitle: "O que fazer", revalidate: "Revalidar conexão",
+    errorSteps: [
+      "Conexão com erro — a última sincronização não alcançou as APIs do produto.",
+      "Revalide a API Key do cliente e a Base URL do ambiente.",
+      "Re-sincronize e confirme que as APIs voltaram a responder.",
+    ],
+    pendingSteps: [
+      "Conector ainda não configurado para este cliente.",
+      "Informe a Base URL do ambiente e a API Key do cliente.",
+      "Sincronize para popular o inventário (Catálogo vivo).",
+    ],
+  },
+  en: {
+    fClient: "Client", fProduct: "Product", fStatus: "Status", fKey: "Key", fBaseUrl: "Base URL",
+    fLastSync: "Last sync", fApis: "APIs", yes: "Configured", no: "No key",
+    guideTitle: "What to do", revalidate: "Revalidate connection",
+    errorSteps: [
+      "Connection in error — the last sync did not reach the product's APIs.",
+      "Revalidate the client's API Key and the environment Base URL.",
+      "Re-sync and confirm the APIs respond again.",
+    ],
+    pendingSteps: [
+      "Connector not yet configured for this client.",
+      "Provide the environment Base URL and the client's API Key.",
+      "Sync to populate the inventory (live Catalog).",
+    ],
+  },
+  es: {
+    fClient: "Cliente", fProduct: "Producto", fStatus: "Estado", fKey: "Clave", fBaseUrl: "Base URL",
+    fLastSync: "Último sync", fApis: "APIs", yes: "Configurada", no: "Sin clave",
+    guideTitle: "Qué hacer", revalidate: "Revalidar conexión",
+    errorSteps: [
+      "Conexión con error — el último sync no alcanzó las APIs del producto.",
+      "Revalida la API Key del cliente y la Base URL del ambiente.",
+      "Vuelve a sincronizar y confirma que las APIs responden de nuevo.",
+    ],
+    pendingSteps: [
+      "Conector aún no configurado para este cliente.",
+      "Indica la Base URL del ambiente y la API Key del cliente.",
+      "Sincroniza para poblar el inventario (Catálogo vivo).",
+    ],
+  },
+};
 
 const META: Record<string, { label: string; icon: string }> = {
   ARIBA: { label: "SAP Ariba", icon: "🛒" },
@@ -26,8 +80,10 @@ export default function ConnectorsPage() {
   const [draft, setDraft] = useState<{ baseUrl: string; apiKey: string }>({ baseUrl: "", apiKey: "" });
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<Record<string, string>>({});
+  const [sel, setSel] = useState<any>(null);
   const { lang } = useLang();
   const t = T[lang];
+  const st = SHEET_T[lang];
 
   useEffect(() => { getMe().then((u) => setIsAdmin(u.role === "CONSULTANCY_ADMIN" || u.role === "PLATFORM_ADMIN")).catch(() => {}); }, []);
   async function load() { try { setClients((await getConnectors()).clients); } finally { setLoading(false); } }
@@ -66,7 +122,7 @@ export default function ConnectorsPage() {
             {c.connectors.map((k: any) => {
               const key = `${c.clientId}:${k.product}`; const m = META[k.product];
               return (
-                <div key={k.product} className="bg-[#0f0b1a] border border-white/[0.08] rounded-lg p-3">
+                <div key={k.product} onClick={() => setSel({ ...k, clientId: c.clientId, client: c.client, meta: m })} className="bg-[#0f0b1a] border border-white/[0.08] rounded-lg p-3 cursor-pointer hover:bg-white/[0.03] transition-colors">
                   <div className="flex items-center justify-between">
                     <span className="font-medium">{m.icon} {m.label}</span>
                     <span className={`text-xs ${statusCls[k.status]}`}>● {k.status}</span>
@@ -80,7 +136,7 @@ export default function ConnectorsPage() {
                     </div>
                   )}
                   {isAdmin && (edit === key ? (
-                    <div className="mt-3 space-y-2">
+                    <div className="mt-3 space-y-2" onClick={(e) => e.stopPropagation()}>
                       <input value={draft.baseUrl} onChange={(e) => setDraft({ ...draft, baseUrl: e.target.value })} placeholder={k.baseUrl} className="w-full bg-[#1a1527] border border-white/[0.1] rounded px-2 py-1.5 text-xs font-mono" />
                       <input type="password" value={draft.apiKey} onChange={(e) => setDraft({ ...draft, apiKey: e.target.value })} placeholder={t.apiKeyPlaceholder} className="w-full bg-[#1a1527] border border-white/[0.1] rounded px-2 py-1.5 text-xs" />
                       <div className="flex gap-2">
@@ -89,7 +145,7 @@ export default function ConnectorsPage() {
                       </div>
                     </div>
                   ) : (
-                    <div className="mt-3 flex gap-2">
+                    <div className="mt-3 flex gap-2" onClick={(e) => e.stopPropagation()}>
                       <button onClick={() => { setEdit(key); setDraft({ baseUrl: k.baseUrl, apiKey: "" }); }} className="text-xs px-3 py-1.5 rounded bg-white/[0.06] text-[#e2e0ea] hover:bg-white/[0.1] cursor-pointer">{k.hasKey ? t.edit : t.connect}</button>
                       {k.hasKey && <button onClick={() => doSync(c.clientId, k.product)} disabled={busy === key + ":sync"} className="text-xs px-3 py-1.5 rounded bg-emerald-500/20 text-emerald-300 cursor-pointer disabled:opacity-50">{busy === key + ":sync" ? t.syncing : t.sync}</button>}
                     </div>
@@ -101,6 +157,42 @@ export default function ConnectorsPage() {
           </div>
         </div>
       ))}
+
+      {sel && (
+        <DetailSheet
+          open={!!sel}
+          onClose={() => setSel(null)}
+          icon={sel.meta?.icon || "🔌"}
+          title={sel.meta?.label || sel.product}
+          subtitle={sel.client}
+          badge={<span className={`text-xs ${statusCls[sel.status] || ""}`}>● {sel.status}</span>}
+          fields={[
+            { label: st.fClient, value: sel.client },
+            { label: st.fProduct, value: sel.meta?.label || sel.product },
+            { label: st.fStatus, value: sel.status },
+            { label: st.fKey, value: sel.hasKey ? st.yes : st.no },
+            { label: st.fBaseUrl, value: sel.baseUrl ? <span className="font-mono text-xs break-all">{sel.baseUrl}</span> : undefined },
+            { label: st.fLastSync, value: sel.lastSyncAt ? new Date(sel.lastSyncAt).toLocaleString("pt-BR") : undefined },
+            {
+              label: st.fApis,
+              value: sel.lastResult?.results?.length ? (
+                <div className="space-y-0.5">
+                  {sel.lastResult.results.map((r: any) => (
+                    <div key={r.apiName} className="flex justify-between gap-3 text-xs"><span className="text-[#9b95ad]">{r.apiName}</span><span className={r.ok ? "text-emerald-300" : "text-rose-300"}>{r.ok ? (r.count != null ? t.records(r.count) : t.ok) : t.httpStatus(r.httpStatus || "—")}</span></div>
+                  ))}
+                </div>
+              ) : undefined,
+            },
+          ]}
+          guideTitle={st.guideTitle}
+          guideSteps={sel.status === "ERROR" ? st.errorSteps : (sel.status === "PENDING" || !sel.hasKey) ? st.pendingSteps : undefined}
+          actions={(isAdmin && sel.status === "ERROR") ? (
+            <button onClick={() => { doSync(sel.clientId, sel.product); setSel(null); }} className="text-sm px-3 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 cursor-pointer">🔄 {st.revalidate}</button>
+          ) : undefined}
+        >
+          <ExplainData screen="Conectores SAP Cloud — item" data={{ client: sel.client, product: sel.product, status: sel.status, hasKey: sel.hasKey, baseUrl: sel.baseUrl, lastSyncAt: sel.lastSyncAt, results: sel.lastResult?.results }} />
+        </DetailSheet>
+      )}
     </div>
   );
 }

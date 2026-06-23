@@ -4,9 +4,51 @@ import { useEffect, useState, useCallback, Fragment } from "react";
 import Link from "next/link";
 import { getCloud, diagnoseCloud, fixCloud, recommendRunbooks, type CloudItem } from "@/lib/api";
 import { AiReport } from "@/components/AiReport";
+import ExplainData from "@/components/ExplainData";
+import DetailSheet from "@/components/DetailSheet";
 import { usePaginate, Pagination } from "@/components/Pagination";
-import { useLang } from "@/i18n/I18n";
+import { useLang, type Lang } from "@/i18n/I18n";
 import { T } from "./i18n";
+
+const SHEET_T: Record<Lang, {
+  source: string; artifact: string; direction: string; messageId: string; status: string; error: string;
+  when: string; resolved: string; yes: string; no: string; inbound: string; outbound: string;
+  guideTitle: string; guideSteps: string[]; guideTx: string;
+}> = {
+  pt: {
+    source: "Fonte", artifact: "Artefato", direction: "Direção", messageId: "Message ID", status: "Status", error: "Erro",
+    when: "Quando", resolved: "Resolvido", yes: "Sim", no: "Não", inbound: "Entrada", outbound: "Saída",
+    guideTitle: "Como reprocessar",
+    guideSteps: [
+      "CPI: abra o MPL pelo Message ID e reprocesse o IFlow no Integration Suite.",
+      "AIF: trate o erro e reprocesse a interface na transação /AIF/ERR.",
+      "Use Diagnosticar com IA para a causa raiz e Gerar correção para o artefato pronto.",
+    ],
+    guideTx: "/AIF/ERR · Integration Suite (MPL)",
+  },
+  en: {
+    source: "Source", artifact: "Artifact", direction: "Direction", messageId: "Message ID", status: "Status", error: "Error",
+    when: "When", resolved: "Resolved", yes: "Yes", no: "No", inbound: "Inbound", outbound: "Outbound",
+    guideTitle: "How to reprocess",
+    guideSteps: [
+      "CPI: open the MPL by Message ID and reprocess the IFlow in Integration Suite.",
+      "AIF: handle the error and reprocess the interface in transaction /AIF/ERR.",
+      "Use Diagnose with AI for the root cause and Generate fix for the ready artifact.",
+    ],
+    guideTx: "/AIF/ERR · Integration Suite (MPL)",
+  },
+  es: {
+    source: "Fuente", artifact: "Artefacto", direction: "Dirección", messageId: "Message ID", status: "Status", error: "Error",
+    when: "Cuándo", resolved: "Resuelto", yes: "Sí", no: "No", inbound: "Entrada", outbound: "Salida",
+    guideTitle: "Cómo reprocesar",
+    guideSteps: [
+      "CPI: abre el MPL por Message ID y reprocesa el IFlow en Integration Suite.",
+      "AIF: trata el error y reprocesa la interfaz en la transacción /AIF/ERR.",
+      "Usa Diagnosticar con IA para la causa raíz y Generar corrección para el artefacto listo.",
+    ],
+    guideTx: "/AIF/ERR · Integration Suite (MPL)",
+  },
+};
 
 function statusCls(s?: string | null) {
   const u = (s || "").toUpperCase();
@@ -28,6 +70,8 @@ export default function CloudPage() {
   const [fix, setFix] = useState<Record<string, { loading: boolean; text?: string; err?: boolean }>>({});
   const [rbs, setRbs] = useState<Record<string, any[]>>({});
   const [open, setOpen] = useState<Record<string, boolean>>({});
+  const [sel, setSel] = useState<CloudItem | null>(null);
+  const st = SHEET_T[lang];
 
   const load = useCallback(async () => { setData(await getCloud(filters)); }, [filters]);
   useEffect(() => { setLoading(true); load().catch(() => {}).finally(() => setLoading(false)); }, [load]);
@@ -98,7 +142,7 @@ export default function CloudPage() {
                 const failed = isFail(i.status) && !i.resolved;
                 return (
                 <Fragment key={i.id}>
-                <tr className="border-b border-white/[0.04]">
+                <tr onClick={() => setSel(i)} className="border-b border-white/[0.04] cursor-pointer hover:bg-white/[0.03] transition-colors">
                   <td className="px-3 py-2"><span className="text-xs font-mono px-1.5 py-0.5 rounded bg-white/[0.06]">{i.source}</span></td>
                   <td className="px-3 py-2 text-[#e2e0ea]">{i.artifact}{i.direction && <span className="text-[10px] text-[#9b95ad] ml-1">{i.direction === "INBOUND" ? "↓" : "↑"}</span>}</td>
                   <td className="px-3 py-2 font-mono text-xs text-[#9b95ad]">{i.messageId}</td>
@@ -110,8 +154,8 @@ export default function CloudPage() {
                   <td className="px-3 py-2">
                     {failed ? (
                       <button
-                        onClick={() => (open[i.id] ? setOpen((o) => ({ ...o, [i.id]: false })) : runDiagnose(i))}
-                        className="text-xs px-2 py-1 rounded-lg bg-violet-500/15 text-violet-300 hover:bg-violet-500/25 whitespace-nowrap"
+                        onClick={(e) => { e.stopPropagation(); open[i.id] ? setOpen((o) => ({ ...o, [i.id]: false })) : runDiagnose(i); }}
+                        className="text-xs px-2 py-1 rounded-lg bg-violet-500/15 text-violet-300 hover:bg-violet-500/25 whitespace-nowrap cursor-pointer"
                       >
                         {d?.loading ? t.analyzing : i.aiDiagnosis || d?.text ? (open[i.id] ? t.hide : t.viewSolution) : t.diagnoseWithAi}
                       </button>
@@ -173,6 +217,38 @@ export default function CloudPage() {
           </table>
           <div className="px-3 pb-3"><Pagination {...pag} /></div>
         </div>
+      )}
+
+      {sel && (
+        <DetailSheet
+          open={!!sel}
+          onClose={() => setSel(null)}
+          icon="☁️"
+          title={sel.artifact}
+          subtitle={`${sel.source}${sel.messageId ? ` · ${sel.messageId}` : ""}`}
+          badge={sel.status ? <span className={`text-xs font-mono px-2 py-1 rounded shrink-0 ${statusCls(sel.status)}`}>{sel.status}</span> : undefined}
+          fields={[
+            { label: st.source, value: sel.source },
+            { label: st.artifact, value: sel.artifact },
+            { label: st.direction, value: sel.direction ? (sel.direction === "INBOUND" ? st.inbound : st.outbound) : undefined },
+            { label: st.messageId, value: <span className="font-mono break-all">{sel.messageId}</span> },
+            { label: st.status, value: sel.status },
+            { label: st.error, value: sel.error },
+            { label: st.when, value: sel.occurredAt ? new Date(sel.occurredAt).toLocaleString("pt-BR") : undefined },
+            { label: st.resolved, value: sel.resolved ? st.yes : st.no },
+          ]}
+          guideTitle={isFail(sel.status) && !sel.resolved ? st.guideTitle : undefined}
+          guideSteps={isFail(sel.status) && !sel.resolved ? st.guideSteps : undefined}
+          guideTx={isFail(sel.status) && !sel.resolved ? st.guideTx : undefined}
+          actions={isFail(sel.status) && !sel.resolved ? (
+            <>
+              <button onClick={() => { runDiagnose(sel); }} className="text-xs px-3 py-1.5 rounded-lg bg-violet-500/15 text-violet-300 hover:bg-violet-500/25 cursor-pointer">{t.diagnoseWithAi}</button>
+              <button onClick={() => { runFix(sel); }} className="text-xs px-3 py-1.5 rounded-lg bg-cyan-500/15 text-cyan-200 hover:bg-cyan-500/25 cursor-pointer">{t.generateFix}</button>
+            </>
+          ) : undefined}
+        >
+          <ExplainData screen="CPI & AIF — item" data={{ fonte: sel.source, artefato: sel.artifact, messageId: sel.messageId, status: sel.status, erro: sel.error, quando: sel.occurredAt, resolvido: sel.resolved }} />
+        </DetailSheet>
       )}
     </div>
   );

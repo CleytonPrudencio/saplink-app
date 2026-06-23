@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { getPredict, getBenchmark, type Prediction, type BenchmarkRow } from "@/lib/api";
 import ExplainData from "@/components/ExplainData";
+import DetailSheet from "@/components/DetailSheet";
 import { useLang } from "@/i18n/I18n";
 import { T } from "./i18n";
 
@@ -19,6 +20,8 @@ export default function PredictPage() {
   const [pred, setPred] = useState<{ predictions: Prediction[]; summary: { high: number; medium: number; low: number } } | null>(null);
   const [bench, setBench] = useState<{ rows: BenchmarkRow[]; marketTenants: number } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selP, setSelP] = useState<Prediction | null>(null);
+  const [selB, setSelB] = useState<BenchmarkRow | null>(null);
 
   useEffect(() => {
     Promise.all([getPredict(), getBenchmark()])
@@ -46,7 +49,7 @@ export default function PredictPage() {
           {pred?.predictions.filter((p) => p.level !== "LOW").concat(pred.predictions.filter((p) => p.level === "LOW")).map((p) => {
             const lv = LEVEL[p.level];
             return (
-              <div key={p.integrationId} className={`rounded-xl border p-4 ${lv.cls}`}>
+              <div key={p.integrationId} onClick={() => setSelP(p)} className={`rounded-xl border p-4 cursor-pointer hover:bg-white/[0.03] transition-colors ${lv.cls}`}>
                 <div className="flex items-center justify-between gap-2">
                   <div className="min-w-0">
                     <p className="font-semibold text-[#e2e0ea] truncate">{p.integration}</p>
@@ -89,7 +92,7 @@ export default function PredictPage() {
               </tr></thead>
               <tbody>
                 {bench.rows.map((r) => (
-                  <tr key={r.type} className="border-b border-white/[0.04]">
+                  <tr key={r.type} onClick={() => setSelB(r)} className="border-b border-white/[0.04] cursor-pointer hover:bg-white/[0.03] transition-colors">
                     <td className="px-3 py-2 font-mono text-[#e2e0ea]">{r.type} <span className="text-xs text-[#9b95ad]">({r.count})</span></td>
                     <td className="px-3 py-2 text-right">{r.myUptime}%</td>
                     <td className="px-3 py-2 text-right text-[#9b95ad]">{r.marketUptime}%</td>
@@ -106,6 +109,59 @@ export default function PredictPage() {
         )}
         <p className="text-[11px] text-[#6b6580]">{t.percentileNote}</p>
       </section>
+
+      {selP && (
+        <DetailSheet
+          open={!!selP}
+          onClose={() => setSelP(null)}
+          icon="🔮"
+          title={selP.integration}
+          subtitle={t.sheetPredSub}
+          badge={<span className={`text-sm font-bold ${selP.level === "HIGH" ? "text-rose-300" : selP.level === "MEDIUM" ? "text-amber-300" : "text-emerald-300"}`}>{selP.riskScore} · {LEVEL_LABEL[selP.level]}</span>}
+          fields={[
+            { label: t.fldClient, value: selP.client },
+            { label: t.fldStatus, value: selP.status },
+            { label: t.fldRiskScore, value: selP.riskScore },
+            { label: t.fldLevel, value: LEVEL_LABEL[selP.level] },
+            { label: t.fldForecast, value: selP.forecast },
+            { label: t.fldSignals, value: selP.signals.length ? selP.signals.join(" · ") : undefined },
+            { label: t.fldErrorRate, value: `${selP.errorRate}%` },
+            { label: t.fldUptime, value: `${selP.uptime}%` },
+            { label: t.fldLatency, value: `${selP.latency}ms` },
+            { label: t.fldQueueDepth, value: selP.queueDepth },
+            { label: t.fldSamples, value: selP.samples },
+          ]}
+          guideTitle={t.predGuideTitle}
+          guideSteps={selP.level === "HIGH" ? t.predGuideHigh : selP.level === "MEDIUM" ? t.predGuideMedium : t.predGuideLow}
+        >
+          <ExplainData screen={`${t.screenName} — item`} data={{ previsao: selP }} />
+        </DetailSheet>
+      )}
+
+      {selB && (
+        <DetailSheet
+          open={!!selB}
+          onClose={() => setSelB(null)}
+          icon="📊"
+          title={selB.type}
+          subtitle={t.sheetBenchSub}
+          badge={<span className={`text-sm font-bold ${selB.uptimePercentile >= 50 ? "text-emerald-400" : "text-amber-300"}`}>P{selB.uptimePercentile}</span>}
+          fields={[
+            { label: t.fldCount, value: selB.count },
+            { label: t.fldYourUptime, value: `${selB.myUptime}%` },
+            { label: t.fldMarketUptime, value: `${selB.marketUptime}%` },
+            { label: t.fldPercentile, value: `P${selB.uptimePercentile}` },
+            { label: t.fldYourError, value: `${selB.myErrorRate}%` },
+            { label: t.fldMarketError, value: `${selB.marketErrorRate}%` },
+            { label: t.fldYourLatency, value: `${selB.myLatency}ms` },
+            { label: t.fldMarketLatency, value: `${selB.marketLatency}ms` },
+          ]}
+          guideTitle={t.benchGuideTitle}
+          guideSteps={selB.uptimePercentile < 50 ? t.benchGuideBelow : t.benchGuideAbove}
+        >
+          <ExplainData screen={`${t.screenName} — benchmark`} data={{ benchmark: selB }} />
+        </DetailSheet>
+      )}
     </div>
   );
 }

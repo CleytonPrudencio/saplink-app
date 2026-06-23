@@ -6,6 +6,7 @@ import {
   getAllIntegrations, type ValidityItem,
 } from "@/lib/api";
 import ExplainData from "@/components/ExplainData";
+import DetailSheet from "@/components/DetailSheet";
 import { usePaginate, Pagination } from "@/components/Pagination";
 import { useLang } from "@/i18n/I18n";
 import { T } from "./i18n";
@@ -37,6 +38,8 @@ export default function ValidityPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [rowBusy, setRowBusy] = useState<string>("");
   const [msg, setMsg] = useState("");
+  const [sel, setSel] = useState<any>(null);
+  const fmtDate = (v?: string) => v ? new Date(v).toLocaleDateString(lang === "pt" ? "pt-BR" : lang === "es" ? "es" : "en-US") : "—";
 
   // form de segredo manual
   const [integrations, setIntegrations] = useState<IntegrationLite[]>([]);
@@ -147,7 +150,7 @@ export default function ValidityPage() {
           {pag.pageItems.map((i: any) => {
             const sev = SEV[i.severity];
             return (
-              <div key={`${i.integrationId}-${i.kind}`} className={`rounded-xl border p-4 ${sev.cls}`}>
+              <div key={`${i.integrationId}-${i.kind}`} onClick={() => setSel(i)} className={`rounded-xl border p-4 cursor-pointer hover:bg-white/[0.03] transition-colors ${sev.cls}`}>
                 <div className="flex items-center justify-between gap-4 flex-wrap">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
@@ -165,7 +168,7 @@ export default function ValidityPage() {
                     <p className="text-xs text-[#9b95ad]">{new Date(i.expiresAt).toLocaleDateString(lang === "pt" ? "pt-BR" : lang === "es" ? "es" : "en-US")}</p>
                   </div>
                   {isAdmin && i.kind === "CERT" && (
-                    <button onClick={() => onRefreshOne(i.integrationId)} disabled={rowBusy === i.integrationId}
+                    <button onClick={(e) => { e.stopPropagation(); onRefreshOne(i.integrationId); }} disabled={rowBusy === i.integrationId}
                       className="text-xs px-3 py-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] disabled:opacity-40 cursor-pointer">
                       {rowBusy === i.integrationId ? "..." : t.refreshRow}
                     </button>
@@ -204,6 +207,38 @@ export default function ValidityPage() {
             {savingSecret ? t.saving : t.saveSecret}
           </button>
         </form>
+      )}
+
+      {sel && (
+        <DetailSheet
+          open={!!sel}
+          onClose={() => setSel(null)}
+          icon="📡"
+          title={sel.integration}
+          subtitle={`${sel.client} · ${sel.type}`}
+          badge={<span className={`text-[11px] px-2 py-0.5 rounded-full border ${SEV[sel.severity].cls}`}>{SEV_LABEL[sel.severity]}</span>}
+          fields={[
+            { label: t.fIntegration, value: sel.integration },
+            { label: t.fKind, value: sel.kind === "CERT" ? t.certTls : sel.label },
+            { label: t.fClient, value: sel.client },
+            { label: t.fType, value: sel.type },
+            { label: t.fHost, value: sel.host || "—" },
+            { label: t.fExpiresAt, value: fmtDate(sel.expiresAt) },
+            { label: t.fDaysLeft, value: fmtDays(sel.daysLeft) },
+            { label: t.fSeverity, value: SEV_LABEL[sel.severity] },
+          ]}
+          guideTitle={t.guideTitle}
+          guideSteps={t.steps}
+          guideTx="STRUST (TLS)"
+          actions={isAdmin && sel.kind === "CERT" ? (
+            <button onClick={() => { onRefreshOne(sel.integrationId); }} disabled={rowBusy === sel.integrationId}
+              className="text-xs px-3 py-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] disabled:opacity-40 cursor-pointer">
+              {rowBusy === sel.integrationId ? "..." : t.refreshRow}
+            </button>
+          ) : undefined}
+        >
+          <ExplainData screen={`${t.explainScreen} — item`} data={{ integration: sel.integration, kind: sel.kind, client: sel.client, type: sel.type, host: sel.host, expiresAt: sel.expiresAt, daysLeft: sel.daysLeft, severity: sel.severity }} />
+        </DetailSheet>
       )}
     </div>
   );

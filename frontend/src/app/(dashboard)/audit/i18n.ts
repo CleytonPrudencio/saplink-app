@@ -14,6 +14,16 @@ export const T: Record<Lang, {
   colWho: string;
   colWhat: string;
   colClient: string;
+  // DetailSheet
+  sheetSub: string;
+  fldWhen: string;
+  fldType: string;
+  fldWho: string;
+  fldWhat: string;
+  fldClient: string;
+  fldFlag: string;
+  guideTitle: string;
+  guideSod: string[];
 }> = {
   pt: {
     title: "Auditoria & Compliance",
@@ -29,6 +39,20 @@ export const T: Record<Lang, {
     colWho: "Quem",
     colWhat: "O quê",
     colClient: "Cliente",
+    sheetSub: "Registro de auditoria",
+    fldWhen: "Quando",
+    fldType: "Tipo",
+    fldWho: "Quem",
+    fldWhat: "O quê",
+    fldClient: "Cliente",
+    fldFlag: "Alerta",
+    guideTitle: "O que fazer",
+    guideSod: [
+      "Violação de SoD: revisar se quem pediu a mudança é diferente de quem aprovou/executou.",
+      "Confirmar a justificativa de negócio e a aprovação formal correspondente.",
+      "Gerar o pacote de evidências (botão IA acima) e anexar ao chamado/auditoria.",
+      "Se não houver segregação adequada, escalar ao responsável de compliance.",
+    ],
   },
   en: {
     title: "Audit & Compliance",
@@ -44,6 +68,20 @@ export const T: Record<Lang, {
     colWho: "Who",
     colWhat: "What",
     colClient: "Client",
+    sheetSub: "Audit record",
+    fldWhen: "When",
+    fldType: "Type",
+    fldWho: "Who",
+    fldWhat: "What",
+    fldClient: "Client",
+    fldFlag: "Alert",
+    guideTitle: "What to do",
+    guideSod: [
+      "SoD violation: review whether the requester differs from who approved/executed the change.",
+      "Confirm the business justification and the corresponding formal approval.",
+      "Generate the evidence package (AI button above) and attach it to the ticket/audit.",
+      "If proper segregation is missing, escalate to the compliance owner.",
+    ],
   },
   es: {
     title: "Auditoría & Compliance",
@@ -59,5 +97,19 @@ export const T: Record<Lang, {
     colWho: "Quién",
     colWhat: "Qué",
     colClient: "Cliente",
+    sheetSub: "Registro de auditoría",
+    fldWhen: "Cuándo",
+    fldType: "Tipo",
+    fldWho: "Quién",
+    fldWhat: "Qué",
+    fldClient: "Cliente",
+    fldFlag: "Alerta",
+    guideTitle: "Qué hacer",
+    guideSod: [
+      "Violación de SoD: revisar si quien solicitó el cambio es distinto de quien aprobó/ejecutó.",
+      "Confirmar la justificación de negocio y la aprobación formal correspondiente.",
+      "Generar el paquete de evidencias (botón IA arriba) y adjuntarlo al ticket/auditoría.",
+      "Si no hay segregación adecuada, escalar al responsable de compliance.",
+    ],
   },
 };

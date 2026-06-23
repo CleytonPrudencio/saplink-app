@@ -13,8 +13,33 @@ import {
 } from "@/lib/api";
 import { AiReport } from "@/components/AiReport";
 import Loading from "@/components/Loading";
-import { useLang } from "@/i18n/I18n";
+import DetailSheet from "@/components/DetailSheet";
+import ExplainData from "@/components/ExplainData";
+import { useLang, type Lang } from "@/i18n/I18n";
 import { T } from "./i18n";
+
+const SHEET_T: Record<Lang, {
+  query: string; date: string; guide: string; gReopen: string; gReview: string; reopen: string;
+}> = {
+  pt: {
+    query: "Consulta", date: "Gerado em", guide: "O que fazer",
+    gReopen: "Reabra a consulta para rodar um novo diagnóstico com os dados atuais.",
+    gReview: "Revise a resposta e aplique as recomendações no ambiente SAP.",
+    reopen: "Reabrir consulta",
+  },
+  en: {
+    query: "Query", date: "Generated at", guide: "What to do",
+    gReopen: "Reopen the query to run a fresh diagnosis with current data.",
+    gReview: "Review the response and apply the recommendations in the SAP environment.",
+    reopen: "Reopen query",
+  },
+  es: {
+    query: "Consulta", date: "Generado el", guide: "Qué hacer",
+    gReopen: "Reabre la consulta para ejecutar un nuevo diagnóstico con los datos actuales.",
+    gReview: "Revisa la respuesta y aplica las recomendaciones en el entorno SAP.",
+    reopen: "Reabrir consulta",
+  },
+};
 
 interface FixChange { field: string; label: string; from: string; to: string }
 interface SapNoteHint {
@@ -77,7 +102,8 @@ function DiagnosticsContent() {
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState("");
-  const [expandedEntry, setExpandedEntry] = useState<string | null>(null);
+  const [sel, setSel] = useState<DiagnosticEntry | null>(null);
+  const st = SHEET_T[lang];
 
   // Auto-diagnóstico de integração em erro (vindo do card "Diagnosticar com IA")
   const [intDiag, setIntDiag] = useState<IntegrationDiagnosis | null>(null);
@@ -459,37 +485,46 @@ function DiagnosticsContent() {
         <div>
           <h2 className="text-lg font-semibold mb-4">{t.historyTitle}</h2>
           <div className="space-y-3">
-            {history.map((entry) => {
-              const isExpanded = expandedEntry === entry.id;
-              return (
+            {history.map((entry) => (
               <div
                 key={entry.id}
-                className="bg-[#1a1527] rounded-xl border border-white/[0.08] overflow-hidden"
+                onClick={() => setSel(entry)}
+                className="bg-[#1a1527] rounded-xl border border-white/[0.08] p-4 cursor-pointer hover:bg-white/[0.03] transition-colors"
               >
-                <button
-                  onClick={() => setExpandedEntry(isExpanded ? null : entry.id)}
-                  className="w-full p-4 text-left hover:bg-[#231d35] transition-colors cursor-pointer"
-                >
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium text-[#e2e0ea]">{entry.query}</p>
-                    <span className="text-[#9b95ad] text-lg ml-3 flex-shrink-0">{isExpanded ? '−' : '+'}</span>
-                  </div>
-                  <div className="flex items-center gap-3 mt-2">
-                    <span className="text-xs text-[#9b95ad]">{new Date(entry.createdAt).toLocaleString("pt-BR")}</span>
-                    {!isExpanded && <span className="text-xs text-purple-400">{t.clickForDetails}</span>}
-                  </div>
-                </button>
-                {isExpanded && (
-                  <div className="px-4 pb-4 border-t border-white/[0.05]">
-                    <div className="mt-4">
-                      <AiReport text={entry.response} title={t.reportTitle} subtitle={entry.query} meta={[{ label: t.generatedAt, value: new Date(entry.createdAt).toLocaleString("pt-BR") }]} />
-                    </div>
-                  </div>
-                )}
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium text-[#e2e0ea]">{entry.query}</p>
+                  <span className="text-[#9b95ad] text-lg ml-3 flex-shrink-0">›</span>
+                </div>
+                <div className="flex items-center gap-3 mt-2">
+                  <span className="text-xs text-[#9b95ad]">{new Date(entry.createdAt).toLocaleString("pt-BR")}</span>
+                  <span className="text-xs text-purple-400">{t.clickForDetails}</span>
+                </div>
               </div>
-            );})}
+            ))}
           </div>
         </div>
+      )}
+
+      {sel && (
+        <DetailSheet
+          open={!!sel}
+          onClose={() => setSel(null)}
+          icon="🤖"
+          title={sel.query}
+          subtitle={new Date(sel.createdAt).toLocaleString("pt-BR")}
+          fields={[
+            { label: st.query, value: sel.query },
+            { label: st.date, value: new Date(sel.createdAt).toLocaleString("pt-BR") },
+          ]}
+          guideTitle={st.guide}
+          guideSteps={[st.gReopen, st.gReview]}
+          actions={
+            <button onClick={() => { setQuery(sel.query); setSel(null); }} className="text-xs px-3 py-1.5 rounded-lg bg-purple-500/15 text-purple-200 hover:bg-purple-500/25 cursor-pointer">{st.reopen}</button>
+          }
+        >
+          <AiReport text={sel.response} title={t.reportTitle} subtitle={sel.query} meta={[{ label: t.generatedAt, value: new Date(sel.createdAt).toLocaleString("pt-BR") }]} />
+          <ExplainData screen="Diagnóstico IA — item do histórico" data={{ query: sel.query, response: sel.response, createdAt: sel.createdAt }} />
+        </DetailSheet>
       )}
     </div>
   );

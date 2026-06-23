@@ -2,14 +2,43 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { getReconProcesses, saveReconProcess, deleteReconProcess, reconcile, getMe, getClients } from "@/lib/api";
-import { useLang } from "@/i18n/I18n";
+import ExplainData from "@/components/ExplainData";
+import DetailSheet from "@/components/DetailSheet";
+import { useLang, type Lang } from "@/i18n/I18n";
 import { T } from "./i18n";
+
+const SHEET_T: Record<Lang, {
+  stage: string; source: string; artifact: string; ok: string; failed: string; total: string;
+  advanced: string; lostToNext: string; guideTitle: string;
+  guideStepsGap: (lost: number, to: string) => string[]; guideStepsOk: string[];
+}> = {
+  pt: {
+    stage: "Estágio", source: "Origem", artifact: "Artefato/IFlow", ok: "OK", failed: "Falhas", total: "Total",
+    advanced: "Avançou p/ o próximo", lostToNext: "Perdido até o próximo", guideTitle: "O que fazer",
+    guideStepsGap: (lost, to) => [`Investigue este trecho: ${lost} documento(s) não avançaram para "${to}".`, "Compare os artefatos de entrada e saída para achar onde o volume some.", "Verifique filtros, erros de mapeamento ou rejeições no estágio seguinte."],
+    guideStepsOk: ["Este estágio não apresenta vazamento relevante.", "Use-o como referência de fluxo saudável ao comparar com os demais."],
+  },
+  en: {
+    stage: "Stage", source: "Source", artifact: "Artifact/IFlow", ok: "OK", failed: "Failed", total: "Total",
+    advanced: "Advanced to next", lostToNext: "Lost to next", guideTitle: "What to do",
+    guideStepsGap: (lost, to) => [`Investigate this segment: ${lost} document(s) did not advance to "${to}".`, "Compare input and output artifacts to find where volume disappears.", "Check filters, mapping errors or rejections in the next stage."],
+    guideStepsOk: ["This stage shows no relevant leak.", "Use it as a healthy-flow reference when comparing the others."],
+  },
+  es: {
+    stage: "Etapa", source: "Origen", artifact: "Artefacto/IFlow", ok: "OK", failed: "Fallas", total: "Total",
+    advanced: "Avanzó a la siguiente", lostToNext: "Perdido hasta la siguiente", guideTitle: "Qué hacer",
+    guideStepsGap: (lost, to) => [`Investigue este tramo: ${lost} documento(s) no avanzaron a "${to}".`, "Compare los artefactos de entrada y salida para hallar dónde se pierde el volumen.", "Revise filtros, errores de mapeo o rechazos en la etapa siguiente."],
+    guideStepsOk: ["Esta etapa no presenta fuga relevante.", "Úsela como referencia de flujo sano al comparar con las demás."],
+  },
+};
 
 export default function ReconPage() {
   const { lang } = useLang();
   const t = T[lang];
   const [procs, setProcs] = useState<any[]>([]);
   const [sel, setSel] = useState<string>("");
+  const [stageSel, setStageSel] = useState<any>(null);
+  const st = SHEET_T[lang];
   const [result, setResult] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [clients, setClients] = useState<{ id: string; name: string }[]>([]);
@@ -89,7 +118,7 @@ export default function ReconPage() {
           <div className="bg-[#1a1527] border border-white/[0.08] rounded-xl p-5 space-y-3">
             <h2 className="text-lg font-semibold">{result.process} <span className="text-xs text-[#9b95ad]">· {t.lastHours(result.windowHours)}</span></h2>
             {result.stages.map((s: any, i: number) => (
-              <div key={i}>
+              <div key={i} onClick={() => setStageSel({ ...s, _link: result.links[i] || null, _idx: i })} className="cursor-pointer hover:bg-white/[0.03] transition-colors rounded-lg -mx-2 px-2 py-1">
                 <div className="flex justify-between text-sm mb-1">
                   <span className="text-[#e2e0ea]">{s.label || s.artifact} <span className="text-xs text-[#9b95ad]">({s.source} · {s.artifact})</span></span>
                   <span className="text-[#9b95ad]"><b className="text-emerald-300">{s.ok}</b> {t.okSuffix}{s.failed ? <> · <b className="text-rose-300">{s.failed}</b> {t.failSuffix}</> : null}</span>
@@ -107,6 +136,30 @@ export default function ReconPage() {
             </div>
           )}
         </>
+      )}
+
+      {stageSel && (
+        <DetailSheet
+          open={!!stageSel}
+          onClose={() => setStageSel(null)}
+          icon="🔁"
+          title={stageSel.label || stageSel.artifact}
+          subtitle={`${stageSel.source} · ${stageSel.artifact}`}
+          fields={[
+            { label: st.stage, value: stageSel.label || stageSel.artifact },
+            { label: st.source, value: <span className="font-mono">{stageSel.source}</span> },
+            { label: st.artifact, value: <span className="font-mono break-all">{stageSel.artifact}</span> },
+            { label: st.ok, value: <b className="text-emerald-300">{stageSel.ok}</b> },
+            { label: st.failed, value: stageSel.failed ? <b className="text-rose-300">{stageSel.failed}</b> : 0 },
+            { label: st.total, value: stageSel.total },
+            { label: st.advanced, value: stageSel._link ? `${stageSel._link.rate}%` : undefined },
+            { label: st.lostToNext, value: stageSel._link?.lost ? <b className="text-rose-300">{stageSel._link.lost}</b> : undefined },
+          ]}
+          guideTitle={st.guideTitle}
+          guideSteps={stageSel._link?.lost ? st.guideStepsGap(stageSel._link.lost, result.stages[stageSel._idx + 1]?.label || result.stages[stageSel._idx + 1]?.artifact || "—") : st.guideStepsOk}
+        >
+          <ExplainData screen="Reconciliação E2E — item" data={{ process: result.process, stage: stageSel.label || stageSel.artifact, source: stageSel.source, artifact: stageSel.artifact, ok: stageSel.ok, failed: stageSel.failed, total: stageSel.total, link: stageSel._link }} />
+        </DetailSheet>
       )}
     </div>
   );

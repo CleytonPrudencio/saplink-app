@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import { getS4Events } from "@/lib/api";
 import ExplainData from "@/components/ExplainData";
+import DetailSheet from "@/components/DetailSheet";
 import { usePaginate, Pagination } from "@/components/Pagination";
-import { useLang } from "@/i18n/I18n";
+import { useLang, type Lang } from "@/i18n/I18n";
 import { T } from "./i18n";
 
 const ST: Record<string, string> = {
@@ -12,11 +13,83 @@ const ST: Record<string, string> = {
   RETRY: "bg-amber-500/15 text-amber-300", PENDING: "bg-white/[0.06] text-[#9b95ad]",
 };
 
+const SHEET_T: Record<Lang, {
+  fTopic: string; fStatus: string; fSubscriber: string; fLag: string; fClient: string;
+  fWhen: string; fEventId: string; fPayload: string; fAttempts: string; fError: string;
+  guideTitle: string; reprocess: string; deadLetterSteps: string[]; retrySteps: string[]; lagSteps: string[];
+}> = {
+  pt: {
+    fTopic: "Tópico", fStatus: "Status", fSubscriber: "Assinante", fLag: "Lag", fClient: "Cliente",
+    fWhen: "Quando", fEventId: "ID do evento", fPayload: "Payload", fAttempts: "Tentativas", fError: "Erro",
+    guideTitle: "O que fazer",
+    reprocess: "Reenfileirar evento",
+    deadLetterSteps: [
+      "Inspecione o payload e o erro para entender por que o assinante rejeitou o evento.",
+      "Corrija o assinante ou o contrato do evento; reenfileire a partir da dead-letter queue.",
+      "Confirme a entrega no monitor de subscriptions do Event Mesh.",
+    ],
+    retrySteps: [
+      "Verifique se o assinante está disponível (health/endpoint).",
+      "Acompanhe as tentativas — se estourar o limite, vai para dead-letter.",
+      "Investigue o lag e a causa raiz da falha temporária.",
+    ],
+    lagSteps: [
+      "Lag alto indica assinante lento ou fila acumulada.",
+      "Verifique a capacidade do consumidor e escale se necessário.",
+      "Monitore se o lag se estabiliza após a normalização do consumidor.",
+    ],
+  },
+  en: {
+    fTopic: "Topic", fStatus: "Status", fSubscriber: "Subscriber", fLag: "Lag", fClient: "Client",
+    fWhen: "When", fEventId: "Event ID", fPayload: "Payload", fAttempts: "Attempts", fError: "Error",
+    guideTitle: "What to do",
+    reprocess: "Re-enqueue event",
+    deadLetterSteps: [
+      "Inspect the payload and error to understand why the subscriber rejected the event.",
+      "Fix the subscriber or the event contract; re-enqueue from the dead-letter queue.",
+      "Confirm delivery in the Event Mesh subscriptions monitor.",
+    ],
+    retrySteps: [
+      "Check whether the subscriber is available (health/endpoint).",
+      "Track the attempts — if it exceeds the limit it goes to dead-letter.",
+      "Investigate the lag and root cause of the temporary failure.",
+    ],
+    lagSteps: [
+      "High lag indicates a slow subscriber or a backed-up queue.",
+      "Check consumer capacity and scale out if needed.",
+      "Monitor whether the lag stabilizes after the consumer recovers.",
+    ],
+  },
+  es: {
+    fTopic: "Tópico", fStatus: "Status", fSubscriber: "Suscriptor", fLag: "Lag", fClient: "Cliente",
+    fWhen: "Cuándo", fEventId: "ID del evento", fPayload: "Payload", fAttempts: "Intentos", fError: "Error",
+    guideTitle: "Qué hacer",
+    reprocess: "Reencolar evento",
+    deadLetterSteps: [
+      "Inspecciona el payload y el error para entender por qué el suscriptor rechazó el evento.",
+      "Corrige el suscriptor o el contrato del evento; reencola desde la dead-letter queue.",
+      "Confirma la entrega en el monitor de subscriptions del Event Mesh.",
+    ],
+    retrySteps: [
+      "Verifica si el suscriptor está disponible (health/endpoint).",
+      "Sigue los intentos — si supera el límite pasa a dead-letter.",
+      "Investiga el lag y la causa raíz del fallo temporal.",
+    ],
+    lagSteps: [
+      "Un lag alto indica un suscriptor lento o una cola acumulada.",
+      "Verifica la capacidad del consumidor y escala si es necesario.",
+      "Monitorea si el lag se estabiliza tras la recuperación del consumidor.",
+    ],
+  },
+};
+
 export default function EventsPage() {
   const { lang } = useLang();
   const t = T[lang];
+  const st = SHEET_T[lang];
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [sel, setSel] = useState<any>(null);
   useEffect(() => { getS4Events().then(setData).catch(() => {}).finally(() => setLoading(false)); }, []);
   const pag = usePaginate<any>(data?.items || [], 20);
   if (loading) return <div className="text-[#9b95ad]">{t.loading}</div>;
@@ -48,7 +121,7 @@ export default function EventsPage() {
           </tr></thead>
           <tbody>
             {pag.pageItems.map((e: any, i: number) => (
-              <tr key={i} className="border-b border-white/[0.04]">
+              <tr key={i} onClick={() => setSel(e)} className="border-b border-white/[0.04] cursor-pointer hover:bg-white/[0.03] transition-colors">
                 <td className="px-3 py-2 font-mono text-xs text-[#e2e0ea]">{e.topic}</td>
                 <td className="px-3 py-2"><span className={`text-xs px-1.5 py-0.5 rounded ${ST[e.status] || ""}`}>{e.status}</span></td>
                 <td className="px-3 py-2 text-[#9b95ad]">{e.subscriber || "—"}</td>
@@ -62,6 +135,37 @@ export default function EventsPage() {
         </table>
         <div className="px-3 pb-3"><Pagination {...pag} /></div>
       </div>
+
+      {sel && (
+        <DetailSheet
+          open={!!sel}
+          onClose={() => setSel(null)}
+          icon="📨"
+          title={sel.topic}
+          subtitle={sel.subscriber || undefined}
+          badge={<span className={`text-xs px-1.5 py-0.5 rounded ${ST[sel.status] || ""}`}>{sel.status}</span>}
+          fields={[
+            { label: st.fTopic, value: <span className="font-mono text-xs">{sel.topic}</span> },
+            { label: st.fStatus, value: sel.status },
+            { label: st.fSubscriber, value: sel.subscriber },
+            { label: st.fClient, value: sel.client },
+            { label: st.fLag, value: sel.lagMs != null ? `${sel.lagMs}ms` : undefined },
+            { label: st.fAttempts, value: sel.attempts != null ? String(sel.attempts) : undefined },
+            { label: st.fEventId, value: sel.eventId ? <span className="font-mono text-xs">{sel.eventId}</span> : (sel.id ? <span className="font-mono text-xs">{sel.id}</span> : undefined) },
+            { label: st.fWhen, value: sel.occurredAt ? new Date(sel.occurredAt).toLocaleString("pt-BR") : undefined },
+            { label: st.fError, value: sel.error ? <span className="text-rose-300">{sel.error}</span> : undefined },
+            { label: st.fPayload, value: sel.payload ? <span className="font-mono text-xs break-all">{typeof sel.payload === "string" ? sel.payload : JSON.stringify(sel.payload)}</span> : undefined },
+          ]}
+          guideTitle={st.guideTitle}
+          guideSteps={sel.status === "DEAD_LETTER" ? st.deadLetterSteps : sel.status === "RETRY" ? st.retrySteps : (sel.lagMs > 1000 ? st.lagSteps : undefined)}
+          guideTx={sel.status === "DEAD_LETTER" || sel.status === "RETRY" ? "Event Mesh › Subscriptions" : undefined}
+          actions={(sel.status === "DEAD_LETTER" || sel.status === "RETRY") ? (
+            <button className="text-sm px-3 py-1.5 rounded-lg bg-purple-500/20 text-purple-200 hover:bg-purple-500/30 cursor-pointer">🔁 {st.reprocess}</button>
+          ) : undefined}
+        >
+          <ExplainData screen={`${t.explainScreen} — item`} data={{ topic: sel.topic, status: sel.status, subscriber: sel.subscriber, client: sel.client, lagMs: sel.lagMs, attempts: sel.attempts, error: sel.error, occurredAt: sel.occurredAt }} />
+        </DetailSheet>
+      )}
     </div>
   );
 }

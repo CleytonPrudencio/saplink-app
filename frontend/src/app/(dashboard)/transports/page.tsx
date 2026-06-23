@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { getTransports, getClients } from "@/lib/api";
 import ExplainData from "@/components/ExplainData";
+import DetailSheet from "@/components/DetailSheet";
 import { useLang } from "@/i18n/I18n";
 import { T } from "./i18n";
 
@@ -14,8 +15,10 @@ export default function TransportsPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [clientId, setClientId] = useState("");
   const [loading, setLoading] = useState(true);
+  const [sel, setSel] = useState<any>(null);
   const { lang } = useLang();
   const t = T[lang];
+  const fmtDt = (v?: string) => v ? new Date(v).toLocaleString(lang === "pt" ? "pt-BR" : lang === "es" ? "es" : "en-US") : "—";
 
   const load = useCallback(async () => { setData(await getTransports(clientId || undefined)); }, [clientId]);
   useEffect(() => { getClients().then(setClients).catch(() => {}); }, []);
@@ -89,14 +92,14 @@ export default function TransportsPage() {
                     <th className="px-3 py-2 font-medium">{t.colOwner}</th><th className="px-3 py-2 font-medium">{t.colImported}</th>
                   </tr></thead>
                   <tbody>
-                    {data.transports.map((t) => (
-                      <tr key={t.id} className="border-b border-white/[0.04]">
-                        <td className="px-3 py-2 font-mono text-amber-300">{t.trNumber}</td>
-                        <td className="px-3 py-2 text-[#c9c5d6]">{t.description}</td>
-                        <td className="px-3 py-2 text-[#9b95ad]">{t.client}</td>
-                        <td className="px-3 py-2 text-[#9b95ad]">{t.target || "—"}</td>
-                        <td className="px-3 py-2 text-[#9b95ad]">{t.owner || "—"}</td>
-                        <td className="px-3 py-2 text-[#9b95ad]">{t.importedAt ? new Date(t.importedAt).toLocaleString("pt-BR") : "—"}</td>
+                    {data.transports.map((tr) => (
+                      <tr key={tr.id} onClick={() => setSel(tr)} className="border-b border-white/[0.04] cursor-pointer hover:bg-white/[0.03] transition-colors">
+                        <td className="px-3 py-2 font-mono text-amber-300">{tr.trNumber}</td>
+                        <td className="px-3 py-2 text-[#c9c5d6]">{tr.description}</td>
+                        <td className="px-3 py-2 text-[#9b95ad]">{tr.client}</td>
+                        <td className="px-3 py-2 text-[#9b95ad]">{tr.target || "—"}</td>
+                        <td className="px-3 py-2 text-[#9b95ad]">{tr.owner || "—"}</td>
+                        <td className="px-3 py-2 text-[#9b95ad]">{tr.importedAt ? new Date(tr.importedAt).toLocaleString("pt-BR") : "—"}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -105,6 +108,29 @@ export default function TransportsPage() {
             )}
           </section>
         </>
+      )}
+
+      {sel && (
+        <DetailSheet
+          open={!!sel}
+          onClose={() => setSel(null)}
+          icon="🚚"
+          title={sel.trNumber}
+          subtitle={sel.description}
+          fields={[
+            { label: t.fTr, value: <span className="font-mono text-amber-300">{sel.trNumber}</span> },
+            { label: t.fDescription, value: sel.description },
+            { label: t.fClient, value: sel.client },
+            { label: t.fTarget, value: sel.target || "—" },
+            { label: t.fOwner, value: sel.owner || "—" },
+            { label: t.fImported, value: fmtDt(sel.importedAt) },
+          ]}
+          guideTitle={t.guideTitle}
+          guideSteps={t.steps}
+          guideTx="STMS / SE10"
+        >
+          <ExplainData screen="Radar de transports (STMS) — item" data={{ trNumber: sel.trNumber, description: sel.description, client: sel.client, target: sel.target, owner: sel.owner, importedAt: sel.importedAt }} />
+        </DetailSheet>
       )}
     </div>
   );

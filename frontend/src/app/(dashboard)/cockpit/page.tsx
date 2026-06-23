@@ -7,11 +7,59 @@ import {
   type CockpitData, type SapItemView, type RemediationAction,
 } from "@/lib/api";
 import ExplainData from "@/components/ExplainData";
+import DetailSheet from "@/components/DetailSheet";
 import { usePaginate, Pagination } from "@/components/Pagination";
-import { useLang } from "@/i18n/I18n";
+import { useLang, type Lang } from "@/i18n/I18n";
 import { T } from "./i18n";
 
 interface Client { id: string; name: string }
+
+const SHEET_T: Record<Lang, {
+  kind: string; direction: string; ref: string; client: string; messageType: string; partner: string;
+  status: string; statusText: string; depth: string; integration: string; remediable: string;
+  yes: string; no: string; inbound: string; outbound: string;
+  guideTitle: string; guideSteps: string[]; guideTx: string;
+}> = {
+  pt: {
+    kind: "Tipo", direction: "Direção", ref: "Referência", client: "Cliente", messageType: "Message type", partner: "Parceiro",
+    status: "Status", statusText: "Detalhe do status", depth: "Profundidade", integration: "Integração", remediable: "Remediável",
+    yes: "Sim", no: "Não", inbound: "Entrada", outbound: "Saída",
+    guideTitle: "Como destravar",
+    guideSteps: [
+      "IDoc em erro (51): corrija o dado e reprocesse em BD87.",
+      "Fila qRFC travada: destrave/reexecute em SMQ1 (saída) ou SMQ2 (entrada).",
+      "Fila tRFC parada: reexecute a LUW em SM58.",
+      "Sendo remediável, use ✨ Remediar (aprovação do admin) em vez de fazer manual.",
+    ],
+    guideTx: "BD87 · SMQ1/SMQ2 · SM58",
+  },
+  en: {
+    kind: "Kind", direction: "Direction", ref: "Reference", client: "Client", messageType: "Message type", partner: "Partner",
+    status: "Status", statusText: "Status detail", depth: "Depth", integration: "Integration", remediable: "Remediable",
+    yes: "Yes", no: "No", inbound: "Inbound", outbound: "Outbound",
+    guideTitle: "How to unblock",
+    guideSteps: [
+      "IDoc in error (51): fix the data and reprocess in BD87.",
+      "Stuck qRFC queue: unlock/re-run in SMQ1 (outbound) or SMQ2 (inbound).",
+      "Stopped tRFC queue: re-run the LUW in SM58.",
+      "If remediable, use ✨ Remediate (admin approval) instead of doing it manually.",
+    ],
+    guideTx: "BD87 · SMQ1/SMQ2 · SM58",
+  },
+  es: {
+    kind: "Tipo", direction: "Dirección", ref: "Referencia", client: "Cliente", messageType: "Message type", partner: "Socio",
+    status: "Status", statusText: "Detalle del status", depth: "Profundidad", integration: "Integración", remediable: "Remediable",
+    yes: "Sí", no: "No", inbound: "Entrada", outbound: "Salida",
+    guideTitle: "Cómo destrabar",
+    guideSteps: [
+      "IDoc en error (51): corrige el dato y reprocesa en BD87.",
+      "Cola qRFC trabada: destraba/reejecuta en SMQ1 (salida) o SMQ2 (entrada).",
+      "Cola tRFC detenida: reejecuta la LUW en SM58.",
+      "Si es remediable, usa ✨ Remediar (aprobación del admin) en vez de hacerlo manual.",
+    ],
+    guideTx: "BD87 · SMQ1/SMQ2 · SM58",
+  },
+};
 
 const ACTION_STATUS_CLS: Record<string, string> = {
   PENDING_APPROVAL: "bg-amber-500/15 text-amber-300",
@@ -50,6 +98,8 @@ export default function CockpitPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [actions, setActions] = useState<RemediationAction[]>([]);
   const [busy, setBusy] = useState<string>("");
+  const [sel, setSel] = useState<SapItemView | null>(null);
+  const st = SHEET_T[lang];
 
   const load = useCallback(async () => {
     const d = await getCockpit(filters);
@@ -183,7 +233,7 @@ export default function CockpitPage() {
             </thead>
             <tbody>
               {pag.pageItems.map((i: SapItemView) => (
-                <tr key={i.id} className="border-b border-white/[0.04] hover:bg-white/[0.02]">
+                <tr key={i.id} onClick={() => setSel(i)} className="border-b border-white/[0.04] cursor-pointer hover:bg-white/[0.03] transition-colors">
                   <td className="px-3 py-2">
                     <span className="text-xs font-mono px-1.5 py-0.5 rounded bg-white/[0.06] text-[#c9c5d6]">{KIND_LABEL[i.kind] || i.kind}</span>
                     {i.direction && <span className="text-[10px] text-[#9b95ad] ml-1">{i.direction === "INBOUND" ? "↓" : "↑"}</span>}
@@ -205,7 +255,7 @@ export default function CockpitPage() {
                     ) : openItemIds.has(i.id) ? (
                       <span className="text-[11px] text-amber-300">{t.inProgress}</span>
                     ) : isAdmin ? (
-                      <button onClick={() => onRemediate(i)} disabled={busy === i.id}
+                      <button onClick={(e) => { e.stopPropagation(); onRemediate(i); }} disabled={busy === i.id}
                         className="text-xs px-2.5 py-1 rounded-lg bg-purple-500/20 text-purple-200 hover:bg-purple-500/30 disabled:opacity-40 cursor-pointer">
                         {busy === i.id ? "..." : t.remediate}
                       </button>
@@ -273,6 +323,41 @@ export default function CockpitPage() {
             })}
           </div>
         </div>
+      )}
+
+      {sel && (
+        <DetailSheet
+          open={!!sel}
+          onClose={() => setSel(null)}
+          icon="🛰️"
+          title={`${KIND_LABEL[sel.kind] || sel.kind} · ${sel.ref}`}
+          subtitle={`${sel.client || ""}${sel.integration ? ` · ${sel.integration}` : ""}`}
+          badge={sel.statusCode ? <span className={`text-xs font-mono px-2 py-1 rounded shrink-0 ${statusCls(sel.statusCode)}`}>{sel.statusCode}</span> : undefined}
+          fields={[
+            { label: st.kind, value: KIND_LABEL[sel.kind] || sel.kind },
+            { label: st.direction, value: sel.direction ? (sel.direction === "INBOUND" ? st.inbound : st.outbound) : undefined },
+            { label: st.ref, value: <span className="font-mono">{sel.ref}</span> },
+            { label: st.client, value: sel.client },
+            { label: st.messageType, value: sel.messageType },
+            { label: st.partner, value: sel.partner },
+            { label: st.status, value: sel.statusCode },
+            { label: st.statusText, value: sel.statusText },
+            { label: st.depth, value: sel.kind === "IDOC" ? "—" : sel.depth },
+            { label: st.integration, value: sel.integration },
+            { label: st.remediable, value: sel.remediable ? st.yes : st.no },
+          ]}
+          guideTitle={st.guideTitle}
+          guideSteps={st.guideSteps}
+          guideTx={st.guideTx}
+          actions={sel.remediable && isAdmin && !openItemIds.has(sel.id) ? (
+            <button onClick={() => { onRemediate(sel); }} disabled={busy === sel.id}
+              className="text-xs px-3 py-1.5 rounded-lg bg-purple-500/20 text-purple-200 hover:bg-purple-500/30 disabled:opacity-40 cursor-pointer">
+              {busy === sel.id ? "..." : t.remediate}
+            </button>
+          ) : undefined}
+        >
+          <ExplainData screen="Cockpit de IDoc & filas — item" data={{ tipo: sel.kind, ref: sel.ref, cliente: sel.client, messageType: sel.messageType, parceiro: sel.partner, statusCode: sel.statusCode, statusText: sel.statusText, depth: sel.depth, integracao: sel.integration, remediavel: sel.remediable }} />
+        </DetailSheet>
       )}
     </div>
   );

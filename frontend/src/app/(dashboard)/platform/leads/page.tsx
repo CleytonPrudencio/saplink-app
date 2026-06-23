@@ -2,7 +2,9 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { getLeads, updateLeadStatus } from "@/lib/api";
-import { useLang } from "@/i18n/I18n";
+import { useLang, type Lang } from "@/i18n/I18n";
+import DetailSheet from "@/components/DetailSheet";
+import ExplainData from "@/components/ExplainData";
 import { T } from "./i18n";
 
 const ST_CLS: Record<string, string> = {
@@ -12,18 +14,53 @@ const ST_CLS: Record<string, string> = {
   DISCARDED: "bg-white/[0.06] text-[#9b95ad]",
 };
 
+const SHEET_T: Record<Lang, {
+  email: string; phone: string; company: string; role: string; employees: string;
+  status: string; message: string; created: string;
+  guide: string; gContact: string; gQualify: string; gStatus: string;
+  email_action: string; whatsapp: string; markContacted: string; markQualified: string;
+}> = {
+  pt: {
+    email: "E-mail", phone: "Telefone", company: "Empresa", role: "Cargo", employees: "Tamanho",
+    status: "Status", message: "Mensagem", created: "Recebido em",
+    guide: "O que fazer", gContact: "Faça o primeiro contato por e-mail ou WhatsApp em até 24h.",
+    gQualify: "Qualifique: tamanho, dor com integrações SAP e orçamento.",
+    gStatus: "Atualize o status do lead conforme a conversa avança.",
+    email_action: "Enviar e-mail", whatsapp: "WhatsApp", markContacted: "Marcar contatado", markQualified: "Marcar qualificado",
+  },
+  en: {
+    email: "Email", phone: "Phone", company: "Company", role: "Role", employees: "Size",
+    status: "Status", message: "Message", created: "Received at",
+    guide: "What to do", gContact: "Make first contact via email or WhatsApp within 24h.",
+    gQualify: "Qualify: size, pain with SAP integrations and budget.",
+    gStatus: "Update the lead status as the conversation progresses.",
+    email_action: "Send email", whatsapp: "WhatsApp", markContacted: "Mark contacted", markQualified: "Mark qualified",
+  },
+  es: {
+    email: "Correo", phone: "Teléfono", company: "Empresa", role: "Cargo", employees: "Tamaño",
+    status: "Status", message: "Mensaje", created: "Recibido el",
+    guide: "Qué hacer", gContact: "Haz el primer contacto por correo o WhatsApp en 24h.",
+    gQualify: "Califica: tamaño, dolor con integraciones SAP y presupuesto.",
+    gStatus: "Actualiza el estado del lead a medida que avanza la conversación.",
+    email_action: "Enviar correo", whatsapp: "WhatsApp", markContacted: "Marcar contactado", markQualified: "Marcar calificado",
+  },
+};
+
 export default function LeadsPage() {
   const { lang } = useLang();
   const t = T[lang];
+  const st = SHEET_T[lang];
   const [data, setData] = useState<{ leads: any[]; counts: Record<string, number> } | null>(null);
   const [filter, setFilter] = useState("");
   const [loading, setLoading] = useState(true);
+  const [sel, setSel] = useState<any>(null);
 
   const load = useCallback(async () => { setData(await getLeads(filter || undefined)); }, [filter]);
   useEffect(() => { setLoading(true); load().catch(() => {}).finally(() => setLoading(false)); }, [load]);
 
   async function setStatus(id: string, status: string) {
     await updateLeadStatus(id, status).catch(() => {});
+    setSel((s: any) => (s && s.id === id ? { ...s, status } : s));
     load();
   }
 
@@ -50,13 +87,17 @@ export default function LeadsPage() {
       ) : (
         <div className="space-y-3">
           {data.leads.map((l) => (
-            <div key={l.id} className="bg-[#1a1527] rounded-xl p-4 border border-white/[0.08]">
+            <div
+              key={l.id}
+              onClick={() => setSel(l)}
+              className="bg-[#1a1527] rounded-xl p-4 border border-white/[0.08] cursor-pointer hover:bg-white/[0.03] transition-colors"
+            >
               <div className="flex items-start justify-between gap-3 flex-wrap">
                 <div className="min-w-0">
                   <p className="font-semibold text-[#e2e0ea]">{l.name} <span className={`ml-2 text-xs px-1.5 py-0.5 rounded ${ST_CLS[l.status]}`}>{t.status[l.status as keyof typeof t.status]}</span></p>
                   <p className="text-sm text-[#c9c5d6] mt-1">
-                    <a href={`mailto:${l.email}`} className="text-cyan-300 hover:underline">{l.email}</a>
-                    {l.phone && <> · <a href={`tel:${l.phone}`} className="text-cyan-300 hover:underline">{l.phone}</a></>}
+                    <a href={`mailto:${l.email}`} onClick={(e) => e.stopPropagation()} className="text-cyan-300 hover:underline">{l.email}</a>
+                    {l.phone && <> · <a href={`tel:${l.phone}`} onClick={(e) => e.stopPropagation()} className="text-cyan-300 hover:underline">{l.phone}</a></>}
                   </p>
                   <p className="text-xs text-[#9b95ad] mt-1">
                     {[l.company, l.role, l.employees && t.clients(l.employees)].filter(Boolean).join(" · ") || t.dash}
@@ -64,13 +105,46 @@ export default function LeadsPage() {
                   {l.message && <p className="text-sm text-[#c9c5d6] mt-2 bg-[#0f0b1a] rounded-lg p-2">{l.message}</p>}
                   <p className="text-[11px] text-[#6b6580] mt-1">{new Date(l.createdAt).toLocaleString(t.locale)}</p>
                 </div>
-                <select value={l.status} onChange={(e) => setStatus(l.id, e.target.value)} className="bg-[#0f0b1a] border border-white/[0.1] rounded-lg px-2 py-1.5 text-sm shrink-0">
+                <select value={l.status} onClick={(e) => e.stopPropagation()} onChange={(e) => setStatus(l.id, e.target.value)} className="bg-[#0f0b1a] border border-white/[0.1] rounded-lg px-2 py-1.5 text-sm shrink-0">
                   {Object.keys(ST_CLS).map((k) => <option key={k} value={k}>{t.status[k as keyof typeof t.status]}</option>)}
                 </select>
               </div>
             </div>
           ))}
         </div>
+      )}
+
+      {sel && (
+        <DetailSheet
+          open={!!sel}
+          onClose={() => setSel(null)}
+          icon="📥"
+          title={sel.name}
+          subtitle={[sel.company, sel.role].filter(Boolean).join(" · ") || undefined}
+          badge={<span className={`text-xs px-2 py-0.5 rounded-full ${ST_CLS[sel.status]}`}>{t.status[sel.status as keyof typeof t.status]}</span>}
+          fields={[
+            { label: st.email, value: <a href={`mailto:${sel.email}`} className="text-cyan-300 hover:underline">{sel.email}</a> },
+            { label: st.phone, value: sel.phone ? <a href={`tel:${sel.phone}`} className="text-cyan-300 hover:underline">{sel.phone}</a> : undefined },
+            { label: st.company, value: sel.company },
+            { label: st.role, value: sel.role },
+            { label: st.employees, value: sel.employees ? t.clients(sel.employees) : undefined },
+            { label: st.status, value: t.status[sel.status as keyof typeof t.status] },
+            { label: st.message, value: sel.message },
+            { label: st.created, value: new Date(sel.createdAt).toLocaleString(t.locale) },
+          ]}
+          guideTitle={st.guide}
+          guideSteps={[st.gContact, st.gQualify, st.gStatus]}
+          actions={
+            <>
+              <a href={`mailto:${sel.email}`} className="text-xs px-3 py-1.5 rounded-lg bg-cyan-500/15 text-cyan-200 hover:bg-cyan-500/25 cursor-pointer">{st.email_action}</a>
+              {sel.phone && <a href={`https://wa.me/${String(sel.phone).replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer" className="text-xs px-3 py-1.5 rounded-lg bg-emerald-500/15 text-emerald-200 hover:bg-emerald-500/25 cursor-pointer">{st.whatsapp}</a>}
+              {sel.status !== "CONTACTED" && <button onClick={() => setStatus(sel.id, "CONTACTED")} className="text-xs px-3 py-1.5 rounded-lg bg-amber-500/15 text-amber-200 hover:bg-amber-500/25 cursor-pointer">{st.markContacted}</button>}
+              {sel.status !== "QUALIFIED" && <button onClick={() => setStatus(sel.id, "QUALIFIED")} className="text-xs px-3 py-1.5 rounded-lg bg-emerald-500/15 text-emerald-200 hover:bg-emerald-500/25 cursor-pointer">{st.markQualified}</button>}
+            </>
+          }
+        >
+          <ExplainData screen="Leads — item" data={{ name: sel.name, email: sel.email, phone: sel.phone, company: sel.company, role: sel.role, employees: sel.employees, status: sel.status, message: sel.message, createdAt: sel.createdAt }} />
+        </DetailSheet>
       )}
     </div>
   );

@@ -29,6 +29,17 @@ export const T: Record<Lang, {
   reprocessing: string;
   actionManual: string;
   emptyTable: string;
+  sheetTitle: string;
+  fFamily: string;
+  fDocType: string;
+  fNumber: string;
+  fStatus: string;
+  fSefaz: string;
+  fMessage: string;
+  fValue: string;
+  fClient: string;
+  guideTitle: string;
+  steps: string[];
 }> = {
   pt: {
     title: "Fiscal BR — DRC / eDocument / GRC",
@@ -59,6 +70,21 @@ export const T: Record<Lang, {
     reprocessing: "...",
     actionManual: "manual",
     emptyTable: "Sem documentos fiscais — conecte o S/4HANA Cloud (DRC).",
+    sheetTitle: "Detalhes do documento fiscal",
+    fFamily: "Família",
+    fDocType: "Tipo de documento",
+    fNumber: "Número",
+    fStatus: "Status",
+    fSefaz: "Código SEFAZ",
+    fMessage: "Mensagem",
+    fValue: "Valor",
+    fClient: "Cliente",
+    guideTitle: "O que fazer",
+    steps: [
+      "Analise o código/mensagem da SEFAZ para entender a rejeição.",
+      "Corrija o dado de origem (cadastro, imposto, chave) quando necessário.",
+      "Reprocesse o documento; se persistir, trate manualmente no eDocument.",
+    ],
   },
   en: {
     title: "Tax BR — DRC / eDocument / GRC",
@@ -89,6 +115,21 @@ export const T: Record<Lang, {
     reprocessing: "...",
     actionManual: "manual",
     emptyTable: "No tax documents — connect S/4HANA Cloud (DRC).",
+    sheetTitle: "Tax document details",
+    fFamily: "Family",
+    fDocType: "Document type",
+    fNumber: "Number",
+    fStatus: "Status",
+    fSefaz: "SEFAZ code",
+    fMessage: "Message",
+    fValue: "Value",
+    fClient: "Client",
+    guideTitle: "What to do",
+    steps: [
+      "Review the SEFAZ code/message to understand the rejection.",
+      "Fix the source data (master data, tax, key) when needed.",
+      "Reprocess the document; if it persists, handle it manually in eDocument.",
+    ],
   },
   es: {
     title: "Fiscal BR — DRC / eDocument / GRC",
@@ -119,5 +160,20 @@ export const T: Record<Lang, {
     reprocessing: "...",
     actionManual: "manual",
     emptyTable: "Sin documentos fiscales — conecta S/4HANA Cloud (DRC).",
+    sheetTitle: "Detalles del documento fiscal",
+    fFamily: "Familia",
+    fDocType: "Tipo de documento",
+    fNumber: "Número",
+    fStatus: "Status",
+    fSefaz: "Código SEFAZ",
+    fMessage: "Mensaje",
+    fValue: "Valor",
+    fClient: "Cliente",
+    guideTitle: "Qué hacer",
+    steps: [
+      "Analiza el código/mensaje de la SEFAZ para entender el rechazo.",
+      "Corrige el dato de origen (datos maestros, impuesto, clave) cuando sea necesario.",
+      "Reprocesa el documento; si persiste, trátalo manualmente en eDocument.",
+    ],
   },
 };

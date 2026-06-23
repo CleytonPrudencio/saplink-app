@@ -18,6 +18,15 @@ export const T: Record<Lang, {
   colTarget: string;
   colOwner: string;
   colImported: string;
+  sheetTitle: string;
+  fTr: string;
+  fDescription: string;
+  fClient: string;
+  fTarget: string;
+  fOwner: string;
+  fImported: string;
+  guideTitle: string;
+  steps: string[];
 }> = {
   pt: {
     title: "Radar de transports (STMS)",
@@ -37,6 +46,19 @@ export const T: Record<Lang, {
     colTarget: "Alvo",
     colOwner: "Owner",
     colImported: "Importado",
+    sheetTitle: "Detalhes do transport",
+    fTr: "TR",
+    fDescription: "Descrição",
+    fClient: "Cliente",
+    fTarget: "Alvo",
+    fOwner: "Owner",
+    fImported: "Importado",
+    guideTitle: "O que fazer",
+    steps: [
+      "Correlacione este transport com falhas que surgiram logo após a importação.",
+      "Verifique o conteúdo e o log de importação no destino.",
+      "Se for a causa, planeje correção ou rollback via fila de transportes.",
+    ],
   },
   en: {
     title: "Transport radar (STMS)",
@@ -56,6 +78,19 @@ export const T: Record<Lang, {
     colTarget: "Target",
     colOwner: "Owner",
     colImported: "Imported",
+    sheetTitle: "Transport details",
+    fTr: "TR",
+    fDescription: "Description",
+    fClient: "Client",
+    fTarget: "Target",
+    fOwner: "Owner",
+    fImported: "Imported",
+    guideTitle: "What to do",
+    steps: [
+      "Correlate this transport with failures that appeared right after import.",
+      "Check the content and the import log on the target system.",
+      "If it is the cause, plan a fix or rollback through the transport queue.",
+    ],
   },
   es: {
     title: "Radar de transports (STMS)",
@@ -75,5 +110,18 @@ export const T: Record<Lang, {
     colTarget: "Destino",
     colOwner: "Owner",
     colImported: "Importado",
+    sheetTitle: "Detalles del transport",
+    fTr: "TR",
+    fDescription: "Descripción",
+    fClient: "Cliente",
+    fTarget: "Destino",
+    fOwner: "Owner",
+    fImported: "Importado",
+    guideTitle: "Qué hacer",
+    steps: [
+      "Correlaciona este transport con fallas que surgieron justo después de la importación.",
+      "Verifica el contenido y el log de importación en el sistema destino.",
+      "Si es la causa, planifica una corrección o rollback mediante la cola de transportes.",
+    ],
   },
 };

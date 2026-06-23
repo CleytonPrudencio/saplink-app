@@ -3,16 +3,40 @@
 import { useEffect, useState } from "react";
 import { getMoneyGraph } from "@/lib/api";
 import ExplainData from "@/components/ExplainData";
-import { useLang } from "@/i18n/I18n";
+import DetailSheet from "@/components/DetailSheet";
+import { useLang, type Lang } from "@/i18n/I18n";
 import { T } from "./i18n";
 
 function brl(c: number) { return (c / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }); }
 
+const SHEET_T: Record<Lang, {
+  integration: string; client: string; process: string; downtime: string; perHour: string; atRisk: string;
+  guideTitle: string; guideSteps: string[];
+}> = {
+  pt: {
+    integration: "Integração", client: "Cliente", process: "Processo", downtime: "Parada", perHour: "Custo por hora", atRisk: "Em risco agora",
+    guideTitle: "O que fazer",
+    guideSteps: ["Priorize pelo maior impacto: esta é a integração com mais R$ parados agora.", "Restabeleça a integração para estancar a perda por hora.", "Revise o custo de parada por hora cadastrado para manter o cálculo fiel."],
+  },
+  en: {
+    integration: "Integration", client: "Client", process: "Process", downtime: "Downtime", perHour: "Cost per hour", atRisk: "At risk now",
+    guideTitle: "What to do",
+    guideSteps: ["Prioritize by biggest impact: this is the integration with the most money stuck right now.", "Restore the integration to stop the per-hour loss.", "Review the configured downtime cost per hour to keep the calculation accurate."],
+  },
+  es: {
+    integration: "Integración", client: "Cliente", process: "Proceso", downtime: "Parada", perHour: "Costo por hora", atRisk: "En riesgo ahora",
+    guideTitle: "Qué hacer",
+    guideSteps: ["Priorice por mayor impacto: esta es la integración con más dinero detenido ahora.", "Restablezca la integración para detener la pérdida por hora.", "Revise el costo de parada por hora configurado para mantener el cálculo fiel."],
+  },
+};
+
 export default function MoneyPage() {
   const { lang } = useLang();
   const t = T[lang];
+  const st = SHEET_T[lang];
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [sel, setSel] = useState<any>(null);
 
   useEffect(() => { getMoneyGraph().then(setData).catch(() => {}).finally(() => setLoading(false)); }, []);
 
@@ -68,7 +92,7 @@ export default function MoneyPage() {
                 </tr></thead>
                 <tbody>
                   {data.nodes.map((n: any, i: number) => (
-                    <tr key={i} className="border-b border-white/[0.04]">
+                    <tr key={i} onClick={() => setSel(n)} className="border-b border-white/[0.04] cursor-pointer hover:bg-white/[0.03] transition-colors">
                       <td className="px-3 py-2 text-[#e2e0ea]">{n.integration}</td>
                       <td className="px-3 py-2 text-[#9b95ad]">{n.client}</td>
                       <td className="px-3 py-2 text-[#9b95ad]">{n.process}</td>
@@ -86,6 +110,29 @@ export default function MoneyPage() {
             </div>
           )}
         </>
+      )}
+
+      {sel && (
+        <DetailSheet
+          open={!!sel}
+          onClose={() => setSel(null)}
+          icon="💸"
+          title={sel.integration}
+          subtitle={`${sel.client} · ${sel.process}`}
+          badge={<span className="text-xs font-semibold text-rose-300 shrink-0">{brl(sel.atRiskCents)}</span>}
+          fields={[
+            { label: st.integration, value: sel.integration },
+            { label: st.client, value: sel.client },
+            { label: st.process, value: sel.process },
+            { label: st.downtime, value: t.hoursUnit(sel.hoursDown) },
+            { label: st.perHour, value: brl(sel.costPerHourCents) },
+            { label: st.atRisk, value: <b className="text-rose-300">{brl(sel.atRiskCents)}</b> },
+          ]}
+          guideTitle={st.guideTitle}
+          guideSteps={st.guideSteps}
+        >
+          <ExplainData screen={`${t.explainScreen} — item`} data={{ integration: sel.integration, client: sel.client, process: sel.process, hoursDown: sel.hoursDown, costPerHourCents: sel.costPerHourCents, atRiskCents: sel.atRiskCents }} />
+        </DetailSheet>
       )}
     </div>
   );

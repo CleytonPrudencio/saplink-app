@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { getAudit } from "@/lib/api";
 import ExplainData from "@/components/ExplainData";
+import DetailSheet from "@/components/DetailSheet";
 import { usePaginate, Pagination } from "@/components/Pagination";
 import { useLang } from "@/i18n/I18n";
 import { T } from "./i18n";
@@ -12,6 +13,7 @@ export default function AuditPage() {
   const t = T[lang];
   const [data, setData] = useState<{ summary: { changes: number; remediations: number; sodViolations: number }; ledger: any[] } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sel, setSel] = useState<any>(null);
   useEffect(() => { getAudit().then(setData).catch(() => {}).finally(() => setLoading(false)); }, []);
   const pag = usePaginate<any>(data?.ledger || [], 25);
 
@@ -42,7 +44,7 @@ export default function AuditPage() {
             </tr></thead>
             <tbody>
               {pag.pageItems.map((e: any, i: number) => (
-                <tr key={i} className={`border-b border-white/[0.04] ${e.flag ? "bg-rose-500/[0.05]" : ""}`}>
+                <tr key={i} onClick={() => setSel(e)} className={`border-b border-white/[0.04] cursor-pointer hover:bg-white/[0.03] transition-colors ${e.flag ? "bg-rose-500/[0.05]" : ""}`}>
                   <td className="px-3 py-2 text-xs text-[#9b95ad] whitespace-nowrap">{e.at ? new Date(e.at).toLocaleString("pt-BR") : "—"}</td>
                   <td className="px-3 py-2"><span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white/[0.06]">{e.kind}</span></td>
                   <td className="px-3 py-2 text-[#c9c5d6]">{e.who}</td>
@@ -54,6 +56,29 @@ export default function AuditPage() {
           </table>
           <div className="px-3 pb-3"><Pagination {...pag} /></div>
         </div>
+      )}
+
+      {sel && (
+        <DetailSheet
+          open={!!sel}
+          onClose={() => setSel(null)}
+          icon="🛡️"
+          title={sel.what}
+          subtitle={t.sheetSub}
+          badge={<span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white/[0.06] shrink-0">{sel.kind}</span>}
+          fields={[
+            { label: t.fldWhen, value: sel.at ? new Date(sel.at).toLocaleString("pt-BR") : "—" },
+            { label: t.fldType, value: sel.kind },
+            { label: t.fldWho, value: sel.who },
+            { label: t.fldWhat, value: sel.what },
+            { label: t.fldClient, value: sel.client },
+            { label: t.fldFlag, value: sel.flag ? <span className="text-rose-300">⚠ {sel.flag}</span> : undefined },
+          ]}
+          guideTitle={sel.flag ? t.guideTitle : undefined}
+          guideSteps={sel.flag ? t.guideSod : undefined}
+        >
+          <ExplainData screen="Auditoria & Compliance — item" data={{ evento: sel }} />
+        </DetailSheet>
       )}
     </div>
   );

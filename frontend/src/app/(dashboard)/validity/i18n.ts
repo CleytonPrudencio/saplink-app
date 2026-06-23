@@ -28,6 +28,17 @@ export const T: Record<Lang, {
   expiredAgo: (n: number) => string;
   expiresToday: string;
   daysLeft: (n: number) => string;
+  sheetTitle: string;
+  fKind: string;
+  fIntegration: string;
+  fClient: string;
+  fType: string;
+  fHost: string;
+  fExpiresAt: string;
+  fDaysLeft: string;
+  fSeverity: string;
+  guideTitle: string;
+  steps: string[];
 }> = {
   pt: {
     title: "Radar de validade",
@@ -57,6 +68,21 @@ export const T: Record<Lang, {
     expiredAgo: (n) => `expirou há ${n} dia(s)`,
     expiresToday: "expira hoje",
     daysLeft: (n) => `${n} dia(s)`,
+    sheetTitle: "Detalhes da validade",
+    fKind: "Tipo de validade",
+    fIntegration: "Integração",
+    fClient: "Cliente",
+    fType: "Tipo",
+    fHost: "Host",
+    fExpiresAt: "Expira em",
+    fDaysLeft: "Tempo restante",
+    fSeverity: "Severidade",
+    guideTitle: "O que fazer",
+    steps: [
+      "Renove o certificado/segredo antes do vencimento para evitar incidente.",
+      "Atualize o material no destino (TLS no STRUST; segredo OAuth/RFC no sistema de origem).",
+      "Reavalie nesta tela para confirmar a nova validade.",
+    ],
   },
   en: {
     title: "Validity radar",
@@ -86,6 +112,21 @@ export const T: Record<Lang, {
     expiredAgo: (n) => `expired ${n} day(s) ago`,
     expiresToday: "expires today",
     daysLeft: (n) => `${n} day(s)`,
+    sheetTitle: "Validity details",
+    fKind: "Validity type",
+    fIntegration: "Integration",
+    fClient: "Client",
+    fType: "Type",
+    fHost: "Host",
+    fExpiresAt: "Expires at",
+    fDaysLeft: "Time left",
+    fSeverity: "Severity",
+    guideTitle: "What to do",
+    steps: [
+      "Renew the certificate/secret before expiration to avoid an incident.",
+      "Update the material on the target (TLS in STRUST; OAuth/RFC secret in the source system).",
+      "Recheck on this screen to confirm the new validity.",
+    ],
   },
   es: {
     title: "Radar de validez",
@@ -115,5 +156,20 @@ export const T: Record<Lang, {
     expiredAgo: (n) => `expiró hace ${n} día(s)`,
     expiresToday: "expira hoy",
     daysLeft: (n) => `${n} día(s)`,
+    sheetTitle: "Detalles de la validez",
+    fKind: "Tipo de validez",
+    fIntegration: "Integración",
+    fClient: "Cliente",
+    fType: "Tipo",
+    fHost: "Host",
+    fExpiresAt: "Expira el",
+    fDaysLeft: "Tiempo restante",
+    fSeverity: "Severidad",
+    guideTitle: "Qué hacer",
+    steps: [
+      "Renueva el certificado/secreto antes del vencimiento para evitar un incidente.",
+      "Actualiza el material en el destino (TLS en STRUST; secreto OAuth/RFC en el sistema de origen).",
+      "Reevalúa en esta pantalla para confirmar la nueva validez.",
+    ],
   },
 };

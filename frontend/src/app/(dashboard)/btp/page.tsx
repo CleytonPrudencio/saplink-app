@@ -4,12 +4,77 @@ import { useEffect, useState, useCallback } from "react";
 import { getBtp, createBtp, deleteBtp, getMe } from "@/lib/api";
 import { usePaginate, Pagination } from "@/components/Pagination";
 import ExplainData from "@/components/ExplainData";
+import DetailSheet from "@/components/DetailSheet";
 import EnvLabel from "@/components/EnvLabel";
-import { useLang } from "@/i18n/I18n";
+import { useLang, type Lang } from "@/i18n/I18n";
 import { T } from "./i18n";
 
 const KINDS = [["SERVICE_KEY", "Service Key"], ["BINDING", "Binding"], ["DESTINATION", "Destination"], ["QUOTA", "Quota"], ["APP", "App (CF/Kyma)"]];
 const statusCls: Record<string, string> = { EXPIRED: "bg-rose-500/15 text-rose-300", WARN: "bg-amber-500/15 text-amber-300", DOWN: "bg-rose-500/15 text-rose-300", OK: "bg-emerald-500/15 text-emerald-300" };
+
+const SHEET_T: Record<Lang, {
+  fClient: string; fKind: string; fResource: string; fDetail: string; fSubaccount: string;
+  fExpires: string; fStatus: string; guideTitle: string; renew: string;
+  expiredSteps: string[]; warnSteps: string[]; downSteps: string[];
+}> = {
+  pt: {
+    fClient: "Cliente", fKind: "Tipo", fResource: "Recurso", fDetail: "Detalhe", fSubaccount: "Subaccount",
+    fExpires: "Vence", fStatus: "Status", guideTitle: "O que fazer", renew: "Renovar no BTP Cockpit",
+    expiredSteps: [
+      "O recurso já venceu — integrações que dependem dele estão falhando.",
+      "Gere uma nova service key / destination / secret no BTP Cockpit.",
+      "Atualize o valor no consumidor e registre a nova data de validade aqui.",
+    ],
+    warnSteps: [
+      "Vence em ≤30 dias — renove antes do apagão.",
+      "Crie o novo recurso no BTP Cockpit e faça o rollover sem downtime.",
+      "Atualize a data de validade neste inventário.",
+    ],
+    downSteps: [
+      "Recurso indisponível — verifique a subaccount e a saúde do serviço no BTP.",
+      "Revalide binding/destination e o status da quota.",
+      "Reabilite e confirme a conexão a partir do consumidor.",
+    ],
+  },
+  en: {
+    fClient: "Client", fKind: "Type", fResource: "Resource", fDetail: "Detail", fSubaccount: "Subaccount",
+    fExpires: "Expires", fStatus: "Status", guideTitle: "What to do", renew: "Renew in BTP Cockpit",
+    expiredSteps: [
+      "The resource has already expired — integrations depending on it are failing.",
+      "Generate a new service key / destination / secret in the BTP Cockpit.",
+      "Update the value on the consumer and record the new expiration date here.",
+    ],
+    warnSteps: [
+      "Expires in ≤30 days — renew before the outage.",
+      "Create the new resource in the BTP Cockpit and roll over with no downtime.",
+      "Update the expiration date in this inventory.",
+    ],
+    downSteps: [
+      "Resource unavailable — check the subaccount and service health in BTP.",
+      "Revalidate the binding/destination and the quota status.",
+      "Re-enable and confirm the connection from the consumer.",
+    ],
+  },
+  es: {
+    fClient: "Cliente", fKind: "Tipo", fResource: "Recurso", fDetail: "Detalle", fSubaccount: "Subaccount",
+    fExpires: "Vence", fStatus: "Estado", guideTitle: "Qué hacer", renew: "Renovar en BTP Cockpit",
+    expiredSteps: [
+      "El recurso ya venció — las integraciones que dependen de él están fallando.",
+      "Genera una nueva service key / destination / secret en el BTP Cockpit.",
+      "Actualiza el valor en el consumidor y registra la nueva fecha de vencimiento aquí.",
+    ],
+    warnSteps: [
+      "Vence en ≤30 días — renueva antes de la caída.",
+      "Crea el nuevo recurso en el BTP Cockpit y haz el rollover sin downtime.",
+      "Actualiza la fecha de vencimiento en este inventario.",
+    ],
+    downSteps: [
+      "Recurso no disponible — verifica la subaccount y la salud del servicio en BTP.",
+      "Revalida el binding/destination y el estado de la quota.",
+      "Rehabilita y confirma la conexión desde el consumidor.",
+    ],
+  },
+};
 
 export default function BtpPage() {
   const [isAdmin, setIsAdmin] = useState(false);
@@ -18,8 +83,10 @@ export default function BtpPage() {
   const [show, setShow] = useState(false);
   const [form, setForm] = useState<any>({ clientId: "", kind: "SERVICE_KEY", name: "", subaccount: "", detail: "", expiresAt: "", status: "OK" });
   const [msg, setMsg] = useState("");
+  const [sel, setSel] = useState<any>(null);
   const { lang } = useLang();
   const t = T[lang];
+  const st = SHEET_T[lang];
 
   const load = useCallback(async () => { try { setData(await getBtp()); } finally { setLoading(false); } }, []);
   useEffect(() => { getMe().then((u) => setIsAdmin(u.role === "CONSULTANCY_ADMIN" || u.role === "PLATFORM_ADMIN")).catch(() => {}); }, []);
@@ -80,14 +147,14 @@ export default function BtpPage() {
           <thead className="bg-white/[0.03] text-[#9b95ad] text-xs"><tr><th className="text-left px-3 py-2">{t.colClient}</th><th className="text-left px-3 py-2">{t.colKind}</th><th className="text-left px-3 py-2">{t.colResource}</th><th className="text-left px-3 py-2">{t.colSubaccount}</th><th className="text-left px-3 py-2">{t.colExpires}</th><th className="text-left px-3 py-2">{t.colStatus}</th>{isAdmin && <th></th>}</tr></thead>
           <tbody>
             {pag.pageItems.map((i: any) => (
-              <tr key={i.id} className="border-t border-white/[0.05]">
+              <tr key={i.id} onClick={() => setSel(i)} className="border-t border-white/[0.05] cursor-pointer hover:bg-white/[0.03] transition-colors">
                 <td className="px-3 py-2">{i.client}</td>
                 <td className="px-3 py-2 text-[#9b95ad]">{(KINDS.find((k) => k[0] === i.kind) || [])[1] || i.kind}</td>
                 <td className="px-3 py-2 font-mono text-xs">{i.name}{i.detail && <span className="text-[#6b6580]"> · {i.detail}</span>}</td>
                 <td className="px-3 py-2 text-[#9b95ad]">{i.subaccount || "—"}</td>
                 <td className="px-3 py-2 text-[#9b95ad]">{i.expiresAt ? new Date(i.expiresAt).toLocaleDateString("pt-BR") : "—"}</td>
                 <td className="px-3 py-2"><span className={`text-xs px-2 py-0.5 rounded ${statusCls[i.status] || ""}`}>{i.status}</span></td>
-                {isAdmin && <td className="px-3 py-2 text-right"><button onClick={async () => { if (confirm(t.removeConfirm)) { await deleteBtp(i.id); load(); } }} className="text-xs text-rose-300 cursor-pointer">×</button></td>}
+                {isAdmin && <td className="px-3 py-2 text-right"><button onClick={async (e) => { e.stopPropagation(); if (confirm(t.removeConfirm)) { await deleteBtp(i.id); load(); } }} className="text-xs text-rose-300 cursor-pointer">×</button></td>}
               </tr>
             ))}
             {(!data?.items || data.items.length === 0) && <tr><td colSpan={isAdmin ? 7 : 6} className="px-3 py-6 text-center text-[#9b95ad]">{t.empty}</td></tr>}
@@ -95,6 +162,34 @@ export default function BtpPage() {
         </table>
         <div className="px-3 pb-3"><Pagination {...pag} /></div>
       </div>
+
+      {sel && (
+        <DetailSheet
+          open={!!sel}
+          onClose={() => setSel(null)}
+          icon="🪐"
+          title={sel.name}
+          subtitle={sel.client}
+          badge={<span className={`text-xs px-2 py-0.5 rounded ${statusCls[sel.status] || ""}`}>{sel.status}</span>}
+          fields={[
+            { label: st.fClient, value: sel.client },
+            { label: st.fKind, value: (KINDS.find((k) => k[0] === sel.kind) || [])[1] || sel.kind },
+            { label: st.fResource, value: <span className="font-mono text-xs">{sel.name}</span> },
+            { label: st.fDetail, value: sel.detail },
+            { label: st.fSubaccount, value: sel.subaccount },
+            { label: st.fExpires, value: sel.expiresAt ? new Date(sel.expiresAt).toLocaleDateString("pt-BR") : undefined },
+            { label: st.fStatus, value: sel.status },
+          ]}
+          guideTitle={st.guideTitle}
+          guideSteps={sel.status === "EXPIRED" ? st.expiredSteps : sel.status === "WARN" ? st.warnSteps : sel.status === "DOWN" ? st.downSteps : undefined}
+          guideTx={sel.status === "OK" ? undefined : "BTP Cockpit › Subaccount › Service Keys / Destinations"}
+          actions={(isAdmin && sel.status !== "OK") ? (
+            <button className="text-sm px-3 py-1.5 rounded-lg bg-purple-500/20 text-purple-200 hover:bg-purple-500/30 cursor-pointer">♻️ {st.renew}</button>
+          ) : undefined}
+        >
+          <ExplainData screen="BTP Cockpit — item" data={{ client: sel.client, kind: sel.kind, name: sel.name, detail: sel.detail, subaccount: sel.subaccount, expiresAt: sel.expiresAt, status: sel.status }} />
+        </DetailSheet>
+      )}
     </div>
   );
 }

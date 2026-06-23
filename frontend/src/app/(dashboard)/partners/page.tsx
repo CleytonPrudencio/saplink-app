@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { getPartners } from "@/lib/api";
 import ExplainData from "@/components/ExplainData";
+import DetailSheet from "@/components/DetailSheet";
 import { usePaginate, Pagination } from "@/components/Pagination";
 import { useLang } from "@/i18n/I18n";
 import { UI, tUI } from "@/i18n/ui";
@@ -15,6 +16,8 @@ export default function PartnersPage() {
   const t = T[lang];
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [selP, setSelP] = useState<any>(null);
+  const [selF, setSelF] = useState<any>(null);
   useEffect(() => { getPartners().then(setData).catch(() => {}).finally(() => setLoading(false)); }, []);
 
   const pagP = usePaginate<any>(data?.partners || [], 15);
@@ -44,7 +47,7 @@ export default function PartnersPage() {
               </tr></thead>
               <tbody>
                 {pagP.pageItems.map((p: any, i: number) => (
-                  <tr key={i} className="border-b border-white/[0.04]">
+                  <tr key={i} onClick={() => setSelP(p)} className="border-b border-white/[0.04] cursor-pointer hover:bg-white/[0.03] transition-colors">
                     <td className="px-3 py-2 font-mono text-[#e2e0ea]">{p.partner}</td>
                     <td className="px-3 py-2 text-[#9b95ad]">{p.total}</td>
                     <td className="px-3 py-2 text-rose-300">{p.errors}</td>
@@ -77,7 +80,7 @@ export default function PartnersPage() {
               </tr></thead>
               <tbody>
                 {pagF.pageItems.map((f: any, i: number) => (
-                  <tr key={i} className="border-b border-white/[0.04]">
+                  <tr key={i} onClick={() => setSelF(f)} className="border-b border-white/[0.04] cursor-pointer hover:bg-white/[0.03] transition-colors">
                     <td className="px-3 py-2"><span className="text-xs font-mono px-1.5 py-0.5 rounded bg-white/[0.06]">{f.source}</span></td>
                     <td className="px-3 py-2 text-[#e2e0ea]">{f.artifact}</td>
                     <td className="px-3 py-2 text-right text-[#c9c5d6]">{f.messages30d.toLocaleString("pt-BR")}</td>
@@ -91,6 +94,49 @@ export default function PartnersPage() {
         )}
         <p className="text-xs text-[#6b6580] mt-2">{t.finopsNote}</p>
       </section>
+
+      {selP && (
+        <DetailSheet
+          open={!!selP}
+          onClose={() => setSelP(null)}
+          icon="🤝"
+          title={selP.partner}
+          subtitle={t.sheetPartnerSub}
+          badge={<span className={`text-sm font-bold px-2 py-0.5 rounded ${selP.score >= 80 ? "text-emerald-400" : selP.score >= 50 ? "text-amber-300" : "text-rose-400"}`}>{selP.score}</span>}
+          fields={[
+            { label: t.fldItems, value: selP.total },
+            { label: t.fldErrors, value: selP.errors },
+            { label: t.fldErrorRate, value: `${selP.errorRate}%` },
+            { label: t.fldShareOfErrors, value: `${selP.shareOfErrors}%` },
+            { label: t.fldScore, value: selP.score },
+          ]}
+          guideTitle={t.partnerGuideTitle}
+          guideSteps={(selP.errorRate >= 5 || selP.score < 80) ? t.partnerGuideBad : t.partnerGuideOk}
+        >
+          <ExplainData screen="Parceiros EDI & FinOps BTP — parceiro" data={{ parceiro: selP }} />
+        </DetailSheet>
+      )}
+
+      {selF && (
+        <DetailSheet
+          open={!!selF}
+          onClose={() => setSelF(null)}
+          icon="☁️"
+          title={selF.artifact}
+          subtitle={t.sheetFlowSub}
+          badge={<span className="text-sm font-bold text-amber-300">{brl(selF.estMonthlyCents)}</span>}
+          fields={[
+            { label: t.fldSource, value: selF.source },
+            { label: t.fldArtifact, value: selF.artifact },
+            { label: t.fldMessages30d, value: selF.messages30d.toLocaleString("pt-BR") },
+            { label: t.fldEstMonthly, value: brl(selF.estMonthlyCents) },
+          ]}
+          guideTitle={t.flowGuideTitle}
+          guideSteps={(fin && selF.estMonthlyCents >= (fin.summary.estMonthlyCents / Math.max(fin.flows.length, 1))) ? t.flowGuideExpensive : t.flowGuideOk}
+        >
+          <ExplainData screen="Parceiros EDI & FinOps BTP — IFlow" data={{ iflow: selF }} />
+        </DetailSheet>
+      )}
     </div>
   );
 }

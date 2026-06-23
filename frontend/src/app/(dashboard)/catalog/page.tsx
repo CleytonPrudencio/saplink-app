@@ -2,11 +2,30 @@
 
 import { useEffect, useState, useCallback } from "react";
 import ExplainData from "@/components/ExplainData";
+import DetailSheet from "@/components/DetailSheet";
 import { getCatalog, getClients, type CatalogItem } from "@/lib/api";
-import { useLang } from "@/i18n/I18n";
+import { useLang, type Lang } from "@/i18n/I18n";
 import { T } from "./i18n";
 
 interface Client { id: string; name: string }
+
+const SHEET_T: Record<Lang, {
+  kind: string; name: string; detail: string; client: string; integration: string;
+  status: string; active: string; inactive: string; lastSeen: string; attributes: string;
+}> = {
+  pt: {
+    kind: "Tipo", name: "Nome", detail: "Detalhe", client: "Cliente", integration: "Integração",
+    status: "Status", active: "Ativo", inactive: "Inativo", lastSeen: "Visto por último", attributes: "Atributos",
+  },
+  en: {
+    kind: "Type", name: "Name", detail: "Detail", client: "Client", integration: "Integration",
+    status: "Status", active: "Active", inactive: "Inactive", lastSeen: "Last seen", attributes: "Attributes",
+  },
+  es: {
+    kind: "Tipo", name: "Nombre", detail: "Detalle", client: "Cliente", integration: "Integración",
+    status: "Status", active: "Activo", inactive: "Inactivo", lastSeen: "Visto por última vez", attributes: "Atributos",
+  },
+};
 
 const KIND_ICON: Record<string, string> = {
   PARTNER_PROFILE: "🤝", RFC_DEST: "🔌", MESSAGE_TYPE: "✉️", ODATA_SERVICE: "🌐", IDOC_PORT: "🚪",
@@ -20,6 +39,8 @@ export default function CatalogPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({ clientId: "", kind: "", q: "" });
+  const [sel, setSel] = useState<CatalogItem | null>(null);
+  const st = SHEET_T[lang];
 
   const load = useCallback(async () => {
     setData(await getCatalog(filters));
@@ -86,7 +107,7 @@ export default function CatalogPage() {
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                 {list.map((i) => (
-                  <div key={i.id} className={`rounded-lg border p-3 ${i.active ? "bg-[#1a1527] border-white/[0.08]" : "bg-[#15101f] border-white/[0.04] opacity-60"}`}>
+                  <div key={i.id} onClick={() => setSel(i)} className={`rounded-lg border p-3 cursor-pointer hover:bg-white/[0.03] transition-colors ${i.active ? "bg-[#1a1527] border-white/[0.08]" : "bg-[#15101f] border-white/[0.04] opacity-60"}`}>
                     <div className="flex items-center justify-between gap-2">
                       <p className="font-mono text-sm text-[#e2e0ea] truncate">{i.name}</p>
                       {!i.active && <span className="text-[10px] text-[#9b95ad]">{t.inactive}</span>}
@@ -99,6 +120,31 @@ export default function CatalogPage() {
             </div>
           ))}
         </div>
+      )}
+
+      {sel && (
+        <DetailSheet
+          open={!!sel}
+          onClose={() => setSel(null)}
+          icon={KIND_ICON[sel.kind] || "📚"}
+          title={sel.name}
+          subtitle={`${KIND_LABEL[sel.kind] || sel.kind}${sel.client ? ` · ${sel.client}` : ""}`}
+          badge={<span className={`text-xs px-2 py-1 rounded shrink-0 ${sel.active ? "bg-emerald-500/15 text-emerald-300" : "bg-white/[0.06] text-[#9b95ad]"}`}>{sel.active ? st.active : st.inactive}</span>}
+          fields={[
+            { label: st.kind, value: KIND_LABEL[sel.kind] || sel.kind },
+            { label: st.name, value: <span className="font-mono break-all">{sel.name}</span> },
+            { label: st.detail, value: sel.detail },
+            { label: st.client, value: sel.client },
+            { label: st.integration, value: sel.integration },
+            { label: st.status, value: sel.active ? st.active : st.inactive },
+            { label: st.lastSeen, value: sel.lastSeenAt ? new Date(sel.lastSeenAt).toLocaleString("pt-BR") : undefined },
+            { label: st.attributes, value: sel.attributes && Object.keys(sel.attributes).length > 0
+              ? <pre className="text-xs whitespace-pre-wrap break-all">{JSON.stringify(sel.attributes, null, 2)}</pre>
+              : undefined },
+          ]}
+        >
+          <ExplainData screen="Catálogo de interfaces — item" data={{ tipo: sel.kind, nome: sel.name, detalhe: sel.detail, cliente: sel.client, integracao: sel.integration, ativo: sel.active, atributos: sel.attributes }} />
+        </DetailSheet>
       )}
     </div>
   );

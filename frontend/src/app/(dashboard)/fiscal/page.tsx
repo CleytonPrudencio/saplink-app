@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { getMe, getS4Fiscal, reprocessFiscal } from "@/lib/api";
 import ExplainData from "@/components/ExplainData";
+import DetailSheet from "@/components/DetailSheet";
 import { usePaginate, Pagination } from "@/components/Pagination";
 import { useLang } from "@/i18n/I18n";
 import { T } from "./i18n";
@@ -28,6 +29,7 @@ export default function FiscalPage() {
   const [busy, setBusy] = useState("");
   const [loading, setLoading] = useState(true);
   const [family, setFamily] = useState("");
+  const [sel, setSel] = useState<any>(null);
 
   const load = useCallback(async () => { setData(await getS4Fiscal(family ? { family } : {})); }, [family]);
   useEffect(() => {
@@ -76,7 +78,7 @@ export default function FiscalPage() {
           </tr></thead>
           <tbody>
             {pag.pageItems.map((d: any) => (
-              <tr key={d.id} className="border-b border-white/[0.04]">
+              <tr key={d.id} onClick={() => setSel(d)} className="border-b border-white/[0.04] cursor-pointer hover:bg-white/[0.03] transition-colors">
                 <td className="px-3 py-2"><span className="text-xs px-1.5 py-0.5 rounded bg-white/[0.06] text-[#c9c5d6] mr-1">{FAM[d.family] || d.family}</span><span className="font-mono text-[10px] text-[#6b6580]">{d.docType}</span></td>
                 <td className="px-3 py-2 font-mono text-[#e2e0ea]">{d.number}</td>
                 <td className="px-3 py-2"><span className={`text-xs px-1.5 py-0.5 rounded ${ST_CLS[d.status] || ""}`}>{ST_LABEL[d.status] || d.status}</span></td>
@@ -85,7 +87,7 @@ export default function FiscalPage() {
                 <td className="px-3 py-2 text-[#9b95ad]">{d.client}</td>
                 <td className="px-3 py-2 text-right">
                   {d.resolved ? <span className="text-[11px] text-emerald-300/70">{t.actionOk}</span>
-                    : d.remediable && isAdmin ? <button onClick={() => onReprocess(d.id)} disabled={busy === d.id} className="text-xs px-2.5 py-1 rounded-lg bg-purple-500/20 text-purple-200 hover:bg-purple-500/30 disabled:opacity-40 cursor-pointer">{busy === d.id ? t.reprocessing : t.actionReprocess}</button>
+                    : d.remediable && isAdmin ? <button onClick={(e) => { e.stopPropagation(); onReprocess(d.id); }} disabled={busy === d.id} className="text-xs px-2.5 py-1 rounded-lg bg-purple-500/20 text-purple-200 hover:bg-purple-500/30 disabled:opacity-40 cursor-pointer">{busy === d.id ? t.reprocessing : t.actionReprocess}</button>
                     : <span className="text-[11px] text-[#6b6580]">{d.remediable ? "—" : t.actionManual}</span>}
                 </td>
               </tr>
@@ -95,6 +97,37 @@ export default function FiscalPage() {
         </table>
       </div>
       <Pagination {...pag} />
+
+      {sel && (
+        <DetailSheet
+          open={!!sel}
+          onClose={() => setSel(null)}
+          icon="🧾"
+          title={`${FAM[sel.family] || sel.family} ${sel.number}`}
+          subtitle={sel.client}
+          badge={<span className={`text-xs px-1.5 py-0.5 rounded ${ST_CLS[sel.status] || ""}`}>{ST_LABEL[sel.status] || sel.status}</span>}
+          fields={[
+            { label: t.fFamily, value: FAM[sel.family] || sel.family },
+            { label: t.fDocType, value: <span className="font-mono">{sel.docType}</span> },
+            { label: t.fNumber, value: <span className="font-mono">{sel.number}</span> },
+            { label: t.fStatus, value: ST_LABEL[sel.status] || sel.status },
+            { label: t.fSefaz, value: sel.sefazCode || "—" },
+            { label: t.fMessage, value: sel.message || "—" },
+            { label: t.fValue, value: brl(sel.amountCents) },
+            { label: t.fClient, value: sel.client },
+          ]}
+          guideTitle={t.guideTitle}
+          guideSteps={t.steps}
+          guideTx="DRC / eDocument (NF-e/CT-e/SEFAZ)"
+          actions={
+            sel.resolved ? <span className="text-[11px] text-emerald-300/70">{t.actionOk}</span>
+              : sel.remediable && isAdmin ? <button onClick={() => onReprocess(sel.id)} disabled={busy === sel.id} className="text-xs px-2.5 py-1 rounded-lg bg-purple-500/20 text-purple-200 hover:bg-purple-500/30 disabled:opacity-40 cursor-pointer">{busy === sel.id ? t.reprocessing : t.actionReprocess}</button>
+              : <span className="text-[11px] text-[#6b6580]">{sel.remediable ? "—" : t.actionManual}</span>
+          }
+        >
+          <ExplainData screen={`${t.explainScreen} — item`} data={{ family: sel.family, docType: sel.docType, number: sel.number, status: sel.status, sefazCode: sel.sefazCode, message: sel.message, amountCents: sel.amountCents, client: sel.client, resolved: sel.resolved }} />
+        </DetailSheet>
+      )}
     </div>
   );
 }
