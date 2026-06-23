@@ -1,0 +1,74 @@
+# SAPLINK — ambiente DEV (dev.saplink.com.br). Isolado de produção: banco e dados próprios.
+# Compartilha a rede do Caddy/Ollama de prod (saplink_default, external).
+# E-mail em modo log (sem RESEND), Stripe de teste (via .env), seed de demo.
+# Subir: docker compose -p saplink-dev -f docker-compose.dev.yml --env-file .env up -d --build
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: saplink-dev-db
+    environment:
+      POSTGRES_DB: saplink
+      POSTGRES_USER: saplink
+      POSTGRES_PASSWORD: saplink123
+    volumes:
+      - saplinkdev_data:/var/lib/postgresql/data
+    networks: [shared]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U saplink -d saplink"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  backend:
+    build:
+      context: ./backend
+    container_name: saplink-dev-backend
+    environment:
+      DATABASE_URL: "postgresql://saplink:saplink123@saplink-dev-db:5432/saplink"
+      JWT_SECRET: "saplink-DEV-jwt-secret-2026"
+      ENCRYPTION_KEY: "saplink-DEV-encryption-key-2026"
+      ANTHROPIC_API_KEY: ""
+      # IA: compartilha o Ollama de produção (mesma rede)
+      OLLAMA_URL: "http://saplink-ollama:11434"
+      OLLAMA_MODEL: "qwen2.5:7b"
+      VAPID_PUBLIC_KEY: "${VAPID_PUBLIC_KEY:-}"
+      VAPID_PRIVATE_KEY: "${VAPID_PRIVATE_KEY:-}"
+      VAPID_SUBJECT: "${VAPID_SUBJECT:-mailto:ops@saplink.com.br}"
+      PORT: "8080"
+      SIMULATION_ENABLED: "false"
+      SIMULATION_INTERVAL: "30000"
+      # DEV traz dados de demonstração pra brincar
+      SEED_DEMO: "true"
+      BILLING_WEBHOOK_SECRET: "dev-billing-webhook-secret"
+      FRONTEND_URL: "https://dev.saplink.com.br"
+      # Stripe de TESTE (mesmas chaves de teste de hoje, vindas do .env)
+      STRIPE_SECRET_KEY: "${STRIPE_SECRET_KEY:-}"
+      STRIPE_WEBHOOK_SECRET: "${STRIPE_WEBHOOK_SECRET:-}"
+      ASAAS_API_URL: "${ASAAS_API_URL:-https://sandbox.asaas.com/api/v3}"
+      ASAAS_API_KEY: "${ASAAS_API_KEY:-}"
+      ASAAS_WEBHOOK_TOKEN: "${ASAAS_WEBHOOK_TOKEN:-}"
+      # E-mail em MODO LOG no DEV (sem RESEND_API_KEY = não envia de verdade, só loga)
+      RESEND_API_KEY: ""
+      RESEND_FROM: "SAPLINK DEV <onboarding@resend.dev>"
+    networks: [shared]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: saplink-dev-frontend
+    environment:
+      NEXT_PUBLIC_API_URL: "/api"
+    networks: [shared]
+    depends_on:
+      - backend
+
+volumes:
+  saplinkdev_data:
+
+networks:
+  shared:
+    external: true
+    name: saplink_default

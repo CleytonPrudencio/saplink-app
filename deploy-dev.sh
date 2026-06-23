@@ -5,10 +5,11 @@
 set -euo pipefail
 cd /opt/saplink-dev
 
-echo "==> Atualizando código (origin/main -> branch dev)..."
+echo "==> Atualizando código a partir de origin/dev..."
 git fetch origin --quiet
-# Traz o código mais novo de produção pro DEV. (Se um dia publicar a branch 'dev', troque por origin/dev.)
-git merge --no-edit origin/main
+# DEV segue a branch 'dev' (integração). Garante que o worktree fique idêntico ao remoto.
+git checkout dev 2>/dev/null || git checkout -b dev origin/dev
+git reset --hard origin/dev
 
 echo "==> Rebuild + up da stack DEV..."
 docker compose -p saplink-dev -f docker-compose.dev.yml --env-file .env up -d --build backend frontend
