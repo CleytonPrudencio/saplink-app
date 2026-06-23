@@ -170,6 +170,47 @@ function LivePanel({ t }: { t: { title: string; health: string; risk: string; cu
   );
 }
 
+// Slider arrastável (clique + arraste no mouse/toque/caneta) — padrão canônico com listeners
+// nativos e pointer capture. Definido no nível de módulo pra NÃO remontar a cada render.
+function DragSlider({ value, min, max, step, onChange, ariaLabel }: { value: number; min: number; max: number; step: number; onChange: (n: number) => void; ariaLabel?: string }) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const onChangeRef = useRef(onChange); onChangeRef.current = onChange;
+  const cfg = useRef({ min, max, step }); cfg.current = { min, max, step };
+  useEffect(() => {
+    const el = ref.current; if (!el) return;
+    let active = false;
+    const apply = (clientX: number) => {
+      const r = el.getBoundingClientRect();
+      const pct = Math.max(0, Math.min(1, (clientX - r.left) / r.width));
+      const { min, max, step } = cfg.current;
+      let v = min + pct * (max - min);
+      v = Math.round(v / step) * step;
+      onChangeRef.current(Math.max(min, Math.min(max, v)));
+    };
+    const down = (e: PointerEvent) => { active = true; try { el.setPointerCapture(e.pointerId); } catch {} apply(e.clientX); e.preventDefault(); };
+    const move = (e: PointerEvent) => { if (active) { apply(e.clientX); e.preventDefault(); } };
+    const up = (e: PointerEvent) => { active = false; try { el.releasePointerCapture(e.pointerId); } catch {} };
+    el.addEventListener("pointerdown", down, { passive: false });
+    el.addEventListener("pointermove", move, { passive: false });
+    el.addEventListener("pointerup", up);
+    el.addEventListener("pointercancel", up);
+    return () => { el.removeEventListener("pointerdown", down); el.removeEventListener("pointermove", move); el.removeEventListener("pointerup", up); el.removeEventListener("pointercancel", up); };
+  }, []);
+  const pct = ((value - min) / (max - min)) * 100;
+  return (
+    <div
+      ref={ref} role="slider" aria-label={ariaLabel} aria-valuenow={value} aria-valuemin={min} aria-valuemax={max} tabIndex={0}
+      onKeyDown={(e) => { if (e.key === "ArrowLeft") onChange(Math.max(min, value - step)); if (e.key === "ArrowRight") onChange(Math.min(max, value + step)); }}
+      className="relative h-6 flex items-center cursor-pointer select-none" style={{ touchAction: "none" }}
+    >
+      <div className="w-full h-2 rounded-full bg-white/[0.1]">
+        <div className="h-full rounded-full bg-gradient-to-r from-purple-500 to-cyan-400" style={{ width: `${pct}%` }} />
+      </div>
+      <div className="absolute w-5 h-5 rounded-full bg-white shadow-[0_2px_8px_rgba(0,0,0,0.4)] ring-2 ring-purple-500 -translate-x-1/2 pointer-events-none" style={{ left: `${pct}%` }} />
+    </div>
+  );
+}
+
 // Calculadora de ROI — usa os números do próprio visitante (estimativa honesta).
 function RoiCalc({ onInterest, t }: { onInterest: () => void; t: { hoursLabel: string; costLabel: string; assume: string; loseNow: string; saved: string; perMonth: string; perYear: string; cta: string } }) {
   const [hoursLost, setHoursLost] = useState(8);
@@ -177,17 +218,17 @@ function RoiCalc({ onInterest, t }: { onInterest: () => void; t: { hoursLabel: s
   const REDU = 0.7; // detecção+remediação rápida reduz ~70% do downtime
   const loss = hoursLost * costHr;
   const saved = Math.round(loss * REDU);
-  const Field = ({ label, value, set, min, max, step, fmt }: any) => (
-    <div>
-      <div className="flex justify-between text-sm mb-1"><span className="text-[#c9c5d6]">{label}</span><span className="font-semibold text-[#e2e0ea]">{fmt(value)}</span></div>
-      <input type="range" min={min} max={max} step={step} value={value} onChange={(e) => set(Number(e.target.value))} className="w-full accent-purple-500 cursor-pointer" />
-    </div>
-  );
   return (
     <div className="grid md:grid-cols-2 gap-6 items-center">
       <div className="bg-[#1a1527] border border-white/[0.08] rounded-2xl p-6 space-y-5">
-        <Field label={t.hoursLabel} value={hoursLost} set={setHoursLost} min={1} max={80} step={1} fmt={(v: number) => `${v} h`} />
-        <Field label={t.costLabel} value={costHr} set={setCostHr} min={200} max={50000} step={200} fmt={(v: number) => brl(v * 100)} />
+        <div>
+          <div className="flex justify-between text-sm mb-1"><span className="text-[#c9c5d6]">{t.hoursLabel}</span><span className="font-semibold text-[#e2e0ea]">{hoursLost} h</span></div>
+          <DragSlider value={hoursLost} min={1} max={80} step={1} onChange={setHoursLost} ariaLabel={t.hoursLabel} />
+        </div>
+        <div>
+          <div className="flex justify-between text-sm mb-1"><span className="text-[#c9c5d6]">{t.costLabel}</span><span className="font-semibold text-[#e2e0ea]">{brl(costHr * 100)}</span></div>
+          <DragSlider value={costHr} min={200} max={50000} step={200} onChange={setCostHr} ariaLabel={t.costLabel} />
+        </div>
         <p className="text-xs text-[#6b6580]">{t.assume}</p>
       </div>
       <div className="bg-gradient-to-br from-purple-600/15 to-cyan-500/10 border border-purple-500/30 rounded-2xl p-6 text-center">
