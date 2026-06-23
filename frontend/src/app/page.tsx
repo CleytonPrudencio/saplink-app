@@ -107,14 +107,14 @@ function RotatingWord({ words }: { words: string[] }) {
   );
 }
 
-function LivePanel({ t }: { t: { title: string; health: string; risk: string; feed: string[] } }) {
+function LivePanel({ t }: { t: { title: string; health: string; risk: string; cur: string; feed: string[]; rows: string[] } }) {
   const FEED = t.feed;
   const base: [string, number, string][] = [
-    ["S/4HANA Cloud · OData", 98, "#34d399"],
-    ["CPI · Pedidos B2B", 94, "#34d399"],
-    ["IDoc · INVOIC02", 71, "#fbbf24"],
-    ["RFC · PI_PROD", 88, "#34d399"],
-    ["Event Mesh · BP", 62, "#f87171"],
+    [t.rows[0], 98, "#34d399"],
+    [t.rows[1], 94, "#34d399"],
+    [t.rows[2], 71, "#fbbf24"],
+    [t.rows[3], 88, "#34d399"],
+    [t.rows[4], 62, "#f87171"],
   ];
   const [health, setHealth] = useState(92);
   const [risk, setRisk] = useState(84.2);
@@ -146,7 +146,7 @@ function LivePanel({ t }: { t: { title: string; health: string; risk: string; fe
             </div>
             <div className="text-right">
               <p className="text-xs text-[#9b95ad]">{t.risk}</p>
-              <p className="text-xl font-bold text-amber-300 tabular-nums">R$ {risk.toFixed(1).replace(".", ",")}k</p>
+              <p className="text-xl font-bold text-amber-300 tabular-nums">{t.cur} {risk.toFixed(1).replace(".", t.cur === "R$" ? "," : ".")}k</p>
             </div>
           </div>
           <div className="space-y-2.5">
@@ -524,7 +524,7 @@ export default function LandingPage() {
             <Reveal delay={160}>
               <div className="bg-[#1a1527] border border-white/[0.08] rounded-2xl p-4 h-full">
                 <p className="text-xs text-[#9b95ad] mb-3">{L.produto.impact}</p>
-                <div className="text-center py-2"><p className="text-xs text-[#9b95ad]">{L.produto.impactNow}</p><p className="text-3xl font-extrabold text-amber-300">R$ 89,2k</p></div>
+                <div className="text-center py-2"><p className="text-xs text-[#9b95ad]">{L.produto.impactNow}</p><p className="text-3xl font-extrabold text-amber-300">{L.produto.impactTotal}</p></div>
                 <div className="space-y-1.5 text-xs mt-1">
                   {L.produto.impactRows.map(([a, b]) => (
                     <div key={a} className="flex justify-between bg-[#0f0b1a] rounded-lg px-2.5 py-1.5"><span className="text-[#c9c5d6]">{a}</span><span className="text-amber-300 font-semibold">{b}</span></div>
