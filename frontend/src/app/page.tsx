@@ -269,28 +269,49 @@ function TryDemo({ t }: { t: { fail: string; btn: string; btnRunning: string; hi
   );
 }
 
-// Antes / Depois com régua arrastável
+// Antes / Depois com régua arrastável direto no painel (mouse + toque) via Pointer Events.
 function BeforeAfter({ t }: { t: { beforeTag: string; beforeText: string; beforeChips: string[]; afterTag: string; afterText: string; afterChips: string[]; drag: string } }) {
   const [pos, setPos] = useState(50);
+  const boxRef = useRef<HTMLDivElement | null>(null);
+  const dragging = useRef(false);
+  const setFromX = (clientX: number) => {
+    const el = boxRef.current; if (!el) return;
+    const r = el.getBoundingClientRect();
+    setPos(Math.max(0, Math.min(100, ((clientX - r.left) / r.width) * 100)));
+  };
+  const down = (e: React.PointerEvent) => { dragging.current = true; e.currentTarget.setPointerCapture?.(e.pointerId); setFromX(e.clientX); };
+  const move = (e: React.PointerEvent) => { if (dragging.current) setFromX(e.clientX); };
+  const up = (e: React.PointerEvent) => { dragging.current = false; try { e.currentTarget.releasePointerCapture?.(e.pointerId); } catch {} };
   return (
     <div className="relative max-w-3xl mx-auto select-none">
-      <div className="relative h-64 sm:h-72 rounded-2xl overflow-hidden border border-white/[0.1]">
+      <div
+        ref={boxRef}
+        onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}
+        role="slider" aria-label={t.drag} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(pos)} tabIndex={0}
+        onKeyDown={(e) => { if (e.key === "ArrowLeft") setPos((p) => Math.max(0, p - 3)); if (e.key === "ArrowRight") setPos((p) => Math.min(100, p + 3)); }}
+        className="relative h-64 sm:h-72 rounded-2xl overflow-hidden border border-white/[0.1] cursor-ew-resize"
+        style={{ touchAction: "pan-y" }}
+      >
         {/* Depois (fundo) */}
-        <div className="absolute inset-0 bg-gradient-to-br from-purple-600/15 to-cyan-500/10 p-5">
+        <div className="absolute inset-0 bg-gradient-to-br from-purple-600/15 to-cyan-500/10 p-5 pointer-events-none">
           <p className="text-xs font-bold text-cyan-300 mb-2">{t.afterTag}</p>
           <p className="text-sm text-[#e2e0ea]">{t.afterText}</p>
           <div className="mt-4 flex gap-2 flex-wrap">{t.afterChips.map((c) => <span key={c} className="text-[11px] px-2 py-1 rounded-full bg-white/[0.08] text-emerald-200">{c}</span>)}</div>
         </div>
         {/* Antes (clipado) */}
-        <div className="absolute inset-0 bg-[#15101f] p-5" style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}>
+        <div className="absolute inset-0 bg-[#15101f] p-5 pointer-events-none" style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}>
           <p className="text-xs font-bold text-rose-300 mb-2">{t.beforeTag}</p>
           <p className="text-sm text-[#9b95ad]">{t.beforeText}</p>
           <div className="mt-4 flex gap-2 flex-wrap">{t.beforeChips.map((c) => <span key={c} className="text-[11px] px-2 py-1 rounded-full bg-white/[0.06] text-[#9b95ad]">{c}</span>)}</div>
         </div>
-        {/* Linha */}
-        <div className="absolute top-0 bottom-0 w-0.5 bg-cyan-400/70" style={{ left: `${pos}%` }} />
+        {/* Linha + handle (alça) arrastável */}
+        <div className="absolute top-0 bottom-0 w-0.5 bg-cyan-400/80 pointer-events-none" style={{ left: `${pos}%`, transform: "translateX(-50%)" }} />
+        <div
+          className="absolute top-1/2 w-9 h-9 -translate-x-1/2 -translate-y-1/2 rounded-full bg-cyan-400 text-[#0f0b1a] flex items-center justify-center text-sm font-bold shadow-[0_4px_16px_rgba(34,211,238,0.5)] ring-2 ring-white/30"
+          style={{ left: `${pos}%` }}
+        >⇆</div>
       </div>
-      <input type="range" min={0} max={100} value={pos} onChange={(e) => setPos(Number(e.target.value))} className="w-full mt-3 accent-cyan-400 cursor-pointer" aria-label="compare" />
+      <input type="range" min={0} max={100} value={pos} onChange={(e) => setPos(Number(e.target.value))} className="w-full mt-3 accent-cyan-400 cursor-pointer" aria-label={t.drag} />
       <p className="text-center text-xs text-[#6b6580] mt-1">{t.drag}</p>
     </div>
   );
