@@ -410,6 +410,10 @@ export default function LandingPage() {
   const cta = (label: string, primary = true, cls = "") => (
     <button onClick={() => setInterest(true)} className={`${primary ? "bg-gradient-to-r from-purple-600 to-cyan-500 text-white" : "bg-white/[0.06] text-[#e2e0ea] hover:bg-white/[0.12]"} px-6 py-3 rounded-lg font-semibold transition cursor-pointer ${cls}`}>{label}</button>
   );
+  // Cadastro self-service (empresa cria conta na hora). O "Tenho interesse" (cta) fica pra quem só quer info.
+  const signupLink = (label: string, primary = true, cls = "") => (
+    <Link href="/register" className={`${primary ? "bg-gradient-to-r from-purple-600 to-cyan-500 text-white" : "bg-white/[0.06] text-[#e2e0ea] hover:bg-white/[0.12]"} px-6 py-3 rounded-lg font-semibold transition cursor-pointer inline-block text-center ${cls}`}>{label}</Link>
+  );
 
   return (
     <div className="min-h-screen bg-transparent text-[#e2e0ea] overflow-x-hidden">
@@ -449,7 +453,8 @@ export default function LandingPage() {
           <div className="flex items-center gap-2 shrink-0">
             <div className="hidden lg:block"><LangSwitcher compact /></div>
             <Link href="/login" className="hidden lg:inline px-3 sm:px-4 py-2 text-sm text-[#e2e0ea] hover:text-white transition">{L.footer.login}</Link>
-            <button onClick={() => setInterest(true)} className="hidden sm:inline-flex px-3 sm:px-4 py-2 text-sm font-semibold rounded-lg bg-gradient-to-r from-purple-600 to-cyan-500 text-white hover:opacity-90 transition cursor-pointer whitespace-nowrap">{L.interest.title}</button>
+            <button onClick={() => setInterest(true)} className="hidden md:inline-flex px-3 sm:px-4 py-2 text-sm font-semibold rounded-lg bg-white/[0.06] text-[#e2e0ea] hover:bg-white/[0.12] transition cursor-pointer whitespace-nowrap">{L.interest.title}</button>
+            <Link href="/register" className="hidden sm:inline-flex px-3 sm:px-4 py-2 text-sm font-semibold rounded-lg bg-gradient-to-r from-purple-600 to-cyan-500 text-white hover:opacity-90 transition whitespace-nowrap">{L.signup}</Link>
             <button onClick={() => setMenuOpen(!menuOpen)} aria-label="Menu" className="lg:hidden text-[#e2e0ea] p-1.5 -mr-1 cursor-pointer text-xl leading-none">{menuOpen ? "✕" : "☰"}</button>
           </div>
         </div>
@@ -460,7 +465,8 @@ export default function LandingPage() {
               <LangSwitcher />
               <div className="flex items-center gap-2">
                 <Link href="/login" onClick={() => setMenuOpen(false)} className="px-3 py-2 rounded-lg bg-white/[0.06] text-[#e2e0ea] hover:bg-white/[0.12] transition">{L.footer.login}</Link>
-                <button onClick={() => { setMenuOpen(false); setInterest(true); }} className="px-3 py-2 rounded-lg font-semibold bg-gradient-to-r from-purple-600 to-cyan-500 text-white transition cursor-pointer">{L.interest.title}</button>
+                <button onClick={() => { setMenuOpen(false); setInterest(true); }} className="px-3 py-2 rounded-lg font-semibold bg-white/[0.06] text-[#e2e0ea] transition cursor-pointer">{L.interest.title}</button>
+                <Link href="/register" onClick={() => setMenuOpen(false)} className="px-3 py-2 rounded-lg font-semibold bg-gradient-to-r from-purple-600 to-cyan-500 text-white transition">{L.signup}</Link>
               </div>
             </div>
           </nav>
@@ -501,7 +507,8 @@ export default function LandingPage() {
               </h1>
               <p className="text-base sm:text-lg text-[#c9c5d6] max-w-xl mx-auto lg:mx-0 mt-6 leading-relaxed">{L.hero.subtitle}</p>
               <div className="flex flex-wrap gap-3 justify-center lg:justify-start mt-8">
-                {cta(L.hero.ctaPrimary, true, "shadow-[0_0_30px_rgba(124,58,237,0.35)]")}
+                {signupLink(L.signup, true, "shadow-[0_0_30px_rgba(124,58,237,0.35)]")}
+                {cta(L.hero.ctaPrimary, false)}
                 <a href="#cobertura" className="px-6 py-3 rounded-lg bg-white/[0.06] text-[#e2e0ea] font-semibold hover:bg-white/[0.12] transition">{L.hero.ctaSecondary}</a>
               </div>
               <div className="flex flex-wrap gap-x-5 gap-y-2 justify-center lg:justify-start mt-7 text-xs text-[#6b6580]">
@@ -864,7 +871,7 @@ export default function LandingPage() {
           <div className="rounded-2xl p-8 sm:p-12 text-center bg-gradient-to-br from-purple-600/20 to-cyan-500/15 border border-purple-500/30">
             <h2 className="text-2xl sm:text-4xl font-bold">{L.ctaFinal.title}</h2>
             <p className="text-[#c9c5d6] mt-3 max-w-xl mx-auto">{L.ctaFinal.sub}</p>
-            <div className="mt-7 flex justify-center">{cta(L.ctaFinal.btn)}</div>
+            <div className="mt-7 flex flex-wrap gap-3 justify-center">{signupLink(L.signup)}{cta(L.ctaFinal.btn, false)}</div>
           </div>
         </section>
       </main>
