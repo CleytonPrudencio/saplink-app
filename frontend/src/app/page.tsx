@@ -273,24 +273,34 @@ function TryDemo({ t }: { t: { fail: string; btn: string; btnRunning: string; hi
 function BeforeAfter({ t }: { t: { beforeTag: string; beforeText: string; beforeChips: string[]; afterTag: string; afterText: string; afterChips: string[]; drag: string } }) {
   const [pos, setPos] = useState(50);
   const boxRef = useRef<HTMLDivElement | null>(null);
-  const dragging = useRef(false);
   const setFromX = (clientX: number) => {
     const el = boxRef.current; if (!el) return;
     const r = el.getBoundingClientRect();
     setPos(Math.max(0, Math.min(100, ((clientX - r.left) / r.width) * 100)));
   };
-  const down = (e: React.PointerEvent) => { dragging.current = true; e.currentTarget.setPointerCapture?.(e.pointerId); setFromX(e.clientX); };
-  const move = (e: React.PointerEvent) => { if (dragging.current) setFromX(e.clientX); };
-  const up = (e: React.PointerEvent) => { dragging.current = false; try { e.currentTarget.releasePointerCapture?.(e.pointerId); } catch {} };
+  // Arraste robusto: ao pressionar, escuta move/up na janela (mouse + toque + caneta).
+  const start = (e: React.PointerEvent) => {
+    e.preventDefault();
+    setFromX(e.clientX);
+    const move = (ev: PointerEvent) => setFromX(ev.clientX);
+    const end = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", end);
+      window.removeEventListener("pointercancel", end);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", end);
+    window.addEventListener("pointercancel", end);
+  };
   return (
     <div className="relative max-w-3xl mx-auto select-none">
       <div
         ref={boxRef}
-        onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}
+        onPointerDown={start}
         role="slider" aria-label={t.drag} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(pos)} tabIndex={0}
         onKeyDown={(e) => { if (e.key === "ArrowLeft") setPos((p) => Math.max(0, p - 3)); if (e.key === "ArrowRight") setPos((p) => Math.min(100, p + 3)); }}
         className="relative h-64 sm:h-72 rounded-2xl overflow-hidden border border-white/[0.1] cursor-ew-resize"
-        style={{ touchAction: "pan-y" }}
+        style={{ touchAction: "none" }}
       >
         {/* Depois (fundo) */}
         <div className="absolute inset-0 bg-gradient-to-br from-purple-600/15 to-cyan-500/10 p-5 pointer-events-none">
