@@ -14,3 +14,14 @@ saplink.com.br {
 www.saplink.com.br {
 	redir https://saplink.com.br{uri} permanent
 }
+
+# Ambiente DEV — stack isolada (containers saplink-dev-*) na mesma rede
+dev.saplink.com.br {
+	encode gzip
+	handle /api/* {
+		reverse_proxy saplink-dev-backend:8080
+	}
+	handle {
+		reverse_proxy saplink-dev-frontend:3000
+	}
+}
