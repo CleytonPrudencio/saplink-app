@@ -462,6 +462,29 @@ export default function LandingPage() {
           </div>
         </section>
 
+        {/* Global / multilíngue — novidade */}
+        <section className="py-14 sm:py-16 border-t border-white/[0.06]">
+          <div className="rounded-2xl p-6 sm:p-10 bg-gradient-to-br from-cyan-500/10 via-purple-600/10 to-emerald-500/10 border border-cyan-500/20">
+            <div className="text-center max-w-3xl mx-auto">
+              <span className="inline-block px-3 py-1 rounded-full bg-cyan-500/15 text-cyan-200 text-xs font-bold mb-4">{L.global.badge}</span>
+              <h2 className="text-2xl sm:text-4xl font-bold">{L.global.title}</h2>
+              <p className="text-[#c9c5d6] mt-3 leading-relaxed">{L.global.sub}</p>
+              <div className="mt-5 flex flex-wrap justify-center gap-2 text-2xl">
+                {L.global.flags.map((f, i) => <span key={i} className="slk-tilt">{f}</span>)}
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-8">
+              {L.global.points.map(([ic, t, d]) => (
+                <div key={t} className="bg-[#0f0b1a]/60 rounded-xl p-5 border border-white/[0.08]">
+                  <div className="text-2xl mb-1.5">{ic}</div>
+                  <p className="font-semibold text-sm">{t}</p>
+                  <p className="text-xs text-[#9b95ad] mt-1 leading-relaxed">{d}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
         <section id="cobertura" className="py-14 sm:py-16 border-t border-white/[0.06]">
           <div className="text-center max-w-3xl mx-auto">
             <span className="inline-block px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/25 text-cyan-300 text-xs font-bold mb-4">{L.coverage.badge}</span>
