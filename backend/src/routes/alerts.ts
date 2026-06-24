@@ -3,6 +3,7 @@ import prisma from '../lib/prisma';
 import { authMiddleware } from '../middleware/auth';
 import { tenancyMiddleware } from '../middleware/tenancy';
 import { diagnose } from '../services/ai';
+import { diagnoseAlert } from '../services/alertdiag';
 import { consultancyClientIds } from '../lib/scope';
 import { reqEnv, reqLang } from '../lib/env';
 
@@ -133,16 +134,9 @@ router.post('/resolve-group', async (req: Request, res: Response) => {
 // POST /:id/diagnose — IA explica o alerta (causa provável + o que fazer)
 router.post('/:id/diagnose', async (req: Request, res: Response) => {
   try {
-    const alert = await prisma.alert.findUnique({ where: { id: req.params.id }, include: { client: true, integration: true } });
-    if (!alert || alert.client.consultancyId !== req.consultancyId!) { res.status(404).json({ error: 'Alerta não encontrado' }); return; }
-    const sameOpen = await prisma.alert.count({ where: { resolved: false, type: alert.type, integrationId: alert.integrationId, clientId: alert.clientId } });
-    const context = {
-      cliente: alert.client.name,
-      integracao: alert.integration?.name, tipo_integracao: alert.integration?.type,
-      tipo_alerta: alert.type, severidade: alert.severity, mensagem: alert.message,
-      ocorrencias_abertas_iguais: sameOpen, desde: alert.createdAt,
-    };
-    const text = await diagnose(`Explique este alerta e diga o que fazer para resolver: ${alert.message}`, context, req.consultancyId!, reqLang(req));
+    const fresh = req.query.fresh === '1' || req.body?.fresh === true;
+    const text = await diagnoseAlert(req.params.id, req.consultancyId!, reqLang(req), fresh);
+    if (text === null) { res.status(404).json({ error: 'Alerta não encontrado' }); return; }
     res.json({ text });
   } catch (error) {
     console.error('Alert diagnose error:', error);

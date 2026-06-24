@@ -1,7 +1,7 @@
-import { generate } from './aiProviders';
+import { generate, generateStream } from './aiProviders';
 
 export type Lang = 'pt' | 'en' | 'es';
-type AiCtx = { consultancyId?: string; learnKey?: string; lang?: Lang };
+type AiCtx = { consultancyId?: string; learnKey?: string; lang?: Lang; fresh?: boolean };
 
 const LANG_NAME: Record<Lang, string> = {
   pt: 'Brazilian Portuguese',
@@ -78,15 +78,36 @@ async function runAI(systemPrompt: string, userMessage: string, numPredict = 450
   return text && text.length > 0 ? text : AI_UNAVAILABLE[lang];
 }
 
+// Versão streaming do runAI (mesmo prompt → mesma chave de cache).
+async function runAIStream(systemPrompt: string, userMessage: string, numPredict: number, ctx: AiCtx, onDelta: (t: string) => void): Promise<string> {
+  const lang: Lang = ctx.lang || 'pt';
+  const sys = langDirective(lang) + systemPrompt;
+  const user = `${userMessage}\n\n---\nReminder: write the ENTIRE answer in ${LANG_NAME[lang]} (keep SAP terms/codes as-is).`;
+  const text = await generateStream(sys, user, numPredict, { consultancyId: ctx.consultancyId, fresh: ctx.fresh }, onDelta);
+  if (text && text.length > 0) return text;
+  onDelta(AI_UNAVAILABLE[lang]);
+  return AI_UNAVAILABLE[lang];
+}
+
 export async function diagnose(query: string, context: object, consultancyId?: string, lang: Lang = 'pt'): Promise<string> {
   const userMessage = `Contexto do cliente:\n${JSON.stringify(context, null, 2)}\n\nConsulta do usuário:\n${query}`;
   return runAI(SYSTEM_PROMPT, userMessage, 450, { consultancyId, learnKey: query, lang });
+}
+
+export async function diagnoseStream(query: string, context: object, consultancyId: string, lang: Lang, onDelta: (t: string) => void, fresh = false): Promise<string> {
+  const userMessage = `Contexto do cliente:\n${JSON.stringify(context, null, 2)}\n\nConsulta do usuário:\n${query}`;
+  return runAIStream(SYSTEM_PROMPT, userMessage, 450, { consultancyId, lang, fresh }, onDelta);
 }
 
 /** Copiloto: pergunta em linguagem natural sobre a carteira inteira da consultoria. */
 export async function ask(question: string, context: object, consultancyId?: string, lang: Lang = 'pt'): Promise<string> {
   const userMessage = `Dados da carteira (resumo):\n${JSON.stringify(context, null, 2)}\n\nPergunta: ${question}`;
   return runAI(ASK_PROMPT, userMessage, 500, { consultancyId, lang });
+}
+
+export async function askStream(question: string, context: object, consultancyId: string, lang: Lang, onDelta: (t: string) => void): Promise<string> {
+  const userMessage = `Dados da carteira (resumo):\n${JSON.stringify(context, null, 2)}\n\nPergunta: ${question}`;
+  return runAIStream(ASK_PROMPT, userMessage, 500, { consultancyId, lang }, onDelta);
 }
 
 /** Digest semanal: narra o resumo de saúde da carteira para o gestor. */

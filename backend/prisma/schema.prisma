@@ -165,6 +165,9 @@ model Alert {
   ticketKey      String?
   ticketUrl      String?
   ticketClosedAt DateTime?
+  // Diagnóstico de IA pré-gerado (abre instantâneo). lang = idioma do texto guardado.
+  aiDiagnosis     String?
+  aiDiagnosisLang String?
 }
 
 // C1 — canais de notificação por consultoria, com níveis de escalonamento.
@@ -810,4 +813,17 @@ model ActivityLog {
   ip            String?
   createdAt     DateTime @default(now())
   @@index([consultancyId, createdAt])
+}
+
+// Cache de respostas da IA (por escopo = consultoria, ou "global"). Acelera prompts repetidos.
+model AiCache {
+  id        String   @id @default(uuid())
+  scope     String   // consultancyId ou "global"
+  keyHash   String   // sha256(system + user)
+  response  String
+  provider  String?
+  hits      Int      @default(0)
+  createdAt DateTime @default(now())
+  @@unique([scope, keyHash])
+  @@index([createdAt])
 }

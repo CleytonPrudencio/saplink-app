@@ -122,6 +122,44 @@ export async function askPortfolio(question: string) {
   return data as { answer: string };
 }
 
+// Copiloto com streaming de tokens (SSE). Cai pro askPortfolio quando lança.
+// API_BASE é exportado mais abaixo; usamos a mesma const local.
+const ASK_API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
+export async function askPortfolioStream(question: string, onToken: (t: string) => void): Promise<string> {
+  const res = await fetch(`${ASK_API_BASE}/ask/stream`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(localStorage.getItem('token') ? { Authorization: `Bearer ${localStorage.getItem('token')}` } : {}),
+      ...(localStorage.getItem('slk_env') ? { 'x-environment': localStorage.getItem('slk_env')! } : {}),
+      ...(localStorage.getItem('slk_lang') ? { 'x-lang': localStorage.getItem('slk_lang')! } : {}),
+    },
+    body: JSON.stringify({ question }),
+  });
+  if (!res.ok || !res.body) throw new Error('stream falhou');
+  const reader = res.body.getReader();
+  const dec = new TextDecoder();
+  let buf = '', full = '';
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    let nl: number;
+    while ((nl = buf.indexOf('\n\n')) >= 0) {
+      const chunk = buf.slice(0, nl); buf = buf.slice(nl + 2);
+      if (chunk.startsWith('event: done')) continue; // fim do stream
+      // pega só "data: <json>"; ignora demais linhas de evento
+      const line = chunk.split('\n').find((l) => l.startsWith('data: '));
+      if (!line) continue;
+      try {
+        const tok = JSON.parse(line.slice(6));
+        if (typeof tok === 'string') { full += tok; onToken(tok); }
+      } catch { /* ignora linhas que não são token */ }
+    }
+  }
+  return full;
+}
+
 // Digest semanal por IA
 export async function getDigestStatus() {
   const { data } = await api.get('/digest');

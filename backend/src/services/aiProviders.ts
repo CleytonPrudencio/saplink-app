@@ -10,7 +10,8 @@ export type Provider = 'ollama' | 'anthropic' | 'openai' | 'azure';
 interface Step { provider: Provider; key?: string; model?: string; endpoint?: string; deployment?: string }
 interface Chain { steps: Step[]; learn: boolean }
 
-const DEF_MODELS = { anthropic: 'claude-sonnet-4-20250514', openai: 'gpt-4o-mini', ollama: process.env.OLLAMA_MODEL || 'qwen2.5:7b' };
+// Haiku como padrão: rápido e barato (a consultoria pode escolher Sonnet no BYO via cfg.anthropicModel).
+const DEF_MODELS = { anthropic: process.env.ANTHROPIC_MODEL || 'claude-haiku-4-5-20251001', openai: 'gpt-4o-mini', ollama: process.env.OLLAMA_MODEL || 'qwen2.5:7b' };
 
 export function normalizeKey(s = ''): string {
   return String(s).toLowerCase()
@@ -28,7 +29,9 @@ async function resolveChain(consultancyId?: string): Promise<Chain> {
     if (p === 'azure') { const key = cfg?.azureKey ? String(decryptValue(cfg.azureKey) ?? '') : undefined; return key && cfg?.azureEndpoint && cfg?.azureDeployment ? { provider: 'azure', key, endpoint: cfg.azureEndpoint, deployment: cfg.azureDeployment } : null; }
     return null;
   };
-  const order = cfg ? [cfg.primary, cfg.fallback] : ['ollama', 'anthropic'];
+  // Sem config da consultoria: se a plataforma tem chave Claude, ele é o primário (rápido);
+  // o Ollama (CPU, lento) fica só como reserva. Sem chave, mantém Ollama primário.
+  const order = cfg ? [cfg.primary, cfg.fallback] : (process.env.ANTHROPIC_API_KEY ? ['anthropic', 'ollama'] : ['ollama', 'anthropic']);
   const steps: Step[] = [];
   for (const p of order) { const s = build(p); if (s && !steps.find((x) => x.provider === s.provider)) steps.push(s); }
   // garante o Ollama como último recurso
@@ -40,7 +43,7 @@ async function callProvider(step: Step, sys: string, user: string, numPredict: n
   if (step.provider === 'ollama') {
     const resp = await fetch(`${process.env.OLLAMA_URL}/api/chat`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: step.model, stream: false, options: { num_predict: numPredict, temperature: 0.4 }, messages: [{ role: 'system', content: sys }, { role: 'user', content: user }] }),
+      body: JSON.stringify({ model: step.model, stream: false, keep_alive: process.env.OLLAMA_KEEP_ALIVE || '1h', options: { num_predict: numPredict, temperature: 0.4 }, messages: [{ role: 'system', content: sys }, { role: 'user', content: user }] }),
       signal: AbortSignal.timeout(Number(process.env.OLLAMA_TIMEOUT_MS) || 180000),
     });
     if (!resp.ok) throw new Error(`Ollama HTTP ${resp.status}`);
@@ -80,7 +83,81 @@ async function store(consultancyId: string, topicKey: string, question: string, 
 }
 
 /** Gera texto pela cadeia de provedores do tenant. Retorna null se todos falharem. */
-export async function generate(sys: string, user: string, numPredict = 450, ctx: { consultancyId?: string; learnKey?: string } = {}): Promise<string | null> {
+// Versão streaming: emite cada pedaço via onDelta e retorna o texto completo.
+// Cacheia igual ao generate(); cache hit → emite tudo de uma vez (instantâneo).
+export async function generateStream(
+  sys: string, user: string, numPredict: number,
+  ctx: { consultancyId?: string; fresh?: boolean }, onDelta: (t: string) => void,
+): Promise<string> {
+  const scope = ctx.consultancyId || 'global';
+  const cacheKey = crypto.createHash('sha256').update(`${sys} ${user}`).digest('hex');
+  const ttlMs = (Number(process.env.AI_CACHE_TTL_DAYS) || 14) * 86400000;
+  if (!ctx.fresh) {
+    const hit = await prisma.aiCache.findUnique({ where: { scope_keyHash: { scope, keyHash: cacheKey } } }).catch(() => null);
+    if (hit && Date.now() - hit.createdAt.getTime() < ttlMs) {
+      prisma.aiCache.update({ where: { id: hit.id }, data: { hits: { increment: 1 } } }).catch(() => {});
+      onDelta(hit.response);
+      return hit.response;
+    }
+  }
+
+  const { steps } = await resolveChain(ctx.consultancyId);
+  for (const step of steps) {
+    let full = '';
+    try {
+      if (step.provider === 'ollama') {
+        const resp = await fetch(`${process.env.OLLAMA_URL}/api/chat`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model: step.model, stream: true, keep_alive: process.env.OLLAMA_KEEP_ALIVE || '1h', options: { num_predict: numPredict, temperature: 0.4 }, messages: [{ role: 'system', content: sys }, { role: 'user', content: user }] }),
+          signal: AbortSignal.timeout(Number(process.env.OLLAMA_TIMEOUT_MS) || 180000),
+        });
+        if (!resp.ok || !resp.body) throw new Error(`Ollama HTTP ${resp.status}`);
+        const reader = resp.body.getReader(); const dec = new TextDecoder(); let buf = '';
+        for (;;) {
+          const { done, value } = await reader.read(); if (done) break;
+          buf += dec.decode(value, { stream: true });
+          let nl: number;
+          while ((nl = buf.indexOf('\n')) >= 0) {
+            const line = buf.slice(0, nl).trim(); buf = buf.slice(nl + 1);
+            if (!line) continue;
+            try { const j = JSON.parse(line) as { message?: { content?: string } }; const t = j?.message?.content; if (t) { full += t; onDelta(t); } } catch { /* linha parcial */ }
+          }
+        }
+      } else if (step.provider === 'anthropic') {
+        const client = new Anthropic({ apiKey: step.key });
+        const stream = client.messages.stream({ model: step.model!, max_tokens: 2048, system: sys, messages: [{ role: 'user', content: user }] });
+        stream.on('text', (t: string) => { full += t; onDelta(t); });
+        await stream.finalMessage();
+      } else {
+        // openai/azure: sem stream aqui → cai pro não-stream e emite de uma vez
+        const t = await callProvider(step, sys, user, numPredict); if (t) { full = t; onDelta(t); }
+      }
+      if (full && full.length > 0) {
+        prisma.aiCache.upsert({
+          where: { scope_keyHash: { scope, keyHash: cacheKey } },
+          update: { response: full, provider: step.provider, createdAt: new Date(), hits: 0 },
+          create: { scope, keyHash: cacheKey, response: full, provider: step.provider },
+        }).catch(() => {});
+        return full;
+      }
+    } catch (e) { console.error(`[ai-stream] provider ${step.provider}:`, (e as Error).message); }
+  }
+  return '';
+}
+
+export async function generate(sys: string, user: string, numPredict = 450, ctx: { consultancyId?: string; learnKey?: string; fresh?: boolean } = {}): Promise<string | null> {
+  // Cache de respostas: mesmo prompt → resposta instantânea (vale pra todos os recursos de IA).
+  const scope = ctx.consultancyId || 'global';
+  const cacheKey = crypto.createHash('sha256').update(`${sys} ${user}`).digest('hex');
+  const ttlMs = (Number(process.env.AI_CACHE_TTL_DAYS) || 14) * 86400000;
+  if (!ctx.fresh) {
+    const hit = await prisma.aiCache.findUnique({ where: { scope_keyHash: { scope, keyHash: cacheKey } } }).catch(() => null);
+    if (hit && Date.now() - hit.createdAt.getTime() < ttlMs) {
+      prisma.aiCache.update({ where: { id: hit.id }, data: { hits: { increment: 1 } } }).catch(() => {});
+      return hit.response;
+    }
+  }
+
   const { steps, learn } = await resolveChain(ctx.consultancyId);
   const key = ctx.learnKey ? normalizeKey(ctx.learnKey) : normalizeKey(user);
   for (const step of steps) {
@@ -93,6 +170,11 @@ export async function generate(sys: string, user: string, numPredict = 450, ctx:
       const text = await callProvider(step, sys, u, numPredict);
       if (text && text.length > 0) {
         if (learn && step.provider !== 'ollama' && ctx.consultancyId) await store(ctx.consultancyId, key, user, text, step.provider).catch(() => {});
+        prisma.aiCache.upsert({
+          where: { scope_keyHash: { scope, keyHash: cacheKey } },
+          update: { response: text, provider: step.provider, createdAt: new Date(), hits: 0 },
+          create: { scope, keyHash: cacheKey, response: text, provider: step.provider },
+        }).catch(() => {});
         return text;
       }
     } catch (e) { console.error(`[ai] provider ${step.provider}:`, (e as Error).message); }
