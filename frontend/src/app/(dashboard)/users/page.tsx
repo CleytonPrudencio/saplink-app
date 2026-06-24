@@ -7,6 +7,7 @@ import {
   type TenantUser,
 } from "@/lib/api";
 import { useLang } from "@/i18n/I18n";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { T } from "./i18n";
 
 const ROLES = ["CONSULTANCY_ADMIN", "CONSULTANCY_ANALYST", "CONSULTANCY_VIEWER"] as const;
@@ -58,6 +59,9 @@ export default function UsersPage() {
   const [resetResult, setResetResult] = useState<{ invited?: boolean; tempPassword?: string } | null>(null);
   const [resetCopied, setResetCopied] = useState(false);
 
+  // confirmação (substitui window.confirm)
+  const [confirm, setConfirm] = useState<{ kind: "reset" | "delete"; user: TenantUser } | null>(null);
+
   const roleLabel = (r: string) =>
     r === "CONSULTANCY_ADMIN" ? t.roleAdmin : r === "CONSULTANCY_VIEWER" ? t.roleViewer : t.roleAnalyst;
   const roleBadge = (r: string) =>
@@ -103,7 +107,6 @@ export default function UsersPage() {
   }, []);
 
   async function onResetPassword(u: TenantUser) {
-    if (!window.confirm(t.confirmReset(u.name))) return;
     setResettingId(u.id);
     try {
       const res = await resetUserPassword(u.id);
@@ -186,7 +189,6 @@ export default function UsersPage() {
   }
 
   async function onDelete(u: TenantUser) {
-    if (!window.confirm(t.confirmDelete(u.name))) return;
     try {
       await deleteUser(u.id);
       if (editId === u.id) setEditId(null);
@@ -347,7 +349,7 @@ export default function UsersPage() {
                   </span>
                 ) : u.id !== meId ? (
                   <button
-                    onClick={() => onResetPassword(u)}
+                    onClick={() => setConfirm({ kind: "reset", user: u })}
                     disabled={resettingId === u.id}
                     className="text-xs px-2.5 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08] text-[#9b95ad] hover:text-white hover:bg-white/[0.1] cursor-pointer transition disabled:opacity-40"
                   >
@@ -361,7 +363,7 @@ export default function UsersPage() {
                   {t.edit}
                 </button>
                 <button
-                  onClick={() => onDelete(u)}
+                  onClick={() => setConfirm({ kind: "delete", user: u })}
                   aria-label={t.remove}
                   title={t.remove}
                   className="text-[#9b95ad] hover:text-rose-400 hover:bg-white/[0.06] text-base px-2 py-1.5 rounded-lg cursor-pointer transition"
@@ -486,6 +488,29 @@ export default function UsersPage() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!confirm}
+        title={confirm?.kind === "delete" ? t.remove : t.resetPassword}
+        message={
+          confirm
+            ? confirm.kind === "delete"
+              ? t.confirmDelete(confirm.user.name)
+              : t.confirmReset(confirm.user.name)
+            : ""
+        }
+        confirmLabel={confirm?.kind === "delete" ? t.remove : t.resetPassword}
+        cancelLabel={t.cancel}
+        danger={confirm?.kind === "delete"}
+        onClose={() => setConfirm(null)}
+        onConfirm={() => {
+          if (!confirm) return;
+          const { kind, user } = confirm;
+          setConfirm(null);
+          if (kind === "delete") onDelete(user);
+          else onResetPassword(user);
+        }}
+      />
     </div>
   );
 }

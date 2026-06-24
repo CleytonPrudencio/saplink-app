@@ -28,6 +28,14 @@ export const T: Record<Lang, {
   emptyTitle: string;
   // locale para datas
   locale: string;
+  // filtros
+  filterUser: string;
+  filterUserAll: string;
+  filterAction: string;
+  filterActionAll: string;
+  filterFrom: string;
+  filterTo: string;
+  filterClear: string;
 }> = {
   pt: {
     title: "Log de atividade",
@@ -52,6 +60,13 @@ export const T: Record<Lang, {
     totalRecords: (n) => `${n} ${n === 1 ? "registro" : "registros"}`,
     emptyTitle: "Nenhuma atividade registrada ainda.",
     locale: "pt-BR",
+    filterUser: "Usuário",
+    filterUserAll: "Todos",
+    filterAction: "Ação",
+    filterActionAll: "Todas",
+    filterFrom: "De",
+    filterTo: "Até",
+    filterClear: "Limpar",
   },
   en: {
     title: "Activity log",
@@ -76,6 +91,13 @@ export const T: Record<Lang, {
     totalRecords: (n) => `${n} ${n === 1 ? "record" : "records"}`,
     emptyTitle: "No activity recorded yet.",
     locale: "en-US",
+    filterUser: "User",
+    filterUserAll: "All",
+    filterAction: "Action",
+    filterActionAll: "All",
+    filterFrom: "From",
+    filterTo: "To",
+    filterClear: "Clear",
   },
   es: {
     title: "Registro de actividad",
@@ -100,5 +122,12 @@ export const T: Record<Lang, {
     totalRecords: (n) => `${n} ${n === 1 ? "registro" : "registros"}`,
     emptyTitle: "Aún no hay actividad registrada.",
     locale: "es-ES",
+    filterUser: "Usuario",
+    filterUserAll: "Todos",
+    filterAction: "Acción",
+    filterActionAll: "Todas",
+    filterFrom: "Desde",
+    filterTo: "Hasta",
+    filterClear: "Limpiar",
   },
 };

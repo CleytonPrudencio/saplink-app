@@ -26,7 +26,15 @@ router.post('/page', async (req: Request, res: Response) => {
 router.get('/', requireConsultancyAdmin, async (req: Request, res: Response) => {
   const page = Math.max(1, parseInt(String(req.query.page || '1'), 10) || 1);
   const pageSize = Math.min(100, Math.max(5, parseInt(String(req.query.pageSize || '30'), 10) || 30));
-  const where = { consultancyId: req.consultancyId! };
+  const { action, userId, from, to } = req.query as Record<string, string | undefined>;
+  const where: any = { consultancyId: req.consultancyId! };
+  if (action) where.action = action;
+  if (userId) where.userId = userId;
+  if (from || to) {
+    where.createdAt = {};
+    if (from) where.createdAt.gte = new Date(from + 'T00:00:00');
+    if (to) where.createdAt.lte = new Date(to + 'T23:59:59.999');
+  }
 
   const [total, rows, users] = await Promise.all([
     prisma.activityLog.count({ where }),

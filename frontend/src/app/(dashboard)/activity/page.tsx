@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getMe, getActivity, type ActivityItem } from "@/lib/api";
+import { getMe, getActivity, getUsers, type ActivityItem, type TenantUser } from "@/lib/api";
 import { useLang } from "@/i18n/I18n";
 import { T } from "./i18n";
 
@@ -20,6 +20,13 @@ export default function ActivityPage() {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
+
+  // filtros
+  const [usersList, setUsersList] = useState<TenantUser[]>([]);
+  const [fAction, setFAction] = useState("");
+  const [fUserId, setFUserId] = useState("");
+  const [fFrom, setFFrom] = useState("");
+  const [fTo, setFTo] = useState("");
 
   function actionLabel(a: ActivityItem["action"]) {
     switch (a) {
@@ -48,10 +55,18 @@ export default function ActivityPage() {
     }
   }
 
-  async function load(p: number) {
+  async function load(
+    p: number,
+    filters: { action?: string; userId?: string; from?: string; to?: string } = {
+      action: fAction,
+      userId: fUserId,
+      from: fFrom,
+      to: fTo,
+    },
+  ) {
     setLoading(true);
     try {
-      const res = await getActivity(p, PAGE_SIZE);
+      const res = await getActivity({ page: p, pageSize: PAGE_SIZE, ...filters });
       setItems(res.items || []);
       setTotal(res.total || 0);
       setTotalPages(res.totalPages || 1);
@@ -64,14 +79,37 @@ export default function ActivityPage() {
     }
   }
 
+  // Aplica um novo conjunto de filtros: atualiza estado e recarrega na página 1
+  function applyFilters(next: { action?: string; userId?: string; from?: string; to?: string }) {
+    const action = next.action ?? fAction;
+    const userId = next.userId ?? fUserId;
+    const from = next.from ?? fFrom;
+    const to = next.to ?? fTo;
+    setFAction(action);
+    setFUserId(userId);
+    setFFrom(from);
+    setFTo(to);
+    load(1, { action, userId, from, to });
+  }
+
+  function clearFilters() {
+    setFAction("");
+    setFUserId("");
+    setFFrom("");
+    setFTo("");
+    load(1, { action: "", userId: "", from: "", to: "" });
+  }
+
   useEffect(() => {
     getMe()
       .then((me) => {
         const admin = me?.role === "CONSULTANCY_ADMIN";
         setIsAdmin(admin);
         setAuthReady(true);
-        if (admin) load(1);
-        else setLoading(false);
+        if (admin) {
+          load(1, { action: "", userId: "", from: "", to: "" });
+          getUsers().then((u) => setUsersList(Array.isArray(u) ? u : [])).catch(() => {});
+        } else setLoading(false);
       })
       .catch(() => {
         setAuthReady(true);
@@ -100,6 +138,67 @@ export default function ActivityPage() {
       </div>
 
       {error && <div className="text-rose-400">{error}</div>}
+
+      {/* Filtros */}
+      <div className="flex flex-wrap items-end gap-3">
+        <div>
+          <label className="block text-xs text-[#6b6580] mb-1">{t.filterUser}</label>
+          <select
+            value={fUserId}
+            onChange={(e) => applyFilters({ userId: e.target.value })}
+            className="bg-[#0f0b1a] border border-white/[0.1] rounded-lg px-3 py-2 text-sm"
+          >
+            <option value="">{t.filterUserAll}</option>
+            {usersList.map((u) => (
+              <option key={u.id} value={u.id}>{u.name}</option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-xs text-[#6b6580] mb-1">{t.filterAction}</label>
+          <select
+            value={fAction}
+            onChange={(e) => applyFilters({ action: e.target.value })}
+            className="bg-[#0f0b1a] border border-white/[0.1] rounded-lg px-3 py-2 text-sm"
+          >
+            <option value="">{t.filterActionAll}</option>
+            <option value="view">{t.actView}</option>
+            <option value="create">{t.actCreate}</option>
+            <option value="edit">{t.actEdit}</option>
+            <option value="delete">{t.actDelete}</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-xs text-[#6b6580] mb-1">{t.filterFrom}</label>
+          <input
+            type="date"
+            value={fFrom}
+            onChange={(e) => applyFilters({ from: e.target.value })}
+            className="bg-[#0f0b1a] border border-white/[0.1] rounded-lg px-3 py-2 text-sm"
+          />
+        </div>
+
+        <div>
+          <label className="block text-xs text-[#6b6580] mb-1">{t.filterTo}</label>
+          <input
+            type="date"
+            value={fTo}
+            onChange={(e) => applyFilters({ to: e.target.value })}
+            className="bg-[#0f0b1a] border border-white/[0.1] rounded-lg px-3 py-2 text-sm"
+          />
+        </div>
+
+        {(fAction || fUserId || fFrom || fTo) && (
+          <button
+            onClick={clearFilters}
+            className="px-3 py-2 rounded-lg bg-white/[0.06] text-[#e2e0ea] text-sm hover:bg-white/[0.12] cursor-pointer transition"
+          >
+            {t.filterClear}
+          </button>
+        )}
+      </div>
 
       <div className="bg-[#1a1527] rounded-xl border border-white/[0.08] overflow-hidden">
         {loading ? (

@@ -614,8 +614,14 @@ export interface ActivityItem {
   userName?: string | null;
   createdAt: string;
 }
-export async function getActivity(page = 1, pageSize = 30) {
-  const { data } = await api.get('/activity', { params: { page, pageSize } });
+export async function getActivity(
+  params: { page?: number; pageSize?: number; action?: string; userId?: string; from?: string; to?: string } = {},
+) {
+  const query: Record<string, string | number> = {};
+  for (const [k, v] of Object.entries(params)) {
+    if (v !== undefined && v !== null && v !== "") query[k] = v;
+  }
+  const { data } = await api.get('/activity', { params: query });
   return data as { items: ActivityItem[]; total: number; page: number; pageSize: number; totalPages: number };
 }
 // Beacon de acesso a página — fire-and-forget, nunca relança
