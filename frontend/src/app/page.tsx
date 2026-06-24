@@ -445,11 +445,13 @@ export default function LandingPage() {
 
       {/* Header */}
       <header className="sticky top-0 z-50 bg-[#0f0b1a] border-b border-white/[0.06]">
-        <div className="max-w-6xl mx-auto px-4 sm:px-5 h-16 flex items-center justify-between gap-3">
-          <a href="#top" className="shrink-0"><Logo size={30} /></a>
-          <nav className="hidden xl:flex items-center gap-6 text-sm text-[#9b95ad]">
-            {L.nav.map((n) => <a key={n.id} href={`#${n.id}`} className="hover:text-white transition">{n.label}</a>)}
-          </nav>
+        <div className="w-full px-4 sm:px-6 lg:px-10 xl:px-16 h-16 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-8 min-w-0">
+            <a href="#top" className="shrink-0"><Logo size={30} /></a>
+            <nav className="hidden xl:flex items-center gap-7 text-sm text-[#9b95ad]">
+              {L.nav.map((n) => <a key={n.id} href={`#${n.id}`} className="hover:text-white transition">{n.label}</a>)}
+            </nav>
+          </div>
           <div className="flex items-center gap-2 shrink-0">
             <div className="hidden xl:block"><LangSwitcher compact /></div>
             <Link href="/login" className="hidden xl:inline px-3 sm:px-4 py-2 text-sm text-[#e2e0ea] hover:text-white transition">{L.footer.login}</Link>
