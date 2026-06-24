@@ -34,7 +34,8 @@ services:
       DATABASE_URL: "postgresql://saplink:saplink123@saplink-db:5432/saplink"
       JWT_SECRET: "saplink-jwt-secret-2026-super-seguro"
       ENCRYPTION_KEY: "saplink-encryption-key-2026-troque-em-producao"
-      ANTHROPIC_API_KEY: ""
+      # Defina ANTHROPIC_API_KEY no /opt/saplink/.env pra ligar o Claude Haiku (IA rápida).
+      ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY:-}"
       # IA local grátis via Ollama (deixe OLLAMA_URL vazio para usar Claude/mock)
       OLLAMA_URL: "http://ollama:11434"
       OLLAMA_MODEL: "qwen2.5:7b"
