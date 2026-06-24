@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { askPortfolio } from "@/lib/api";
+import { askPortfolio, askPortfolioStream } from "@/lib/api";
 import { MarkdownLite } from "@/components/AiReport";
 import { useLang } from "@/i18n/I18n";
 import { T } from "./i18n";
@@ -26,10 +26,34 @@ export default function AskPage() {
     setQ("");
     setLoading(true);
     try {
-      const r = await askPortfolio(text);
-      setMsgs((m) => [...m, { role: "ai", text: r.answer || t.noAnswer }]);
-    } catch (e: any) {
-      setMsgs((m) => [...m, { role: "ai", text: e?.response?.data?.error || t.errorAsk }]);
+      // Tenta streaming (SSE). O índice da msg "ai" é fixado no 1º token,
+      // pra anexar cada token incremental no lugar certo.
+      let aiIdx = -1;
+      let started = false;
+      const full = await askPortfolioStream(text, (tok) => {
+        if (!started) {
+          started = true;
+          setLoading(false); // primeiro token chegou → some o "digitando"
+          setMsgs((m) => {
+            aiIdx = m.length;
+            return [...m, { role: "ai", text: tok }];
+          });
+        } else {
+          setMsgs((m) => m.map((x, i) => (i === aiIdx ? { ...x, text: x.text + tok } : x)));
+        }
+      });
+      // Stream terminou sem nenhum token → garante uma resposta visível.
+      if (!started) {
+        setMsgs((m) => [...m, { role: "ai", text: full || t.noAnswer }]);
+      }
+    } catch {
+      // Fallback não-stream quando o /ask/stream falha (4xx, rede, etc.).
+      try {
+        const r = await askPortfolio(text);
+        setMsgs((m) => [...m, { role: "ai", text: r.answer || t.noAnswer }]);
+      } catch (e: any) {
+        setMsgs((m) => [...m, { role: "ai", text: e?.response?.data?.error || t.errorAsk }]);
+      }
     } finally {
       setLoading(false);
     }
