@@ -10,7 +10,8 @@ export type Provider = 'ollama' | 'anthropic' | 'openai' | 'azure';
 interface Step { provider: Provider; key?: string; model?: string; endpoint?: string; deployment?: string }
 interface Chain { steps: Step[]; learn: boolean }
 
-const DEF_MODELS = { anthropic: 'claude-sonnet-4-20250514', openai: 'gpt-4o-mini', ollama: process.env.OLLAMA_MODEL || 'qwen2.5:7b' };
+// Haiku como padrão: rápido e barato (a consultoria pode escolher Sonnet no BYO via cfg.anthropicModel).
+const DEF_MODELS = { anthropic: process.env.ANTHROPIC_MODEL || 'claude-haiku-4-5-20251001', openai: 'gpt-4o-mini', ollama: process.env.OLLAMA_MODEL || 'qwen2.5:7b' };
 
 export function normalizeKey(s = ''): string {
   return String(s).toLowerCase()
@@ -28,7 +29,9 @@ async function resolveChain(consultancyId?: string): Promise<Chain> {
     if (p === 'azure') { const key = cfg?.azureKey ? String(decryptValue(cfg.azureKey) ?? '') : undefined; return key && cfg?.azureEndpoint && cfg?.azureDeployment ? { provider: 'azure', key, endpoint: cfg.azureEndpoint, deployment: cfg.azureDeployment } : null; }
     return null;
   };
-  const order = cfg ? [cfg.primary, cfg.fallback] : ['ollama', 'anthropic'];
+  // Sem config da consultoria: se a plataforma tem chave Claude, ele é o primário (rápido);
+  // o Ollama (CPU, lento) fica só como reserva. Sem chave, mantém Ollama primário.
+  const order = cfg ? [cfg.primary, cfg.fallback] : (process.env.ANTHROPIC_API_KEY ? ['anthropic', 'ollama'] : ['ollama', 'anthropic']);
   const steps: Step[] = [];
   for (const p of order) { const s = build(p); if (s && !steps.find((x) => x.provider === s.provider)) steps.push(s); }
   // garante o Ollama como último recurso
@@ -40,7 +43,7 @@ async function callProvider(step: Step, sys: string, user: string, numPredict: n
   if (step.provider === 'ollama') {
     const resp = await fetch(`${process.env.OLLAMA_URL}/api/chat`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: step.model, stream: false, options: { num_predict: numPredict, temperature: 0.4 }, messages: [{ role: 'system', content: sys }, { role: 'user', content: user }] }),
+      body: JSON.stringify({ model: step.model, stream: false, keep_alive: process.env.OLLAMA_KEEP_ALIVE || '1h', options: { num_predict: numPredict, temperature: 0.4 }, messages: [{ role: 'system', content: sys }, { role: 'user', content: user }] }),
       signal: AbortSignal.timeout(Number(process.env.OLLAMA_TIMEOUT_MS) || 180000),
     });
     if (!resp.ok) throw new Error(`Ollama HTTP ${resp.status}`);
