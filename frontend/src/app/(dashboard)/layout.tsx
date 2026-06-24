@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { getMe, getBilling, logPageView } from "@/lib/api";
 import Sidebar from "@/components/Sidebar";
@@ -70,10 +70,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       });
   }, [router, pathname]);
 
-  // Beacon de página: registra acesso quando o pathname muda (só após autenticar).
-  // Fire-and-forget — logPageView já engole erros internamente.
+  // Beacon de página: registra acesso UMA vez quando o pathname muda (só após autenticar).
+  // O ref evita duplicar quando o `user` é refetchado na navegação (nova referência reaciona o efeito).
+  const lastLoggedPath = useRef("");
   useEffect(() => {
     if (!user || !pathname) return;
+    if (lastLoggedPath.current === pathname) return;
+    lastLoggedPath.current = pathname;
     logPageView(pathname);
   }, [pathname, user]);
 
