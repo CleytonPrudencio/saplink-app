@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   getMe, getUsers, getClients, createUser, updateUser, deleteUser,
+  getSsoConfig, resetUserPassword,
   type TenantUser,
 } from "@/lib/api";
 import { useLang } from "@/i18n/I18n";
@@ -50,6 +51,13 @@ export default function UsersPage() {
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState("");
 
+  // reset de senha
+  const [meId, setMeId] = useState<string | null>(null);
+  const [ssoEnabled, setSsoEnabled] = useState(false);
+  const [resettingId, setResettingId] = useState<string | null>(null);
+  const [resetResult, setResetResult] = useState<{ invited?: boolean; tempPassword?: string } | null>(null);
+  const [resetCopied, setResetCopied] = useState(false);
+
   const roleLabel = (r: string) =>
     r === "CONSULTANCY_ADMIN" ? t.roleAdmin : r === "CONSULTANCY_VIEWER" ? t.roleViewer : t.roleAnalyst;
   const roleBadge = (r: string) =>
@@ -78,10 +86,14 @@ export default function UsersPage() {
     getMe()
       .then((me) => {
         const admin = me?.role === "CONSULTANCY_ADMIN";
+        setMeId(me?.id ?? null);
         setIsAdmin(admin);
         setAuthReady(true);
-        if (admin) load();
-        else setLoading(false);
+        if (admin) {
+          load();
+          // SSO ativo → reset de senha é feito pelo provedor; esconde o botão
+          getSsoConfig().then((s) => setSsoEnabled(!!s?.enabled)).catch(() => {});
+        } else setLoading(false);
       })
       .catch(() => {
         setAuthReady(true);
@@ -89,6 +101,20 @@ export default function UsersPage() {
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  async function onResetPassword(u: TenantUser) {
+    if (!window.confirm(t.confirmReset(u.name))) return;
+    setResettingId(u.id);
+    try {
+      const res = await resetUserPassword(u.id);
+      setResetResult({ invited: res?.invited, tempPassword: res?.tempPassword });
+      setResetCopied(false);
+    } catch (err: any) {
+      alert(err?.response?.data?.error || t.resetError);
+    } finally {
+      setResettingId(null);
+    }
+  }
 
   function toggleClient(state: FormState, set: (f: FormState) => void, id: string) {
     const has = state.clientIds.includes(id);
@@ -315,6 +341,19 @@ export default function UsersPage() {
                 {u.allClients ? t.scopeAll : t.scopeN((u.clientIds || []).length)}
               </span>
               <div className="flex items-center gap-1.5 shrink-0">
+                {ssoEnabled ? (
+                  <span className="text-xs text-[#6b6580] hidden sm:inline" title={t.ssoManaged}>
+                    🔐 {t.ssoManaged}
+                  </span>
+                ) : u.id !== meId ? (
+                  <button
+                    onClick={() => onResetPassword(u)}
+                    disabled={resettingId === u.id}
+                    className="text-xs px-2.5 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08] text-[#9b95ad] hover:text-white hover:bg-white/[0.1] cursor-pointer transition disabled:opacity-40"
+                  >
+                    {resettingId === u.id ? t.resetting : t.resetPassword}
+                  </button>
+                ) : null}
                 <button
                   onClick={() => (editId === u.id ? setEditId(null) : startEdit(u))}
                   className="text-xs px-2.5 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08] text-[#9b95ad] hover:text-white hover:bg-white/[0.1] cursor-pointer transition"
@@ -398,6 +437,48 @@ export default function UsersPage() {
             )}
             <button
               onClick={() => { setCreated(null); setCopied(false); }}
+              className="mt-5 w-full px-4 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-cyan-400 text-white text-sm font-semibold cursor-pointer"
+            >
+              {t.done}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Resultado do reset de senha: convite/redefinição ou nova senha temporária */}
+      {resetResult && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6" onClick={() => setResetResult(null)}>
+          <div
+            className="max-w-md w-full bg-[#1a1527] border border-white/[0.1] rounded-2xl p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {resetResult.tempPassword ? (
+              <>
+                <h2 className="text-lg font-bold text-[#e2e0ea] mb-1">{t.resetTempTitle}</h2>
+                <p className="text-sm text-[#9b95ad] mb-4">{t.resetTempText}</p>
+                <div className="flex gap-2">
+                  <input
+                    readOnly
+                    value={resetResult.tempPassword}
+                    className="flex-1 bg-[#0f0b1a] border border-white/[0.1] rounded-lg px-3 py-2 text-sm font-mono text-[#e2e0ea]"
+                  />
+                  <button
+                    onClick={() => { navigator.clipboard?.writeText(resetResult.tempPassword!); setResetCopied(true); }}
+                    className="px-3 py-2 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] text-sm cursor-pointer whitespace-nowrap"
+                  >
+                    {resetCopied ? t.copied : t.copy}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="text-3xl mb-2">📨</div>
+                <h2 className="text-lg font-bold text-[#e2e0ea] mb-1">{t.resetInvitedTitle}</h2>
+                <p className="text-sm text-[#9b95ad]">{t.resetInvitedText}</p>
+              </>
+            )}
+            <button
+              onClick={() => { setResetResult(null); setResetCopied(false); }}
               className="mt-5 w-full px-4 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-cyan-400 text-white text-sm font-semibold cursor-pointer"
             >
               {t.done}

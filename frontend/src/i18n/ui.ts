@@ -128,6 +128,7 @@ export const UI = {
     "/licensing": t("Licenciamento", "Licensing", "Licenciamiento"),
     "/reports": t("Relatórios", "Reports", "Informes"),
     "/users": t("Usuários", "Users", "Usuarios"),
+    "/activity": t("Log de atividade", "Activity log", "Registro de actividad"),
     "/notifications": t("On-call & Tickets", "On-call & Tickets", "On-call & Tickets"),
     "/billing": t("Cobrança", "Billing", "Facturación"),
     "/sso": t("SSO corporativo", "Corporate SSO", "SSO corporativo"),

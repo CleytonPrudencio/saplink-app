@@ -111,6 +111,22 @@ router.patch('/:id', requireConsultancyAdmin, async (req: Request, res: Response
   res.json({ status: 'ok' });
 });
 
+// Redefine a senha de um usuário (admin). Bloqueado se a consultoria usa SSO.
+// Não altera o e-mail (imutável). Gera senha temporária e envia/retorna.
+router.post('/:id/reset-password', requireConsultancyAdmin, async (req: Request, res: Response) => {
+  const target = await prisma.user.findFirst({ where: { id: req.params.id, consultancyId: req.consultancyId! } });
+  if (!target) { res.status(404).json({ error: 'Usuário não encontrado' }); return; }
+  const sso = await prisma.ssoConfig.findUnique({ where: { consultancyId: req.consultancyId! } }).catch(() => null);
+  if (sso?.enabled) {
+    res.status(400).json({ error: 'SSO ativo: a senha é gerida pelo provedor de identidade.' });
+    return;
+  }
+  const tempPassword = crypto.randomBytes(6).toString('base64url');
+  await prisma.user.update({ where: { id: target.id }, data: { password: await bcrypt.hash(tempPassword, 10) } });
+  const sent = await sendUserInvite(target.email, target.name, tempPassword);
+  res.json({ reset: true, ...(sent ? { invited: true } : { tempPassword }) });
+});
+
 // Remove usuário do tenant (admin; não pode remover a si mesmo)
 router.delete('/:id', requireConsultancyAdmin, async (req: Request, res: Response) => {
   if (req.params.id === req.user!.userId) {

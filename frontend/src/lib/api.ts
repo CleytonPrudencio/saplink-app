@@ -602,6 +602,35 @@ export async function deleteUser(id: string) {
   return data;
 }
 
+// Log de atividade (admin) + beacon de página
+export interface ActivityItem {
+  id: string;
+  action: "view" | "create" | "edit" | "delete" | "other";
+  method: string;
+  path: string;
+  detail?: string | null;
+  status: number;
+  userEmail?: string | null;
+  userName?: string | null;
+  createdAt: string;
+}
+export async function getActivity(page = 1, pageSize = 30) {
+  const { data } = await api.get('/activity', { params: { page, pageSize } });
+  return data as { items: ActivityItem[]; total: number; page: number; pageSize: number; totalPages: number };
+}
+// Beacon de acesso a página — fire-and-forget, nunca relança
+export async function logPageView(path: string, label?: string) {
+  try {
+    await api.post('/activity/page', { path, label });
+  } catch {
+    // silencioso de propósito: telemetria não pode quebrar a navegação
+  }
+}
+export async function resetUserPassword(id: string) {
+  const { data } = await api.post(`/users/${id}/reset-password`);
+  return data as { reset: boolean; invited?: boolean; tempPassword?: string };
+}
+
 // Password reset
 export async function forgotPassword(email: string) {
   const { data } = await api.post('/auth/forgot-password', { email });

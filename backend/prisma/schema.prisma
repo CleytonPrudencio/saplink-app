@@ -795,3 +795,19 @@ model LicenseItem {
   @@unique([clientId, metric])
   @@index([clientId])
 }
+
+// Log de atividade do sistema (auditoria de acesso/edição) por consultoria.
+model ActivityLog {
+  id            String   @id @default(uuid())
+  consultancyId String
+  userId        String?
+  userEmail     String?
+  action        String   // view | create | edit | delete | login | other
+  method        String?
+  path          String
+  detail        String?
+  status        Int?
+  ip            String?
+  createdAt     DateTime @default(now())
+  @@index([consultancyId, createdAt])
+}

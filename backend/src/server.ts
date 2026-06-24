@@ -45,6 +45,8 @@ import { statusPublic, statusAdmin } from './routes/status';
 import { authMiddleware } from './middleware/auth';
 import { tenancyMiddleware } from './middleware/tenancy';
 import { blockViewerWrites } from './middleware/roles';
+import { activityLogger } from './lib/activity';
+import activityRoutes from './routes/activity';
 import { requireActiveSubscription } from './middleware/subscription';
 import { simulateIntegrationData } from './services/simulator';
 import { syncIntegration, isMonitorable } from './services/connectors';
@@ -112,7 +114,7 @@ app.use('/api/leads', leadRoutes); // POST público (interesse); GET/PATCH só p
 app.use('/api/chatops', chatopsInRoutes); // webhook público do ChatOps (auth por token)
 
 // Rotas de negócio: exigem assinatura ATIVA (corte do inadimplente)
-const tenantGate = [authMiddleware, tenancyMiddleware, blockViewerWrites, requireActiveSubscription];
+const tenantGate = [authMiddleware, tenancyMiddleware, blockViewerWrites, activityLogger, requireActiveSubscription];
 app.use('/api/clients', ...tenantGate, clientRoutes);
 app.use('/api/integrations', ...tenantGate, integrationRoutes);
 app.use('/api/alerts', ...tenantGate, alertRoutes);
@@ -141,6 +143,7 @@ app.use('/api/btp', ...tenantGate, btpRoutes);
 app.use('/api/ops', ...tenantGate, opsRoutes);
 app.use('/api/reform', ...tenantGate, reformRoutes);
 app.use('/api/license', ...tenantGate, licenseRoutes);
+app.use('/api/activity', ...tenantGate, activityRoutes);
 app.use('/api/status-admin', ...tenantGate, statusAdmin);
 
 // Error handler global (último middleware)

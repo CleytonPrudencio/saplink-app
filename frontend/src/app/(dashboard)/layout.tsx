@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { getMe, getBilling } from "@/lib/api";
+import { getMe, getBilling, logPageView } from "@/lib/api";
 import Sidebar from "@/components/Sidebar";
 import PageGuide from "@/components/PageGuide";
 import PushSetup from "@/components/PushSetup";
@@ -69,6 +69,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         router.push("/login");
       });
   }, [router, pathname]);
+
+  // Beacon de página: registra acesso quando o pathname muda (só após autenticar).
+  // Fire-and-forget — logPageView já engole erros internamente.
+  useEffect(() => {
+    if (!user || !pathname) return;
+    logPageView(pathname);
+  }, [pathname, user]);
 
   function handleLogout() {
     localStorage.removeItem("token");

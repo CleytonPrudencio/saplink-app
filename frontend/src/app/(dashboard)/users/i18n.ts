@@ -47,6 +47,16 @@ export const T: Record<Lang, {
   copied: string;
   done: string;
   emptyTitle: string;
+  // reset de senha
+  resetPassword: string;
+  resetting: string;
+  resetError: string;
+  ssoManaged: string;
+  resetInvitedTitle: string;
+  resetInvitedText: string;
+  resetTempTitle: string;
+  resetTempText: string;
+  confirmReset: (name: string) => string;
 }> = {
   pt: {
     title: "Usuários",
@@ -91,6 +101,15 @@ export const T: Record<Lang, {
     copied: "✓ Copiado",
     done: "Concluir",
     emptyTitle: "Nenhum usuário cadastrado ainda.",
+    resetPassword: "Redefinir senha",
+    resetting: "Redefinindo...",
+    resetError: "Não foi possível redefinir a senha.",
+    ssoManaged: "Senha gerida via SSO",
+    resetInvitedTitle: "Redefinição enviada",
+    resetInvitedText: "Um e-mail de convite/redefinição de senha foi enviado ao usuário.",
+    resetTempTitle: "Nova senha temporária",
+    resetTempText: "Compartilhe esta senha com o usuário. Ela não será mostrada novamente.",
+    confirmReset: (name) => `Redefinir a senha de "${name}"?`,
   },
   en: {
     title: "Users",
@@ -135,6 +154,15 @@ export const T: Record<Lang, {
     copied: "✓ Copied",
     done: "Done",
     emptyTitle: "No users registered yet.",
+    resetPassword: "Reset password",
+    resetting: "Resetting...",
+    resetError: "Could not reset the password.",
+    ssoManaged: "Password managed via SSO",
+    resetInvitedTitle: "Reset sent",
+    resetInvitedText: "A password invite/reset email was sent to the user.",
+    resetTempTitle: "New temporary password",
+    resetTempText: "Share this password with the user. It will not be shown again.",
+    confirmReset: (name) => `Reset the password for "${name}"?`,
   },
   es: {
     title: "Usuarios",
@@ -179,5 +207,14 @@ export const T: Record<Lang, {
     copied: "✓ Copiado",
     done: "Listo",
     emptyTitle: "Aún no hay usuarios registrados.",
+    resetPassword: "Restablecer contraseña",
+    resetting: "Restableciendo...",
+    resetError: "No se pudo restablecer la contraseña.",
+    ssoManaged: "Contraseña gestionada vía SSO",
+    resetInvitedTitle: "Restablecimiento enviado",
+    resetInvitedText: "Se envió un correo de invitación/restablecimiento de contraseña al usuario.",
+    resetTempTitle: "Nueva contraseña temporal",
+    resetTempText: "Comparte esta contraseña con el usuario. No se mostrará de nuevo.",
+    confirmReset: (name) => `¿Restablecer la contraseña de "${name}"?`,
   },
 };
