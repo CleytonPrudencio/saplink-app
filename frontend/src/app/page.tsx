@@ -447,19 +447,19 @@ export default function LandingPage() {
       <header className="sticky top-0 z-50 bg-[#0f0b1a] border-b border-white/[0.06]">
         <div className="max-w-6xl mx-auto px-4 sm:px-5 h-16 flex items-center justify-between gap-3">
           <a href="#top" className="shrink-0"><Logo size={30} /></a>
-          <nav className="hidden lg:flex items-center gap-6 text-sm text-[#9b95ad]">
+          <nav className="hidden xl:flex items-center gap-6 text-sm text-[#9b95ad]">
             {L.nav.map((n) => <a key={n.id} href={`#${n.id}`} className="hover:text-white transition">{n.label}</a>)}
           </nav>
           <div className="flex items-center gap-2 shrink-0">
-            <div className="hidden lg:block"><LangSwitcher compact /></div>
-            <Link href="/login" className="hidden lg:inline px-3 sm:px-4 py-2 text-sm text-[#e2e0ea] hover:text-white transition">{L.footer.login}</Link>
+            <div className="hidden xl:block"><LangSwitcher compact /></div>
+            <Link href="/login" className="hidden xl:inline px-3 sm:px-4 py-2 text-sm text-[#e2e0ea] hover:text-white transition">{L.footer.login}</Link>
             <button onClick={() => setInterest(true)} className="hidden md:inline-flex px-3 sm:px-4 py-2 text-sm font-semibold rounded-lg bg-white/[0.06] text-[#e2e0ea] hover:bg-white/[0.12] transition cursor-pointer whitespace-nowrap">{L.interest.title}</button>
             <Link href="/register" className="hidden sm:inline-flex px-3 sm:px-4 py-2 text-sm font-semibold rounded-lg bg-gradient-to-r from-purple-600 to-cyan-500 text-white hover:opacity-90 transition whitespace-nowrap">{L.signup}</Link>
-            <button onClick={() => setMenuOpen(!menuOpen)} aria-label="Menu" className="lg:hidden text-[#e2e0ea] p-1.5 -mr-1 cursor-pointer text-xl leading-none">{menuOpen ? "✕" : "☰"}</button>
+            <button onClick={() => setMenuOpen(!menuOpen)} aria-label="Menu" className="xl:hidden text-[#e2e0ea] p-1.5 -mr-1 cursor-pointer text-xl leading-none">{menuOpen ? "✕" : "☰"}</button>
           </div>
         </div>
         {menuOpen && (
-          <nav className="lg:hidden border-t border-white/[0.06] bg-[#0f0b1a] px-4 py-3 flex flex-col gap-1 text-sm text-[#9b95ad]">
+          <nav className="xl:hidden border-t border-white/[0.06] bg-[#0f0b1a] px-4 py-3 flex flex-col gap-1 text-sm text-[#9b95ad]">
             {L.nav.map((n) => <a key={n.id} href={`#${n.id}`} onClick={() => setMenuOpen(false)} className="py-2 hover:text-white border-b border-white/[0.04]">{n.label}</a>)}
             <div className="flex items-center justify-between gap-3 pt-3">
               <LangSwitcher />
