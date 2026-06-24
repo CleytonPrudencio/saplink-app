@@ -811,3 +811,16 @@ model ActivityLog {
   createdAt     DateTime @default(now())
   @@index([consultancyId, createdAt])
 }
+
+// Cache de respostas da IA (por escopo = consultoria, ou "global"). Acelera prompts repetidos.
+model AiCache {
+  id        String   @id @default(uuid())
+  scope     String   // consultancyId ou "global"
+  keyHash   String   // sha256(system + user)
+  response  String
+  provider  String?
+  hits      Int      @default(0)
+  createdAt DateTime @default(now())
+  @@unique([scope, keyHash])
+  @@index([createdAt])
+}
