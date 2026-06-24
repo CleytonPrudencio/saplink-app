@@ -52,6 +52,7 @@ import { simulateIntegrationData } from './services/simulator';
 import { syncIntegration, isMonitorable } from './services/connectors';
 import { markStaleAgents } from './services/agent';
 import { runDueDigests } from './services/digest';
+import { pregeneratePending } from './services/alertdiag';
 import { refreshAllCerts } from './services/validity';
 import { processAlerts } from './services/alertproc';
 import { snapshotMetrics } from './services/predict';
@@ -214,6 +215,16 @@ app.listen(PORT, () => {
       logger.error({ err: (error as Error).message }, 'digest scheduler error');
     }
   }, DIGEST_CHECK_MS);
+
+  // Pré-geração de diagnósticos de IA dos alertas críticos/altos abertos (abre instantâneo).
+  // Throttled: poucos por tick pra não saturar a CPU. Desliga com AI_PREGEN_ENABLED=false.
+  if (process.env.AI_PREGEN_ENABLED !== 'false') {
+    const PREGEN_MS = parseInt(process.env.AI_PREGEN_MS || '120000'); // 2 min
+    setInterval(async () => {
+      try { const n = await pregeneratePending(2); if (n) logger.debug({ pregenerated: n }, 'ai pré-gerou diagnósticos de alerta'); }
+      catch (error) { logger.error({ err: (error as Error).message }, 'ai pregen error'); }
+    }, PREGEN_MS);
+  }
 
   // A4 — Radar de validade: reavalia certificados TLS dos endpoints HTTPS e abre alertas
   // de expiração. Roda no boot (após 30s) e depois a cada 12h.

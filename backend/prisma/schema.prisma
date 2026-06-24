@@ -165,6 +165,9 @@ model Alert {
   ticketKey      String?
   ticketUrl      String?
   ticketClosedAt DateTime?
+  // Diagnóstico de IA pré-gerado (abre instantâneo). lang = idioma do texto guardado.
+  aiDiagnosis     String?
+  aiDiagnosisLang String?
 }
 
 // C1 — canais de notificação por consultoria, com níveis de escalonamento.
