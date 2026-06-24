@@ -1,4 +1,5 @@
 import prisma from '../lib/prisma';
+import { consultancyClientIds } from '../lib/scope';
 import { encryptValue, decryptValue } from '../lib/crypto';
 import { ingestCloud } from './cloud';
 
@@ -25,7 +26,7 @@ export async function saveCpiConfig(consultancyId: string, clientId: string, inp
 }
 
 export async function getCpiConfigs(consultancyId: string, env?: string) {
-  const ids = (await prisma.client.findMany({ where: { consultancyId }, select: { id: true } })).map((c) => c.id);
+  const ids = await consultancyClientIds(consultancyId);
   const e = env ? ENV(env) : undefined;
   const cfgs = await prisma.cpiConfig.findMany({ where: { clientId: { in: ids }, ...(e ? { environment: e } : {}) }, include: { client: { select: { name: true } } } });
   return cfgs.map((c) => ({ clientId: c.clientId, client: c.client?.name, environment: c.environment, baseUrl: c.baseUrl, tokenUrl: c.tokenUrl, oauthClientId: c.oauthClientId, enabled: c.enabled, lastSyncAt: c.lastSyncAt, lastResult: c.lastResult, lastCount: c.lastCount, hasSecret: !!c.oauthSecret }));

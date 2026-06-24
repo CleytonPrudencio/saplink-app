@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import ExplainData from "@/components/ExplainData";
-import { getClients, createClient, deleteClient, getPortalStatus, enableClientPortal, disableClientPortal } from "@/lib/api";
+import { getMe, getClients, createClient, deleteClient, getPortalStatus, enableClientPortal, disableClientPortal, setStatusPage } from "@/lib/api";
 import HealthScoreRing from "@/components/HealthScoreRing";
 import { useLang } from "@/i18n/I18n";
 import { T } from "./i18n";
@@ -23,6 +23,8 @@ export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  // Perfil Consulta (CONSULTANCY_VIEWER) é somente leitura: esconde ações de escrita
+  const [isViewer, setIsViewer] = useState(false);
 
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
@@ -36,7 +38,24 @@ export default function ClientsPage() {
   const [portalBusy, setPortalBusy] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  // status page white-label por cliente (otimista, sem GET admin)
+  const [activeStatus, setActiveStatus] = useState("");
+  const [statusInfo, setStatusInfo] = useState<{ enabled: boolean; token: string | null } | null>(null);
+  const [statusBusy, setStatusBusy] = useState(false);
+  const [statusCopied, setStatusCopied] = useState(false);
+
+  function openStatus(clientId: string) {
+    setActivePortal(""); // fecha o painel de portal — só um aberto por vez
+    if (activeStatus === clientId) { setActiveStatus(""); return; }
+    setActiveStatus(clientId); setStatusInfo(null); setStatusCopied(false);
+  }
+  async function toggleStatus(clientId: string, enable: boolean) {
+    setStatusBusy(true);
+    try { const r = await setStatusPage(clientId, enable); setStatusInfo(r); } catch { /* ignore */ } finally { setStatusBusy(false); }
+  }
+
   async function openPortal(clientId: string) {
+    setActiveStatus(""); // fecha o painel de status — só um aberto por vez
     if (activePortal === clientId) { setActivePortal(""); return; }
     setActivePortal(clientId); setPortalInfo(null); setCopied(false);
     try { const s = await getPortalStatus(clientId); setPortalInfo({ enabled: s.portalEnabled, url: s.url }); } catch { setPortalInfo({ enabled: false, url: null }); }
@@ -64,6 +83,7 @@ export default function ClientsPage() {
 
   useEffect(() => {
     load();
+    getMe().then((me) => setIsViewer(me?.role === "CONSULTANCY_VIEWER")).catch(() => {});
   }, []);
 
   async function onCreate(e: React.FormEvent) {
@@ -105,12 +125,14 @@ export default function ClientsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">{t.title}</h1>
-        <button
-          onClick={() => setShowForm((s) => !s)}
-          className="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-cyan-400 text-white text-sm font-semibold"
-        >
-          {showForm ? t.cancel : t.newClient}
-        </button>
+        {!isViewer && (
+          <button
+            onClick={() => setShowForm((s) => !s)}
+            className="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-cyan-400 text-white text-sm font-semibold"
+          >
+            {showForm ? t.cancel : t.newClient}
+          </button>
+        )}
       </div>
       <ExplainData screen="Carteira de clientes" data={{ clientes: clients.map((c: any) => ({ nome: c.name, health: c.healthScore, integracoes: c.integrationCount ?? c._count?.integrations, alertas: c.alertCount ?? c._count?.alerts })) }} label={t.explainLabel} />
 
@@ -172,24 +194,34 @@ export default function ClientsPage() {
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-1">
+              {!isViewer && (
+              <div className="flex items-center gap-1.5 shrink-0">
                 <button
                   onClick={() => openPortal(client.id)}
                   aria-label={t.portalAria(client.name)}
-                  className="text-[#9b95ad] hover:text-cyan-300 text-lg px-1"
                   title={t.portalTitle}
+                  className={`flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border cursor-pointer transition ${activePortal === client.id ? "bg-cyan-500/20 border-cyan-500/40 text-cyan-200" : "bg-white/[0.04] border-white/[0.08] text-[#9b95ad] hover:bg-white/[0.1] hover:text-cyan-200"}`}
                 >
-                  🔗
+                  🔗 <span className="hidden sm:inline">{t.portalShort}</span>
+                </button>
+                <button
+                  onClick={() => openStatus(client.id)}
+                  aria-label={t.statusAria(client.name)}
+                  title={t.statusTitle}
+                  className={`flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border cursor-pointer transition ${activeStatus === client.id ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-200" : "bg-white/[0.04] border-white/[0.08] text-[#9b95ad] hover:bg-white/[0.1] hover:text-emerald-200"}`}
+                >
+                  📊 <span className="hidden sm:inline">{t.statusShort}</span>
                 </button>
                 <button
                   onClick={() => onDelete(client.id, client.name)}
                   aria-label={t.deleteAria(client.name)}
-                  className="text-[#9b95ad] hover:text-rose-400 text-lg px-1"
                   title={t.deleteTitle}
+                  className="text-[#9b95ad] hover:text-rose-400 hover:bg-white/[0.06] text-base px-2 py-1.5 rounded-lg cursor-pointer transition"
                 >
                   ✕
                 </button>
               </div>
+              )}
             </div>
 
             {activePortal === client.id && (
@@ -213,6 +245,26 @@ export default function ClientsPage() {
                 )}
               </div>
             )}
+
+            {activeStatus === client.id && (
+              <div className="mt-3 pt-3 border-t border-white/[0.06] text-sm">
+                {statusInfo?.enabled && statusInfo.token ? (
+                  <div className="space-y-2">
+                    <p className="text-xs text-emerald-400">{t.statusActive}</p>
+                    <div className="flex gap-1">
+                      <input readOnly value={`${typeof window !== "undefined" ? window.location.origin : ""}/status/${statusInfo.token}`} className="flex-1 bg-[#0f0b1a] border border-white/[0.1] rounded-lg px-2 py-1 text-xs text-[#c9c5d6]" />
+                      <button onClick={() => { navigator.clipboard?.writeText(`${window.location.origin}/status/${statusInfo!.token}`); setStatusCopied(true); }} className="text-xs px-2 py-1 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] cursor-pointer">{statusCopied ? "✓" : t.copy}</button>
+                    </div>
+                    <button onClick={() => toggleStatus(client.id, false)} disabled={statusBusy} className="text-xs text-rose-300 hover:underline cursor-pointer disabled:opacity-40">{t.disableStatus}</button>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <p className="text-xs text-[#9b95ad]">{t.statusPitch}</p>
+                    <button onClick={() => toggleStatus(client.id, true)} disabled={statusBusy} className="text-xs px-3 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-200 hover:bg-emerald-500/30 cursor-pointer disabled:opacity-40">{statusBusy ? "..." : t.enableStatus}</button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -220,12 +272,14 @@ export default function ClientsPage() {
       {clients.length === 0 && !showForm && (
         <div className="text-center py-12">
           <p className="text-[#9b95ad] mb-3">{t.noClients}</p>
-          <button
-            onClick={() => setShowForm(true)}
-            className="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-cyan-400 text-white text-sm font-semibold"
-          >
-            {t.registerFirst}
-          </button>
+          {!isViewer && (
+            <button
+              onClick={() => setShowForm(true)}
+              className="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-cyan-400 text-white text-sm font-semibold"
+            >
+              {t.registerFirst}
+            </button>
+          )}
         </div>
       )}
     </div>

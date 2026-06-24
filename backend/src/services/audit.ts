@@ -1,10 +1,11 @@
 import prisma from '../lib/prisma';
+import { consultancyClientIds } from '../lib/scope';
 
 // Auditoria/Compliance autônoma: trilha unificada de mudanças (transports) e ações de
 // remediação (quem pediu/aprovou), com checagem de segregação de função (SoD).
 
 export async function auditLedger(consultancyId: string) {
-  const ids = (await prisma.client.findMany({ where: { consultancyId }, select: { id: true } })).map((c) => c.id);
+  const ids = await consultancyClientIds(consultancyId);
   const names = new Map((await prisma.client.findMany({ where: { id: { in: ids } }, select: { id: true, name: true } })).map((c) => [c.id, c.name]));
 
   const [transports, actions, users] = await Promise.all([

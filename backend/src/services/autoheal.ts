@@ -1,4 +1,5 @@
 import prisma from '../lib/prisma';
+import { consultancyClientIds } from '../lib/scope';
 import { ACTION_FOR_KIND } from './remediation';
 import { lookup } from './federated';
 
@@ -70,7 +71,7 @@ export async function autoHealClient(consultancyId: string, clientId: string): P
 
 /** Scoreboard do AMS: % resolvido sem humano, MTTR, volume. */
 export async function scoreboard(consultancyId: string) {
-  const clientIds = (await prisma.client.findMany({ where: { consultancyId }, select: { id: true } })).map((c) => c.id);
+  const clientIds = await consultancyClientIds(consultancyId);
   const actions = await prisma.remediationAction.findMany({
     where: { clientId: { in: clientIds } },
     select: { status: true, autoExecuted: true, confidence: true, requestedAt: true, executedAt: true, actionType: true },

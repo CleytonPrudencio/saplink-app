@@ -1,4 +1,5 @@
 import prisma from '../lib/prisma';
+import { consultancyClientIds } from '../lib/scope';
 
 // Perda silenciosa de negócio: detecta queda anormal de VOLUME de mensagens por artefato,
 // mesmo com tudo "verde" tecnicamente. Compara a última hora com a média das horas anteriores.
@@ -10,7 +11,7 @@ const WINDOW_H = 12;
 export async function detectAnomalies(consultancyId: string, clientId?: string) {
   const ids = clientId
     ? [clientId]
-    : (await prisma.client.findMany({ where: { consultancyId }, select: { id: true } })).map((c) => c.id);
+    : await consultancyClientIds(consultancyId);
   const names = new Map((await prisma.client.findMany({ where: { id: { in: ids } }, select: { id: true, name: true } })).map((c) => [c.id, c.name]));
 
   const since = new Date(Date.now() - (WINDOW_H + 1) * 3600000);

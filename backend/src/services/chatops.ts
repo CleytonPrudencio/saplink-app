@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import prisma from '../lib/prisma';
+import { consultancyClientIds } from '../lib/scope';
 import { parseIntent } from './ai';
 import { getCloud } from './cloud';
 import { createAction } from './remediation';
@@ -86,7 +87,7 @@ export async function run(consultancyId: string, text: string, userId?: string):
   }
 
   if (intent.action === 'portfolio_summary') {
-    const clientIds = (await prisma.client.findMany({ where: { consultancyId }, select: { id: true } })).map((c) => c.id);
+    const clientIds = await consultancyClientIds(consultancyId);
     const [nClients, openAlerts, failed] = await Promise.all([
       clientIds.length,
       prisma.alert.count({ where: { clientId: { in: clientIds }, resolved: false } }),

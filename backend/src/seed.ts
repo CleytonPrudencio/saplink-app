@@ -641,6 +641,45 @@ O ambiente SAP apresenta saúde geral EXCELENTE (score 94/100).
   }
   console.log('Dead code entries created: 20');
 
+  // 8. Reform Readiness Radar — prontidão CBS/IBS (demo)
+  const reformAreas = (clientId: string, mix: Record<string, string>) =>
+    Object.entries({
+      SAP_NOTES: 'SAP Notes da reforma aplicadas (SNOTE)',
+      TAX_FIELDS: 'Campos CBS/IBS no documento fiscal',
+      CONDITION_TECHNIQUE: 'Determinação tributária (condições) revisada',
+      NFE_LAYOUT: 'Layout NF-e/NFS-e com grupos novos',
+      DRC: 'SAP DRC adaptado à reforma',
+      MASTER_DATA: 'Cadastros (BP/material) com novos códigos',
+    }).map(([area, title]) => ({
+      clientId, area, title, status: mix[area] || 'PENDING',
+      phase: area === 'NFE_LAYOUT' ? '2026' : area === 'DRC' ? '2027' : '2033',
+      detail: mix[area] === 'RISK' ? 'Item crítico para a transição — sem evidência de adequação.'
+        : mix[area] === 'OK' ? 'Adequação detectada no ambiente.' : 'Aguardando verificação/adequação.',
+      lastCheckedAt: new Date(),
+    }));
+  const reformData = [
+    ...reformAreas(client1.id, { SAP_NOTES: 'OK', TAX_FIELDS: 'RISK', NFE_LAYOUT: 'PENDING', DRC: 'RISK', MASTER_DATA: 'OK', CONDITION_TECHNIQUE: 'PENDING' }),
+    ...reformAreas(client2.id, { SAP_NOTES: 'OK', TAX_FIELDS: 'OK', NFE_LAYOUT: 'OK', DRC: 'PENDING', MASTER_DATA: 'OK', CONDITION_TECHNIQUE: 'OK' }),
+    ...reformAreas(client3.id, { SAP_NOTES: 'RISK', TAX_FIELDS: 'RISK', NFE_LAYOUT: 'RISK', DRC: 'PENDING', MASTER_DATA: 'PENDING', CONDITION_TECHNIQUE: 'RISK' }),
+  ];
+  for (const r of reformData) await prisma.reformReadiness.create({ data: r });
+  console.log('Reform readiness items created:', reformData.length);
+
+  // 9. Indirect Access / Licensing Radar (demo)
+  const licenseData = [
+    { clientId: client1.id, metric: 'Documentos de acesso digital/mês', used: 142000, entitled: 120000, unit: 'docs', riskLevel: 'RISK', estCostBrl: 86000, detail: 'Pedidos criados por sistema externo (e-commerce) acima do direito contratado.' },
+    { clientId: client1.id, metric: 'Usuários nomeados (Professional)', used: 58, entitled: 60, unit: 'users', riskLevel: 'WARN', estCostBrl: 0, detail: 'Próximo do limite — revisar usuários inativos.' },
+    { clientId: client2.id, metric: 'Documentos de acesso digital/mês', used: 71000, entitled: 100000, unit: 'docs', riskLevel: 'OK', estCostBrl: 0, detail: 'Dentro do direito contratado.' },
+    { clientId: client2.id, metric: 'Usuários nomeados (Limited)', used: 33, entitled: 40, unit: 'users', riskLevel: 'OK', estCostBrl: 0, detail: 'Folga de licenças.' },
+    { clientId: client3.id, metric: 'Documentos de acesso digital/mês', used: 96000, entitled: 90000, unit: 'docs', riskLevel: 'WARN', estCostBrl: 24000, detail: 'Integração de balança/IoT empurrando documentos — monitorar tendência.' },
+  ];
+  for (const l of licenseData) await prisma.licenseItem.create({ data: l });
+  console.log('License items created:', licenseData.length);
+
+  // 10. Status page white-label (demo) — ativa pro client1 com token fixo de teste
+  await prisma.client.update({ where: { id: client1.id }, data: { statusEnabled: true, statusToken: 'demo-metalurgica' } });
+  console.log('Status page demo: /status/demo-metalurgica');
+
   console.log('\nSeed completed successfully!');
   console.log('Login: admin@saplink.com / Saplink@2026');
 }

@@ -565,20 +565,76 @@ export async function updateBranding(payload: { name?: string; logoUrl?: string 
   return data;
 }
 
-// Usuários do tenant
+// Usuários do tenant (gestão de perfis/escopo por cliente)
+export interface TenantUser {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  allClients: boolean;
+  clientIds: string[];
+  createdAt: string;
+}
+export interface UserUpsertPayload {
+  name?: string;
+  email?: string;
+  role?: string;
+  allClients?: boolean;
+  clientIds?: string[];
+}
 export async function getUsers() {
   const { data } = await api.get('/users');
-  return data;
+  return data as TenantUser[];
 }
 
-export async function createUser(payload: { name: string; email: string; role?: string }) {
+export async function createUser(payload: UserUpsertPayload) {
   const { data } = await api.post('/users', payload);
-  return data;
+  return data as TenantUser & { invited?: boolean; tempPassword?: string };
+}
+
+export async function updateUser(id: string, payload: UserUpsertPayload) {
+  const { data } = await api.patch(`/users/${id}`, payload);
+  return data as TenantUser;
 }
 
 export async function deleteUser(id: string) {
   const { data } = await api.delete(`/users/${id}`);
   return data;
+}
+
+// Log de atividade (admin) + beacon de página
+export interface ActivityItem {
+  id: string;
+  action: "view" | "create" | "edit" | "delete" | "other";
+  method: string;
+  path: string;
+  detail?: string | null;
+  status: number;
+  userEmail?: string | null;
+  userName?: string | null;
+  createdAt: string;
+}
+export async function getActivity(
+  params: { page?: number; pageSize?: number; action?: string; userId?: string; from?: string; to?: string } = {},
+) {
+  const query: Record<string, string | number> = {};
+  for (const [k, v] of Object.entries(params)) {
+    if (v !== undefined && v !== null && v !== "") query[k] = v;
+  }
+  const { data } = await api.get('/activity', { params: query });
+  return data as { items: ActivityItem[]; total: number; page: number; pageSize: number; totalPages: number };
+}
+// Beacon de acesso a página — fire-and-forget, nunca relança
+export async function logPageView(path: string, label?: string) {
+  try {
+    await api.post('/activity/page', { path, label });
+  } catch {
+    // silencioso de propósito: telemetria não pode quebrar a navegação
+  }
+}
+export async function resetUserPassword(id: string) {
+  const { data } = await api.post(`/users/${id}/reset-password`);
+  return data as { reset: boolean; invited?: boolean; tempPassword?: string };
 }
 
 // Password reset
@@ -717,6 +773,30 @@ export async function getDeadCode(clientId: string) {
 export async function getDeadCodeStats(clientId: string) {
   const { data } = await api.get(`/dead-code/stats/${clientId}`);
   return data;
+}
+
+// Reform Readiness Radar — prontidão CBS/IBS
+export async function getReform(clientId?: string) {
+  const { data } = await api.get('/reform', { params: clientId ? { clientId } : {} });
+  return data as {
+    items: { id: string; area: string; areaLabel: string; title: string; status: string; phase?: string | null; detail?: string | null; client?: string; environment?: string }[];
+    summary: { total: number; ok: number; risk: number; pending: number; readiness: number; byClient: { client: string; ok: number; total: number; readiness: number }[] };
+  };
+}
+
+// Indirect Access / Licensing Radar
+export async function getLicense(clientId?: string) {
+  const { data } = await api.get('/license', { params: clientId ? { clientId } : {} });
+  return data as {
+    items: { id: string; metric: string; used: number; entitled: number; unit?: string | null; riskLevel: string; estCostBrl: number; detail?: string | null; client?: string; environment?: string; pct: number }[];
+    summary: { total: number; atRisk: number; warn: number; totalExposure: number };
+  };
+}
+
+// Status page white-label — ativar/desativar por cliente (admin)
+export async function setStatusPage(clientId: string, enable: boolean) {
+  const { data } = await api.post(`/status-admin/${clientId}`, { enable });
+  return data as { enabled: boolean; token: string | null };
 }
 
 export default api;

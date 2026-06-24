@@ -1,4 +1,5 @@
 import prisma from '../lib/prisma';
+import { consultancyClientIds, scopeWithClient } from '../lib/scope';
 
 // Basis & Operações — ingest do agente + leitura agregada.
 export const OPS_CATEGORIES = ['PIPO', 'JOB', 'DUMP', 'UPDATE_ERR', 'LOCK', 'GATEWAY', 'HANA', 'SECURITY', 'PAYMENT', 'BANK', 'MASTERDATA'] as const;
@@ -28,8 +29,8 @@ export async function ingestOps(integrationId: string, clientId: string, signals
 }
 
 export async function listOps(consultancyId: string, f: { clientId?: string; category?: string; env?: string } = {}) {
-  const clients = await prisma.client.findMany({ where: { consultancyId, ...(f.clientId ? { id: f.clientId } : {}) }, select: { id: true, name: true } });
-  const ids = clients.map((c) => c.id);
+  const ids = scopeWithClient(f.clientId, await consultancyClientIds(consultancyId));
+  const clients = await prisma.client.findMany({ where: { id: { in: ids } }, select: { id: true, name: true } });
   const where: Record<string, unknown> = { clientId: { in: ids }, resolved: false };
   if (f.category) where.category = f.category;
   if (f.env) where.environment = f.env;

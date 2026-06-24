@@ -37,6 +37,40 @@ const LBL: Record<Lang, { whatIs: string; whyMatters: string; doNow: string; hid
 // Registro de contexto por rota: o QUE é a tela, POR QUE importa e O QUE fazer.
 // Resolve por prefixo (mais específico primeiro).
 const GUIDES: Record<string, Record<Lang, Guide>> = {
+  "/reform": {
+    pt: {
+      what: "Prontidão do SAP do cliente para a reforma tributária (CBS/IBS). Só monitora — não calcula nem emite imposto.",
+      why: "Toda empresa SAP no Brasil precisa adaptar o sistema até a transição. É prova de valor que renova contrato de AMS.",
+      actions: ["Priorize clientes com menor % de prontidão e itens em risco", "Abra o item para ver a área (SAP Notes, campos CBS/IBS, DRC...) e o que fazer"],
+    },
+    en: {
+      what: "Readiness of the client's SAP for the Brazilian tax reform (CBS/IBS). Monitoring only — it doesn't calculate or issue tax.",
+      why: "Every SAP company in Brazil must adapt before the transition. It's proof of value that renews the AMS contract.",
+      actions: ["Prioritize clients with the lowest readiness % and at-risk items", "Open an item to see the area (SAP Notes, CBS/IBS fields, DRC...) and what to do"],
+    },
+    es: {
+      what: "Preparación del SAP del cliente para la reforma tributaria (CBS/IBS). Solo monitorea — no calcula ni emite impuesto.",
+      why: "Toda empresa SAP en Brasil debe adaptarse antes de la transición. Es prueba de valor que renueva el contrato de AMS.",
+      actions: ["Prioriza clientes con menor % de preparación e ítems en riesgo", "Abre el ítem para ver el área (SAP Notes, campos CBS/IBS, DRC...) y qué hacer"],
+    },
+  },
+  "/licensing": {
+    pt: {
+      what: "Uso de licença x direito contratado e exposição de acesso indireto (Digital Access).",
+      why: "Uso indireto é caro e silencioso — vira multa em auditoria da SAP. Achar antes protege o cliente e gera conversa comercial.",
+      actions: ["Comece pelos itens em risco e maior exposição em R$", "Abra o item para ver uso/direito e os passos para conter ou renegociar"],
+    },
+    en: {
+      what: "License usage vs entitlement and indirect-access exposure (Digital Access).",
+      why: "Indirect use is expensive and silent — it becomes a fine in an SAP audit. Catching it early protects the client.",
+      actions: ["Start with at-risk items and the largest exposure in R$", "Open an item to see usage/entitlement and steps to contain or renegotiate"],
+    },
+    es: {
+      what: "Uso de licencia vs derecho contratado y exposición de acceso indirecto (Digital Access).",
+      why: "El uso indirecto es caro y silencioso — se vuelve multa en una auditoría de SAP. Detectarlo antes protege al cliente.",
+      actions: ["Empieza por los ítems en riesgo y la mayor exposición en R$", "Abre el ítem para ver uso/derecho y los pasos para contener o renegociar"],
+    },
+  },
   "/dashboard": {
     pt: {
       what: "Visão geral da saúde de toda a sua carteira de clientes SAP.",

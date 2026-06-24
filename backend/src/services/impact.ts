@@ -1,4 +1,5 @@
 import prisma from '../lib/prisma';
+import { consultancyClientIds } from '../lib/scope';
 
 const HOUR_MS = 3600000;
 
@@ -17,8 +18,9 @@ export interface ImpactItem {
 /** Calcula a exposição financeira: R$/h em risco (integrações fora do ar) e
  *  exposição acumulada estimada pela idade dos alertas abertos. */
 export async function computeImpact(consultancyId: string, env?: string) {
+  const scoped = await consultancyClientIds(consultancyId);
   const integrations = await prisma.integration.findMany({
-    where: { client: { consultancyId }, costPerHourCents: { gt: 0 }, ...(env ? { environment: env } : {}) },
+    where: { client: { id: { in: scoped } }, costPerHourCents: { gt: 0 }, ...(env ? { environment: env } : {}) },
     select: {
       id: true, name: true, status: true, costPerHourCents: true, businessProcess: true,
       client: { select: { name: true } },

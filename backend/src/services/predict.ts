@@ -1,4 +1,5 @@
 import prisma from '../lib/prisma';
+import { consultancyClientIds } from '../lib/scope';
 
 /** Snapshot periódico das métricas de todas as integrações (alimenta a previsão). */
 export async function snapshotMetrics(): Promise<number> {
@@ -32,8 +33,9 @@ export interface Prediction {
 
 /** Calcula o risco de falha por integração: estado atual + tendência (quando há histórico). */
 export async function predict(consultancyId: string, env?: string): Promise<{ predictions: Prediction[]; summary: { high: number; medium: number; low: number } }> {
+  const scoped = await consultancyClientIds(consultancyId);
   const integrations = await prisma.integration.findMany({
-    where: { client: { consultancyId }, ...(env ? { environment: env } : {}) },
+    where: { client: { id: { in: scoped } }, ...(env ? { environment: env } : {}) },
     select: { id: true, name: true, status: true, latency: true, errorRate: true, uptime: true, client: { select: { name: true } } },
   });
 

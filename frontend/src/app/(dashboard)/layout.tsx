@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { getMe, getBilling } from "@/lib/api";
+import { getMe, getBilling, logPageView } from "@/lib/api";
 import Sidebar from "@/components/Sidebar";
 import PageGuide from "@/components/PageGuide";
 import PushSetup from "@/components/PushSetup";
@@ -70,6 +70,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       });
   }, [router, pathname]);
 
+  // Beacon de página: registra acesso UMA vez quando o pathname muda (só após autenticar).
+  // O ref evita duplicar quando o `user` é refetchado na navegação (nova referência reaciona o efeito).
+  const lastLoggedPath = useRef("");
+  useEffect(() => {
+    if (!user || !pathname) return;
+    if (lastLoggedPath.current === pathname) return;
+    lastLoggedPath.current = pathname;
+    logPageView(pathname);
+  }, [pathname, user]);
+
   function handleLogout() {
     localStorage.removeItem("token");
     router.push("/login");
@@ -108,6 +118,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // Cobrança e Configurações são exclusivas do admin da consultoria
   const restrictedForUser =
     user?.role === "CONSULTANCY_USER" && onAllowedPage;
+  // Faixa sutil de modo somente leitura para o perfil Consulta
+  const isViewer = user?.role === "CONSULTANCY_VIEWER";
+  const readOnlyBanner = { pt: "Modo somente leitura — perfil Consulta", en: "Read-only mode — Viewer role", es: "Modo solo lectura — perfil Consulta" } as const;
 
   return (
     <div className="min-h-screen flex">
@@ -160,6 +173,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
           ) : (
             <>
+              {isViewer && (
+                <div className="mb-4 flex items-center gap-2 rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-sm text-sky-200 no-print">
+                  <span aria-hidden>👁️</span>
+                  <span>{readOnlyBanner[lang] ?? readOnlyBanner.pt}</span>
+                </div>
+              )}
               <PageGuide />
               {children}
             </>

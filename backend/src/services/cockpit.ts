@@ -1,4 +1,5 @@
 import prisma from '../lib/prisma';
+import { consultancyClientIds } from '../lib/scope';
 import { recordFailure } from './federated';
 
 export interface SapItemInput {
@@ -52,7 +53,8 @@ export async function ingestSapItems(integrationId: string, clientId: string, it
 export interface CockpitFilters { clientId?: string; kind?: string; status?: string; q?: string; env?: string }
 
 export async function getCockpit(consultancyId: string, f: CockpitFilters = {}) {
-  const where: Record<string, unknown> = { client: { consultancyId }, resolved: false };
+  const scoped = await consultancyClientIds(consultancyId);
+  const where: Record<string, unknown> = { client: { id: { in: scoped } }, resolved: false };
   if (f.env) where.environment = f.env;
   if (f.clientId) where.clientId = f.clientId;
   if (f.kind) where.kind = f.kind;
@@ -74,7 +76,7 @@ export async function getCockpit(consultancyId: string, f: CockpitFilters = {}) 
       include: { client: { select: { id: true, name: true } }, integration: { select: { id: true, name: true } } },
     }),
     prisma.sapItem.findMany({
-      where: { client: { consultancyId }, resolved: false },
+      where: { client: { id: { in: scoped } }, resolved: false },
       select: { kind: true, statusCode: true, depth: true, clientId: true, remediable: true },
     }),
   ]);

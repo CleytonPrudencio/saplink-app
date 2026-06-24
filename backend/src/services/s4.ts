@@ -1,8 +1,9 @@
 import prisma from '../lib/prisma';
+import { consultancyClientIds } from '../lib/scope';
 import { encryptValue, decryptValue } from '../lib/crypto';
 
 async function clientIds(consultancyId: string): Promise<string[]> {
-  return (await prisma.client.findMany({ where: { consultancyId }, select: { id: true } })).map((c) => c.id);
+  return await consultancyClientIds(consultancyId);
 }
 async function ownsClient(consultancyId: string, clientId: string): Promise<boolean> {
   return !!(await prisma.client.findFirst({ where: { id: clientId, consultancyId }, select: { id: true } }));

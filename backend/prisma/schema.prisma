@@ -46,11 +46,25 @@ model User {
   email         String               @unique
   password      String
   name          String
-  role          String               @default("CONSULTANCY_USER") // PLATFORM_ADMIN | CONSULTANCY_ADMIN | CONSULTANCY_USER
+  role          String               @default("CONSULTANCY_USER") // PLATFORM_ADMIN | CONSULTANCY_ADMIN | CONSULTANCY_ANALYST | CONSULTANCY_VIEWER (CONSULTANCY_USER = legado/analista)
   consultancyId String?              // PLATFORM_ADMIN não pertence a nenhuma consultoria
   consultancy   Consultancy?         @relation(fields: [consultancyId], references: [id])
+  allClients    Boolean              @default(true) // true = vê todos os clientes da consultoria; false = só os de clientAccess
+  clientAccess  UserClient[]
   createdAt     DateTime             @default(now())
   resetTokens   PasswordResetToken[]
+}
+
+// Acesso por cliente: quais clientes um usuário (analista/consulta restrito) pode ver.
+model UserClient {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  @@unique([userId, clientId])
+  @@index([clientId])
 }
 
 model PasswordResetToken {
@@ -72,9 +86,14 @@ model Client {
   healthScore   Int           @default(0)
   portalEnabled Boolean       @default(false) // C3: portal read-only do cliente final
   portalToken   String?       @unique          // token do link público do portal
+  statusEnabled Boolean       @default(false)  // status page white-label (público)
+  statusToken   String?       @unique          // token do link público do status page
   slaUptimeTarget Float       @default(99.0)   // D1: meta de uptime (%)
   slaMaxLatencyMs Int         @default(2000)   // D1: meta de latência (ms)
   transports    Transport[]
+  reformItems     ReformReadiness[]
+  licenseItems    LicenseItem[]
+  userAccess      UserClient[]
   s4Connections   S4Connection[]
   upgradeFindings UpgradeFinding[]
   cleanCoreItems  CleanCoreItem[]
@@ -739,4 +758,56 @@ model ChatOpsConfig {
   enabled       Boolean  @default(true)
   channel       String?  // whatsapp | telegram | generic
   updatedAt     DateTime @updatedAt
+}
+
+// Reform Readiness Radar — prontidão CBS/IBS por cliente (SÓ monitora; não calcula nem transmite).
+model ReformReadiness {
+  id            String    @id @default(uuid())
+  clientId      String
+  client        Client    @relation(fields: [clientId], references: [id])
+  environment   String    @default("PRD")
+  area          String    // SAP_NOTES | TAX_FIELDS | CONDITION_TECHNIQUE | NFE_LAYOUT | DRC | MASTER_DATA
+  title         String
+  status        String    @default("PENDING") // OK | PENDING | RISK
+  phase         String?   // 2026 | 2027 | 2033 (fase da transição)
+  detail        String?
+  lastCheckedAt DateTime?
+  createdAt     DateTime  @default(now())
+  @@unique([clientId, area])
+  @@index([clientId])
+}
+
+// Indirect Access / Licensing Radar — uso x direito de licença por cliente (monitoramento).
+model LicenseItem {
+  id            String    @id @default(uuid())
+  clientId      String
+  client        Client    @relation(fields: [clientId], references: [id])
+  environment   String    @default("PRD")
+  metric        String    // ex.: "Documentos acesso digital/mês", "Usuários nomeados"
+  used          Int       @default(0)
+  entitled      Int       @default(0)
+  unit          String?   // docs | users | engine
+  riskLevel     String    @default("OK") // OK | WARN | RISK
+  estCostBrl    Float     @default(0)
+  detail        String?
+  lastCheckedAt DateTime?
+  createdAt     DateTime  @default(now())
+  @@unique([clientId, metric])
+  @@index([clientId])
+}
+
+// Log de atividade do sistema (auditoria de acesso/edição) por consultoria.
+model ActivityLog {
+  id            String   @id @default(uuid())
+  consultancyId String
+  userId        String?
+  userEmail     String?
+  action        String   // view | create | edit | delete | login | other
+  method        String?
+  path          String
+  detail        String?
+  status        Int?
+  ip            String?
+  createdAt     DateTime @default(now())
+  @@index([consultancyId, createdAt])
 }

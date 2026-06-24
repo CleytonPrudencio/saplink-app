@@ -1,11 +1,12 @@
 import prisma from '../lib/prisma';
+import { consultancyClientIds, scopeWithClient } from '../lib/scope';
 
 // Grafo dinheiro↔técnico: traduz sinal técnico em R$ em risco AGORA.
 // Junta custo de parada por hora (Integration) + docs fiscais bloqueados, agrupado por processo.
 
 export async function moneyGraph(consultancyId: string) {
-  const clients = await prisma.client.findMany({ where: { consultancyId }, select: { id: true, name: true } });
-  const ids = clients.map((c) => c.id);
+  const ids = await consultancyClientIds(consultancyId);
+  const clients = await prisma.client.findMany({ where: { id: { in: ids } }, select: { id: true, name: true } });
   const names = new Map(clients.map((c) => [c.id, c.name]));
 
   const integrations = await prisma.integration.findMany({

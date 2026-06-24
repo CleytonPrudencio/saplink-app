@@ -1,4 +1,5 @@
 import prisma from '../lib/prisma';
+import { consultancyClientIds } from '../lib/scope';
 
 // Pré-voo de mudança (blast radius): antes de um transport ir pra PRD, calcula o raio
 // de impacto — interfaces, processos de negócio e R$/h em risco — e um score de risco.
@@ -6,7 +7,7 @@ import prisma from '../lib/prisma';
 const brlH = (cents: number) => cents;
 
 export async function listTransports(consultancyId: string) {
-  const ids = (await prisma.client.findMany({ where: { consultancyId }, select: { id: true } })).map((c) => c.id);
+  const ids = await consultancyClientIds(consultancyId);
   const ts = await prisma.transport.findMany({ where: { clientId: { in: ids } }, orderBy: { importedAt: 'desc' }, take: 50 });
   const names = new Map((await prisma.client.findMany({ where: { id: { in: ids } }, select: { id: true, name: true } })).map((c) => [c.id, c.name]));
   return ts.map((t) => ({ id: t.id, trNumber: t.trNumber, description: t.description, owner: t.owner, target: t.target, importedAt: t.importedAt, client: names.get(t.clientId) }));

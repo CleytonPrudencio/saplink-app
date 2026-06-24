@@ -1,4 +1,5 @@
 import prisma from '../lib/prisma';
+import { consultancyClientIds } from '../lib/scope';
 import { recordFix } from './federated';
 
 // Mapeia o tipo de item para a ação de remediação padrão e a transação SAP equivalente.
@@ -62,7 +63,7 @@ export async function setStatus(consultancyId: string, userId: string | undefine
 }
 
 export async function listActions(consultancyId: string, status?: string) {
-  const clientIds = (await prisma.client.findMany({ where: { consultancyId }, select: { id: true } })).map((c) => c.id);
+  const clientIds = await consultancyClientIds(consultancyId);
   const where: Record<string, unknown> = { clientId: { in: clientIds } };
   if (status) where.status = status;
   const actions = await prisma.remediationAction.findMany({

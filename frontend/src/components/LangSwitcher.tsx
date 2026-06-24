@@ -1,6 +1,7 @@
 "use client";
 
 import { LANGS, useLang } from "@/i18n/I18n";
+import FlagIcon from "./FlagIcon";
 
 export default function LangSwitcher({ compact = false }: { compact?: boolean }) {
   const { lang, setLang } = useLang();
@@ -10,10 +11,11 @@ export default function LangSwitcher({ compact = false }: { compact?: boolean })
         <button
           key={l.code}
           onClick={() => setLang(l.code)}
-          className={`px-2 py-1 rounded-md text-xs font-semibold transition cursor-pointer ${lang === l.code ? "bg-white/[0.12] text-white" : "text-[#9b95ad] hover:text-white"}`}
+          className={`px-2 py-1 rounded-md text-xs font-semibold transition cursor-pointer inline-flex items-center gap-1.5 ${lang === l.code ? "bg-white/[0.12] text-white" : "text-[#9b95ad] hover:text-white"}`}
           aria-label={l.label}
+          title={l.label}
         >
-          {l.flag}{compact ? "" : <span className="ml-1 hidden sm:inline">{l.code.toUpperCase()}</span>}
+          <FlagIcon code={l.code} />{compact ? "" : <span className="hidden sm:inline">{l.code.toUpperCase()}</span>}
         </button>
       ))}
     </div>

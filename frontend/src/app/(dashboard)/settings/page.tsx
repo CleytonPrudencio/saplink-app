@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getMe, updateBranding, getUsers, createUser, deleteUser, getDigestStatus, toggleDigest, getDigestPreview, sendDigestNow } from "@/lib/api";
+import Link from "next/link";
 import { useLang } from "@/i18n/I18n";
 import { T } from "./i18n";
 
@@ -252,40 +253,18 @@ export default function SettingsPage() {
       )}
 
       {isAdmin && (
-        <div className="bg-[#1a1527] rounded-xl p-6 border border-white/[0.08] max-w-2xl space-y-4">
+        <div className="bg-[#1a1527] rounded-xl p-6 border border-white/[0.08] max-w-2xl space-y-3">
           <h2 className="text-lg font-semibold">{t.teamUsers}</h2>
-          <div className="space-y-2">
-            {team.map((u) => (
-              <div key={u.id} className="flex items-center justify-between bg-[#0f0b1a] rounded-lg px-3 py-2">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium truncate">{u.name} <span className="text-[#9b95ad]">· {u.email}</span></p>
-                  <p className="text-xs text-[#9b95ad]">{u.role}</p>
-                </div>
-                {u.id !== user.id && (
-                  <button onClick={() => onRemoveUser(u.id, u.name)} aria-label={t.removeUserAria(u.name)}
-                    className="text-[#9b95ad] hover:text-rose-400 px-2">✕</button>
-                )}
-              </div>
-            ))}
-            {team.length === 0 && <p className="text-sm text-[#9b95ad]">{t.noUsers}</p>}
-          </div>
-
-          <form onSubmit={onAddUser} className="grid grid-cols-1 sm:grid-cols-4 gap-2 pt-2 border-t border-white/[0.06]">
-            <input value={nu.name} onChange={(e) => setNu({ ...nu, name: e.target.value })} required placeholder={t.namePlaceholder}
-              className="bg-[#0f0b1a] border border-white/[0.1] rounded-lg px-3 py-2 text-sm" />
-            <input value={nu.email} onChange={(e) => setNu({ ...nu, email: e.target.value })} required type="email" placeholder={t.emailPlaceholder}
-              className="bg-[#0f0b1a] border border-white/[0.1] rounded-lg px-3 py-2 text-sm sm:col-span-1" />
-            <select value={nu.role} onChange={(e) => setNu({ ...nu, role: e.target.value })}
-              className="bg-[#0f0b1a] border border-white/[0.1] rounded-lg px-3 py-2 text-sm">
-              <option value="CONSULTANCY_USER">{t.roleUser}</option>
-              <option value="CONSULTANCY_ADMIN">{t.roleAdmin}</option>
-            </select>
-            <button type="submit" disabled={addingUser}
-              className="px-3 py-2 rounded-lg bg-purple-500 text-white text-sm font-semibold disabled:opacity-40">
-              {addingUser ? t.adding : t.addUser}
-            </button>
-          </form>
-          {userMsg && <p className="text-sm text-amber-300 break-all">{userMsg}</p>}
+          <p className="text-sm text-[#9b95ad]">
+            {lang === "en"
+              ? "Manage your team, profiles (Admin / Analyst / Viewer) and per-client access on the Users page."
+              : lang === "es"
+              ? "Gestiona el equipo, perfiles (Admin / Analista / Consulta) y acceso por cliente en la página Usuarios."
+              : "Gerencie a equipe, perfis (Admin / Analista / Consulta) e o acesso por cliente na página Usuários."}
+          </p>
+          <Link href="/users" className="inline-block px-4 py-2 rounded-lg bg-purple-500 text-white text-sm font-semibold">
+            {lang === "en" ? "Open Users →" : lang === "es" ? "Abrir Usuarios →" : "Abrir Usuários →"}
+          </Link>
         </div>
       )}
     </div>

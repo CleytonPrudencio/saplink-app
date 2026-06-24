@@ -1,11 +1,12 @@
 import prisma from '../lib/prisma';
+import { consultancyClientIds } from '../lib/scope';
 
 // Score de confiabilidade de parceiro EDI + FinOps de BTP (custo estimado por IFlow).
 
 const BTP_RATE_CENTS = Number(process.env.BTP_RATE_CENTS_PER_1K || 30); // R$ 0,30 por 1.000 mensagens (estimativa)
 
 export async function partnerReliability(consultancyId: string) {
-  const ids = (await prisma.client.findMany({ where: { consultancyId }, select: { id: true } })).map((c) => c.id);
+  const ids = await consultancyClientIds(consultancyId);
   const items = await prisma.sapItem.findMany({ where: { clientId: { in: ids }, partner: { not: null } }, select: { partner: true, resolved: true } });
   const map = new Map<string, { total: number; errors: number }>();
   for (const it of items) {
@@ -25,7 +26,7 @@ export async function partnerReliability(consultancyId: string) {
 }
 
 export async function btpFinops(consultancyId: string) {
-  const ids = (await prisma.client.findMany({ where: { consultancyId }, select: { id: true } })).map((c) => c.id);
+  const ids = await consultancyClientIds(consultancyId);
   const since = new Date(Date.now() - 30 * 864e5);
   const items = await prisma.cloudItem.findMany({ where: { clientId: { in: ids }, occurredAt: { gte: since } }, select: { source: true, artifact: true } });
   const map = new Map<string, number>();

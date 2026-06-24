@@ -1,4 +1,5 @@
 import prisma from '../lib/prisma';
+import { consultancyClientIds } from '../lib/scope';
 
 // Reconciliação ponta-a-ponta: rastreia o documento de negócio pela jornada esperada
 // (ex.: Pedido no CPI → Ordem no S/4 → Fatura) e mostra onde o volume se perde.
@@ -11,7 +12,7 @@ async function ownsClient(consultancyId: string, clientId: string) {
 }
 
 export async function getProcesses(consultancyId: string) {
-  const ids = (await prisma.client.findMany({ where: { consultancyId }, select: { id: true } })).map((c) => c.id);
+  const ids = await consultancyClientIds(consultancyId);
   const procs = await prisma.reconProcess.findMany({ where: { clientId: { in: ids } }, orderBy: { createdAt: 'desc' } });
   const names = new Map((await prisma.client.findMany({ where: { id: { in: ids } }, select: { id: true, name: true } })).map((c) => [c.id, c.name]));
   return procs.map((p) => ({ id: p.id, clientId: p.clientId, client: names.get(p.clientId), name: p.name, stages: p.stages }));

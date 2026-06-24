@@ -1,4 +1,5 @@
 import prisma from '../lib/prisma';
+import { consultancyClientIds } from '../lib/scope';
 
 export interface CatalogItemInput {
   kind: string;   // PARTNER_PROFILE | RFC_DEST | MESSAGE_TYPE | ODATA_SERVICE | IDOC_PORT
@@ -41,7 +42,7 @@ export async function ingestCatalog(integrationId: string, clientId: string, ite
 export interface CatalogFilters { clientId?: string; kind?: string; q?: string; env?: string }
 
 export async function getCatalog(consultancyId: string, f: CatalogFilters = {}) {
-  const clientIds = (await prisma.client.findMany({ where: { consultancyId }, select: { id: true } })).map((c) => c.id);
+  const clientIds = await consultancyClientIds(consultancyId);
   const where: Record<string, unknown> = { clientId: { in: clientIds } };
   if (f.env) where.environment = f.env;
   if (f.clientId) where.clientId = f.clientId;

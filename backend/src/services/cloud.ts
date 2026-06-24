@@ -1,4 +1,5 @@
 import prisma from '../lib/prisma';
+import { consultancyClientIds } from '../lib/scope';
 import { diagnose, generateFix, type Lang } from './ai';
 import { recordFailure } from './federated';
 
@@ -151,7 +152,7 @@ export async function fixCloudItem(consultancyId: string, id: string, force = fa
 export interface CloudFilters { source?: string; status?: string; q?: string; clientId?: string; env?: string }
 
 export async function getCloud(consultancyId: string, f: CloudFilters = {}) {
-  const clientIds = (await prisma.client.findMany({ where: { consultancyId }, select: { id: true } })).map((c) => c.id);
+  const clientIds = await consultancyClientIds(consultancyId);
   const where: Record<string, unknown> = { clientId: { in: f.clientId ? [f.clientId] : clientIds } };
   if (f.env) where.environment = f.env;
   if (f.source) where.source = f.source;

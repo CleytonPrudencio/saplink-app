@@ -33,6 +33,11 @@ router.post('/', async (req: Request, res: Response) => {
       return;
     }
 
+    if (req.allowedClientIds && !req.allowedClientIds.includes(clientId)) {
+      res.status(403).json({ error: 'Cliente fora do seu escopo de acesso.' });
+      return;
+    }
+
     // Verify client belongs to consultancy
     const client = await prisma.client.findFirst({
       where: {

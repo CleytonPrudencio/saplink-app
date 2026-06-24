@@ -3,13 +3,14 @@ import prisma from '../lib/prisma';
 import { authMiddleware } from '../middleware/auth';
 import { tenancyMiddleware } from '../middleware/tenancy';
 import { diagnose } from '../services/ai';
+import { consultancyClientIds } from '../lib/scope';
 import { reqEnv, reqLang } from '../lib/env';
 
 const router = Router();
 router.use(authMiddleware, tenancyMiddleware);
 
 async function tenantClientIds(consultancyId: string) {
-  return (await prisma.client.findMany({ where: { consultancyId }, select: { id: true } })).map((c) => c.id);
+  return await consultancyClientIds(consultancyId); // já filtra pelo escopo do usuário
 }
 
 // GET / — list alerts for consultancy with filters
@@ -17,12 +18,8 @@ router.get('/', async (req: Request, res: Response) => {
   try {
     const { severity, resolved, clientId } = req.query;
 
-    // Get all client IDs for this consultancy
-    const clients = await prisma.client.findMany({
-      where: { consultancyId: req.consultancyId! },
-      select: { id: true },
-    });
-    const clientIds = clients.map((c: { id: string }) => c.id);
+    // IDs dos clientes no escopo do usuário (admin/allClients = todos)
+    const clientIds = await consultancyClientIds(req.consultancyId!);
 
     const where: Record<string, unknown> = {
       clientId: { in: clientIds },
@@ -35,7 +32,8 @@ router.get('/', async (req: Request, res: Response) => {
       where.resolved = resolved === 'true';
     }
     if (clientId) {
-      where.clientId = clientId as string;
+      // clampa ao escopo: clientId fora do escopo → nenhum resultado
+      where.clientId = clientIds.includes(clientId as string) ? (clientId as string) : '__out_of_scope__';
     }
     const env = reqEnv(req);
     if (env) where.environment = env;

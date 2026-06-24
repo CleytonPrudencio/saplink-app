@@ -1,4 +1,5 @@
 import prisma from '../lib/prisma';
+import { consultancyClientIds, scopeWithClient } from '../lib/scope';
 
 const DAY_MS = 24 * 3600 * 1000;
 
@@ -39,8 +40,8 @@ export async function ingestTransports(integrationId: string, clientId: string, 
 /** Lista transportes da consultoria + correlaciona incidentes abertos com transportes
  *  importados nas 24h anteriores ao alerta (provável causa). */
 export async function getTransports(consultancyId: string, clientId?: string, env?: string) {
-  const clientIds = (await prisma.client.findMany({ where: { consultancyId }, select: { id: true } })).map((c) => c.id);
-  const scope = clientId ? [clientId] : clientIds;
+  const clientIds = await consultancyClientIds(consultancyId);
+  const scope = scopeWithClient(clientId, clientIds);
   const envW = env ? { environment: env } : {};
 
   const [transports, alerts] = await Promise.all([
